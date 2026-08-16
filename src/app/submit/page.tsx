@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 import { PageHeader } from "@/components/layout/page-header";
-import { PendingPanel } from "@/components/ui/pending-panel";
+import { SubmitForm } from "@/components/submit/submit-form";
 
 export const metadata: Metadata = {
   title: "submit",
@@ -16,15 +16,7 @@ export default function SubmitPage() {
         title="add a spot"
         lede="no account, no moderation queue theatre. coordinates, an honest difficulty rating, and what to watch out for."
       />
-      <PendingPanel
-        summary="the submission form lands in the next milestone, backed by a mock api route until the database goes in."
-        items={[
-          "borderless field set with inline validation",
-          "map picker for coordinates",
-          "difficulty and access-type tagging",
-          "optimistic local state, mock api endpoint",
-        ]}
-      />
+      <SubmitForm />
     </>
   );
 }

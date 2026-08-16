@@ -324,6 +324,107 @@
       will-change: auto;
     }
   }
+
+  /* -- map markers -- *
+   * Safe to keep layered: `divIcon({ className })` replaces Leaflet's own
+   * `.leaflet-div-icon` class outright, so there is nothing to override. */
+  .bkas-marker {
+    background: none;
+    border: 0;
+  }
+
+  .bkas-marker-dot {
+    display: block;
+    position: relative;
+    /* The element is 44x44 for the tap target; the visible mark is the
+       ::after square, which stays small. */
+    width: 44px;
+    height: 44px;
+  }
+
+  .bkas-marker-dot::after {
+    content: "";
+    position: absolute;
+    inset: 50% auto auto 50%;
+    width: 9px;
+    height: 9px;
+    margin: -5px 0 0 -5px;
+    background-color: var(--color-paper);
+    border: 1px solid var(--color-ink);
+    transition:
+      width 200ms var(--ease-damped),
+      height 200ms var(--ease-damped),
+      margin 200ms var(--ease-damped),
+      background-color 200ms var(--ease-damped),
+      border-color 200ms var(--ease-damped);
+  }
+
+  @media (hover: hover) {
+    .bkas-marker:hover .bkas-marker-dot::after {
+      border-color: var(--color-accent);
+    }
+  }
+
+  .bkas-marker-dot.is-selected::after {
+    width: 13px;
+    height: 13px;
+    margin: -7px 0 0 -7px;
+    background-color: var(--color-accent);
+    border-color: var(--color-accent);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bkas-marker-dot::after {
+      transition: none;
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * leaflet chrome
+ *
+ * Leaflet ships rounded, shadowed, bordered controls and a hard-coded
+ * #ddd map background. Flattening it is done here rather than fought
+ * per-component.
+ *
+ * Deliberately UNLAYERED, and deliberately double-classed. `leaflet.css`
+ * is imported by the map component and is itself unlayered — and
+ * unlayered declarations beat *every* cascade layer, so the same rules
+ * inside `@layer components` silently lose. Doubling the class raises
+ * specificity to (0,2,0) so these win on specificity rather than on
+ * source order, which the bundler is free to change.
+ * ------------------------------------------------------------------ */
+.leaflet-container.leaflet-container {
+  background-color: var(--color-paper-raised);
+  font-family: var(--font-mono);
+  outline-offset: -2px;
+}
+
+.leaflet-container.leaflet-container a {
+  color: var(--color-muted);
+}
+
+.leaflet-control-attribution.leaflet-control-attribution {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background-color: var(--color-paper);
+  color: var(--color-faint);
+  font-family: var(--font-mono);
+  font-size: 0.5625rem;
+  letter-spacing: 0.04em;
+  padding: 3px 7px;
+}
+
+.leaflet-control-attribution.leaflet-control-attribution a {
+  color: var(--color-faint);
+  text-decoration: none;
+}
+
+/* Third-party rasters; nudged toward the page ground so they sit inside
+   the palette instead of glowing against it. */
+.leaflet-tile-pane {
+  opacity: 0.92;
 }
 
 /* ------------------------------------------------------------------ *

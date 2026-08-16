@@ -77,6 +77,49 @@ Then open <http://localhost:3000>.
 | `npm run lint`      | eslint                                   |
 | `npm run typecheck` | `tsc --noEmit`                           |
 
+## routes
+
+| route          | what it is                                                    |
+| -------------- | ------------------------------------------------------------- |
+| `/`            | hero (3D field), manifesto, readout                           |
+| `/explore`     | Leaflet map + faceted filters over the seed index             |
+| `/spot/[slug]` | detail: plates, write-up, access notes, dated community notes |
+| `/submit`      | submission form with a map picker                             |
+| `/api/spots`   | mock API — `GET` lists, `POST` validates and accepts          |
+
+Spot pages are statically generated from `generateStaticParams`, so all 14
+seed entries prerender.
+
+## data
+
+`src/lib/data/spots.ts` is the stand-in for the database. Coordinates are
+real; write-ups are illustrative.
+
+`src/lib/spots/validate.ts` holds **one** validator, used by both the
+submission form (for inline feedback) and the API route (for enforcement) —
+the client copy is a convenience, never the gate.
+
+`POST /api/spots` validates and returns `201` with the accepted draft, but
+does not persist: the process is stateless, and an in-memory store would
+start lying the moment there were two instances. The handler bodies are the
+only thing that needs replacing when Supabase lands.
+
+Photography doesn't exist yet, so `photos[].src` is `null` throughout and
+the gallery renders a deterministic terrain plate per caption. Populating
+the field with real URLs is a data change — `SpotPlate` already renders
+`next/image` when a `src` is present.
+
+## known gaps
+
+- **Tiles are unverified from CI.** CARTO basemap tiles (and any remote
+  image host) are blocked by the sandbox's egress policy, so the map was
+  verified with markers, controls and interaction but never with raster
+  tiles actually painted. Swap `TILE_URL` in the map components for another
+  provider if needed.
+- Filters are component state, not URL state — no shareable filtered views
+  yet.
+- No persistence, no auth. Both land with the database.
+
 ## status
 
 Scaffold stage. Data is served from an in-repo seed set through a mock API
