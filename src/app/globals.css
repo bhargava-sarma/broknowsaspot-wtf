@@ -1,0 +1,448 @@
+@import "tailwindcss";
+
+/* ------------------------------------------------------------------ *
+ * dark variant
+ *
+ * Driven by the `data-theme` attribute that ThemeProvider (and the
+ * blocking pre-hydration script) writes onto <html>. We deliberately do
+ * NOT use the prefers-color-scheme default: the system preference is only
+ * the *initial* value, after which an explicit user choice wins.
+ * ------------------------------------------------------------------ */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+/* ------------------------------------------------------------------ *
+ * tone tokens — the single source of truth for colour
+ *
+ * `scripts/check-contrast.mjs` parses THIS BLOCK and fails the build if
+ * any pairing drops below its required ratio, so edit values here and
+ * nowhere else. Light and dark are authored independently — dark is not
+ * an inversion of light; both were tuned against their own background.
+ * ------------------------------------------------------------------ */
+:root {
+  color-scheme: light;
+
+  --tone-paper: #f2f1ed; /* page ground — warm near-white           */
+  --tone-paper-raised: #eae9e3; /* input wells / map chrome — still flat   */
+  --tone-ink: #12120f; /* primary text            16.60:1         */
+  --tone-muted: #4a4944; /* secondary text           7.98:1         */
+  --tone-faint: #6e6c64; /* meta + labels            4.65:1         */
+  --tone-rule: #c9c7bf; /* hairline                 1.50:1         */
+  --tone-rule-strong: #12120f; /* emphatic hairline                       */
+  --tone-accent: #b23f18; /* burnt orange             5.14:1         */
+  --tone-accent-ink: #f2f1ed; /* text on accent fill      5.14:1         */
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --tone-paper: #0d0d0c;
+  --tone-paper-raised: #161614;
+  --tone-ink: #eceae4; /*                         16.16:1         */
+  --tone-muted: #9b988f; /*                          6.74:1         */
+  --tone-faint: #817f76; /*                          4.84:1         */
+  --tone-rule: #33322e; /*                          1.52:1         */
+  --tone-rule-strong: #eceae4;
+  --tone-accent: #f0723c; /* lifted + desaturated for dark  6.65:1   */
+  --tone-accent-ink: #0d0d0c; /*                          6.65:1         */
+}
+
+/* ------------------------------------------------------------------ *
+ * theme — tokens exposed to Tailwind as utilities
+ *
+ * Colours are indirected through the --tone-* vars above so a single
+ * attribute flip on <html> restyles the whole app with no `dark:`
+ * variants sprinkled through the components.
+ * ------------------------------------------------------------------ */
+@theme static {
+  /* -- colour ---------------------------------------------------- */
+  --color-paper: var(--tone-paper);
+  --color-paper-raised: var(--tone-paper-raised);
+  --color-ink: var(--tone-ink);
+  --color-muted: var(--tone-muted);
+  --color-faint: var(--tone-faint);
+  --color-rule: var(--tone-rule);
+  --color-rule-strong: var(--tone-rule-strong);
+  --color-accent: var(--tone-accent);
+  --color-accent-ink: var(--tone-accent-ink);
+
+  /* -- type families --------------------------------------------- */
+  --font-mono:
+    var(--font-jetbrains-mono), ui-monospace, SFMono-Regular, "SF Mono", Menlo,
+    monospace;
+  --font-sans:
+    var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    sans-serif;
+
+  /* -- fluid type scale ------------------------------------------ *
+   * No breakpoint jumps: every step interpolates on viewport width
+   * between a 375px floor and a ~1600px ceiling.
+   * -------------------------------------------------------------- */
+  --text-micro: clamp(0.625rem, 0.6rem + 0.11vw, 0.6875rem);
+  --text-micro--line-height: 1.25;
+  --text-micro--letter-spacing: 0.13em;
+
+  --text-tiny: clamp(0.6875rem, 0.66rem + 0.13vw, 0.75rem);
+  --text-tiny--line-height: 1.35;
+  --text-tiny--letter-spacing: 0.08em;
+
+  --text-small: clamp(0.8125rem, 0.78rem + 0.15vw, 0.875rem);
+  --text-small--line-height: 1.5;
+
+  --text-body: clamp(0.9375rem, 0.9rem + 0.19vw, 1.0625rem);
+  --text-body--line-height: 1.62;
+
+  --text-lead: clamp(1.0625rem, 0.98rem + 0.38vw, 1.3125rem);
+  --text-lead--line-height: 1.5;
+
+  --text-h3: clamp(1.25rem, 1.11rem + 0.62vw, 1.75rem);
+  --text-h3--line-height: 1.2;
+  --text-h3--letter-spacing: -0.01em;
+
+  --text-h2: clamp(1.75rem, 1.4rem + 1.55vw, 3rem);
+  --text-h2--line-height: 1.08;
+  --text-h2--letter-spacing: -0.02em;
+
+  --text-h1: clamp(2.5rem, 1.6rem + 4vw, 5.75rem);
+  --text-h1--line-height: 0.94;
+  --text-h1--letter-spacing: -0.035em;
+
+  --text-mega: clamp(3.25rem, 1rem + 10vw, 11rem);
+  --text-mega--line-height: 0.86;
+  --text-mega--letter-spacing: -0.045em;
+
+  /* -- rigid swiss grid ------------------------------------------ */
+  --gutter: clamp(1rem, 0.62rem + 1.6vw, 2rem);
+  --shell-max: 96rem;
+  --bar-h: 3.5rem; /* header + mobile bar height, shared */
+
+  /* -- damped spring easings (mirrors lib/motion/springs.ts) ------ */
+  --ease-damped: linear(
+    0,
+    0.0033 0.8%,
+    0.0263 2.39%,
+    0.0896 4.77%,
+    0.4676 12.63%,
+    0.6349 15.99%,
+    0.7645 19.19%,
+    0.8659 22.55%,
+    0.9315 25.62%,
+    0.9683 28.28%,
+    0.9873 30.83%,
+    1.0011 35.55%,
+    1.0037 45.29%,
+    1
+  );
+  --ease-exit: cubic-bezier(0.32, 0, 0.67, 0);
+}
+
+/* ------------------------------------------------------------------ *
+ * base
+ * ------------------------------------------------------------------ */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    scroll-behavior: smooth;
+    /* Anchors clear the sticky header. */
+    scroll-padding-top: var(--bar-h);
+  }
+
+  body {
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    font-weight: 400;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    /* Keeps the mobile bar from covering the last line of any page. */
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* Headings and chrome are monospace; long-form prose is the sans. */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-mono);
+    font-weight: 400;
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  /* Borderless controls: the design language has no button chrome. */
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: 0;
+    margin: 0;
+  }
+
+  button {
+    cursor: pointer;
+  }
+
+  /* With no borders or fills anywhere, focus MUST be unmistakable. */
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+    border-radius: 1px;
+  }
+  /* ...but never draw a ring for plain mouse clicks. */
+  :focus:not(:focus-visible) {
+    outline: none;
+  }
+
+  ::selection {
+    background-color: var(--color-accent);
+    color: var(--color-accent-ink);
+  }
+
+  /* Firefox */
+  * {
+    scrollbar-color: var(--color-rule) transparent;
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--color-rule);
+  }
+  ::-webkit-scrollbar-track {
+    background-color: transparent;
+  }
+
+  /* Prevent the theme flip from strobing while the user reads. */
+  html.theme-transition,
+  html.theme-transition *,
+  html.theme-transition *::before,
+  html.theme-transition *::after {
+    transition:
+      background-color 220ms var(--ease-damped),
+      border-color 220ms var(--ease-damped),
+      color 220ms var(--ease-damped),
+      fill 220ms var(--ease-damped),
+      stroke 220ms var(--ease-damped) !important;
+    transition-delay: 0ms !important;
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * components
+ * ------------------------------------------------------------------ */
+@layer components {
+  /* The page shell: every section aligns to this, no ad-hoc padding. */
+  .shell {
+    width: 100%;
+    max-width: var(--shell-max);
+    margin-inline: auto;
+    padding-inline: var(--gutter);
+  }
+
+  /* Rigid 12-column Swiss grid with a single consistent gutter. */
+  .grid-swiss {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    gap: var(--gutter);
+  }
+
+  /* Section separation is a hairline rule — never a card or a shadow. */
+  .rule-t {
+    border-top: 1px solid var(--color-rule);
+  }
+  .rule-b {
+    border-bottom: 1px solid var(--color-rule);
+  }
+
+  /* The one interaction idiom: opacity, never a colour swap or a glow. */
+  .tap {
+    transition: opacity 160ms var(--ease-damped);
+  }
+  @media (hover: hover) {
+    .tap:hover {
+      opacity: 0.7;
+    }
+  }
+  .tap:active {
+    opacity: 0.55;
+  }
+
+  /* Monospace label / eyebrow / tag. */
+  .label {
+    font-family: var(--font-mono);
+    font-size: var(--text-micro);
+    letter-spacing: 0.13em;
+    text-transform: lowercase;
+    color: var(--color-faint);
+  }
+
+  /* Every interactive element clears the 44px touch minimum on coarse
+     pointers without bloating the dense desktop layout. */
+  @media (pointer: coarse) {
+    .touch-target {
+      min-height: 44px;
+      min-width: 44px;
+    }
+  }
+
+  /* Ambient drift for the SVG contour hero. Deliberately very slow and
+     transform-only, so it stays on the compositor and never triggers
+     layout or paint. */
+  .hero-contours-drift {
+    transform-box: view-box;
+    transform-origin: center;
+    animation: hero-drift 38s ease-in-out infinite;
+    will-change: transform;
+  }
+
+  @keyframes hero-drift {
+    0% {
+      transform: rotate(0deg) scale(1);
+    }
+    50% {
+      transform: rotate(2.2deg) scale(1.035);
+    }
+    100% {
+      transform: rotate(0deg) scale(1);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero-contours-drift {
+      animation: none;
+      will-change: auto;
+    }
+  }
+
+  /* -- map markers -- *
+   * Safe to keep layered: `divIcon({ className })` replaces Leaflet's own
+   * `.leaflet-div-icon` class outright, so there is nothing to override. */
+  .bkas-marker {
+    background: none;
+    border: 0;
+  }
+
+  .bkas-marker-dot {
+    display: block;
+    position: relative;
+    /* The element is 44x44 for the tap target; the visible mark is the
+       ::after square, which stays small. */
+    width: 44px;
+    height: 44px;
+  }
+
+  .bkas-marker-dot::after {
+    content: "";
+    position: absolute;
+    inset: 50% auto auto 50%;
+    width: 9px;
+    height: 9px;
+    margin: -5px 0 0 -5px;
+    background-color: var(--color-paper);
+    border: 1px solid var(--color-ink);
+    transition:
+      width 200ms var(--ease-damped),
+      height 200ms var(--ease-damped),
+      margin 200ms var(--ease-damped),
+      background-color 200ms var(--ease-damped),
+      border-color 200ms var(--ease-damped);
+  }
+
+  @media (hover: hover) {
+    .bkas-marker:hover .bkas-marker-dot::after {
+      border-color: var(--color-accent);
+    }
+  }
+
+  .bkas-marker-dot.is-selected::after {
+    width: 13px;
+    height: 13px;
+    margin: -7px 0 0 -7px;
+    background-color: var(--color-accent);
+    border-color: var(--color-accent);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .bkas-marker-dot::after {
+      transition: none;
+    }
+  }
+}
+
+/* ------------------------------------------------------------------ *
+ * leaflet chrome
+ *
+ * Leaflet ships rounded, shadowed, bordered controls and a hard-coded
+ * #ddd map background. Flattening it is done here rather than fought
+ * per-component.
+ *
+ * Deliberately UNLAYERED, and deliberately double-classed. `leaflet.css`
+ * is imported by the map component and is itself unlayered — and
+ * unlayered declarations beat *every* cascade layer, so the same rules
+ * inside `@layer components` silently lose. Doubling the class raises
+ * specificity to (0,2,0) so these win on specificity rather than on
+ * source order, which the bundler is free to change.
+ * ------------------------------------------------------------------ */
+.leaflet-container.leaflet-container {
+  background-color: var(--color-paper-raised);
+  font-family: var(--font-mono);
+  outline-offset: -2px;
+}
+
+.leaflet-container.leaflet-container a {
+  color: var(--color-muted);
+}
+
+.leaflet-control-attribution.leaflet-control-attribution {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background-color: var(--color-paper);
+  color: var(--color-faint);
+  font-family: var(--font-mono);
+  font-size: 0.5625rem;
+  letter-spacing: 0.04em;
+  padding: 3px 7px;
+}
+
+.leaflet-control-attribution.leaflet-control-attribution a {
+  color: var(--color-faint);
+  text-decoration: none;
+}
+
+/* Third-party rasters; nudged toward the page ground so they sit inside
+   the palette instead of glowing against it. */
+.leaflet-tile-pane {
+  opacity: 0.92;
+}
+
+/* ------------------------------------------------------------------ *
+ * reduced motion
+ *
+ * Framer Motion handles its own reduction via useReducedMotion(); this
+ * is the safety net for CSS-driven movement (and the 3D fallback).
+ * ------------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
