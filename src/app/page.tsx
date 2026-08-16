@@ -1,4 +1,5 @@
 import { HeroContours } from "@/components/hero/hero-contours";
+import { HeroVisual } from "@/components/hero/hero-visual";
 import { Reveal, RevealGroup } from "@/components/motion/reveal";
 import { ActionLink } from "@/components/ui/action-link";
 
@@ -32,8 +33,9 @@ export default function HomePage() {
     <>
       {/* ---------------------------------------------------------- hero */}
       <section className="rule-b relative overflow-hidden">
-        {/* Sits behind the type, bleeding off the right edge. */}
-        <HeroContours className="absolute top-1/2 -right-[18%] hidden h-[132%] w-[62%] -translate-y-1/2 opacity-90 sm:block" />
+        {/* Sits behind the type, bleeding off the right edge. Resolves to
+            the WebGL field on capable desktops, the SVG contours elsewhere. */}
+        <HeroVisual className="absolute top-1/2 -right-[18%] hidden h-[132%] w-[62%] -translate-y-1/2 opacity-90 sm:block" />
 
         <div className="shell grid-swiss relative items-end pt-[clamp(3rem,2rem+6vw,8rem)] pb-[clamp(2.5rem,1.6rem+4vw,5rem)]">
           <div className="col-span-12 lg:col-span-8">
