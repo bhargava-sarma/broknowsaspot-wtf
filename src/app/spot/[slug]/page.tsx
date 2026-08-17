@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 
 import { Reveal, RevealGroup } from "@/components/motion/reveal";
+import { ReportControl } from "@/components/spot/report-control";
 import { SpotPlate } from "@/components/spot/spot-plate";
 import { ActionLink } from "@/components/ui/action-link";
 import {
@@ -219,13 +220,20 @@ export default async function SpotPage({
 
       {/* ---------------------------------------------------------- out */}
       <section>
-        <div className="shell flex flex-wrap gap-x-10 gap-y-4 py-[clamp(2rem,1.4rem+2.4vw,3.5rem)]">
-          <ActionLink href="/explore" tone="accent">
-            back to the map
-          </ActionLink>
-          <ActionLink href="/submit" tone="muted">
-            log a note or a new spot
-          </ActionLink>
+        <div className="shell grid-swiss py-[clamp(2rem,1.4rem+2.4vw,3.5rem)]">
+          <div className="col-span-12 flex flex-wrap gap-x-10 gap-y-4 lg:col-span-8">
+            <ActionLink href="/explore" tone="accent">
+              back to the map
+            </ActionLink>
+            <ActionLink href="/submit" tone="muted">
+              log a note or a new spot
+            </ActionLink>
+          </div>
+
+          {/* Deliberately quiet and last. Findable, not an invitation. */}
+          <div className="col-span-12 mt-8 lg:col-span-4 lg:mt-0 lg:text-right">
+            <ReportControl slug={spot.slug} />
+          </div>
         </div>
       </section>
     </article>

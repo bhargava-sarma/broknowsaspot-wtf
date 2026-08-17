@@ -58,6 +58,27 @@ from (
           and tablename in ('spots', 'spot_notes')
           and cmd <> 'SELECT')),
 
+    -- write-path tables: locked down, with no public policy at all
+    ('rls_on_reports',  'true',
+      (select relrowsecurity::text from pg_class
+        where oid = 'public.spot_reports'::regclass)),
+    ('report_policies', '0',
+      (select count(*)::text from pg_policies
+        where schemaname = 'public' and tablename = 'spot_reports')),
+    ('rls_on_submissions', 'true',
+      (select relrowsecurity::text from pg_class
+        where oid = 'public.submission_log'::regclass)),
+    ('submission_policies', '0',
+      (select count(*)::text from pg_policies
+        where schemaname = 'public' and tablename = 'submission_log')),
+
+    -- the auto-hide trigger is attached; without it the threshold is inert
+    ('threshold_trigger', '1',
+      (select count(*)::text from pg_trigger
+        where tgrelid = 'public.spot_reports'::regclass
+          and tgname = 'spot_reports_apply_threshold'
+          and not tgisinternal)),
+
     -- geography actually computing distances, not just storing points
     ('km gjipe→vikos',  '88.0',
       (select round((extensions.ST_Distance(

@@ -85,7 +85,8 @@ Then open <http://localhost:3000>.
 | `/explore`     | Leaflet map + faceted filters over the seed index             |
 | `/spot/[slug]` | detail: plates, write-up, access notes, dated community notes |
 | `/submit`      | submission form with a map picker                             |
-| `/api/spots`   | the index as JSON (`GET` only until submissions land)         |
+| `/api/spots`   | `GET` the index · `POST` a submission                         |
+| `/api/spots/[slug]/report` | `POST` a report                                   |
 
 Spot pages prerender from `generateStaticParams` and revalidate every five
 minutes, so an added spot appears without a redeploy. `dynamicParams` is on,
@@ -108,9 +109,9 @@ throws → log and seed; query succeeds → real data. The site is never down
 because of a half-finished migration.
 
 `src/lib/spots/validate.ts` holds **one** validator. It runs in the browser
-for the submission form today, and it is the same function the server will
-run once `POST` exists — so the rules never get reimplemented on two sides
-and drift apart.
+for the submission form and again in the `POST` handler. The client copy is
+a convenience for fast inline feedback; the server copy is the enforcement
+point, and neither can drift from the other.
 
 Photography doesn't exist yet, so `photos[].src` is `null` throughout and
 the gallery renders a deterministic terrain plate per caption. Populating
@@ -132,6 +133,8 @@ everything else stays server-side.
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | public   | publishable / anon key             |
 | `SUPABASE_SERVICE_ROLE_KEY`     | secret   | server-only, never `NEXT_PUBLIC_`  |
 | `NEXT_PUBLIC_SITE_URL`          | public   | absolute URLs in OG metadata       |
+| `NEXT_PUBLIC_TURNSTILE_SITE_KEY`| public   | Cloudflare Turnstile widget        |
+| `TURNSTILE_SECRET_KEY`          | secret   | **required for writes in prod**    |
 
 The Supabase → Vercel integration syncs the first three automatically.
 
@@ -144,12 +147,13 @@ The Supabase → Vercel integration syncs the first three automatically.
   provider is a one-line change to `TILE_URL` in the map components.
 - Filters are component state, not URL state — no shareable filtered views
   yet.
-- No writes yet: `POST` returns with submissions, moderation and admin auth.
-- Reports and the auto-hide threshold are not built; `hidden_at` exists in
-  the schema ready for them.
+- **No admin screen yet.** Moderation happens in the Supabase Table Editor:
+  set `hidden_at` to hide, clear it to restore. The admin UI is next.
+- Report counts are only visible in the database, by design.
+- No photo uploads; `photos[].src` is still `null` everywhere.
 
 ## status
 
-Live on Vercel. Reads come from Supabase once the migrations are applied,
-with a seed fallback until then. Submissions, reports and admin moderation
-land next.
+Live on Vercel, reading and writing Supabase. Submissions publish
+immediately and are reportable; ten distinct reports auto-hide an entry.
+Admin moderation UI and photo uploads are next.
