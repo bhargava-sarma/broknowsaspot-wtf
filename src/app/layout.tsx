@@ -9,8 +9,17 @@ import { ThemeScript } from "@/lib/theme/theme-script";
 
 import "./globals.css";
 
+/**
+ * Absolute URLs in OG tags have to match wherever this is actually served.
+ * The Pages workflow sets this to the project-site URL; it falls back to the
+ * eventual custom domain so local builds and a future root-domain deploy
+ * both produce sane metadata.
+ */
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://broknowsaspot.wtf";
+
 export const metadata: Metadata = {
-  metadataBase: new URL("https://broknowsaspot.wtf"),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "broknowsaspot.wtf — a guide to the spots regular people don't go",
     template: "%s — broknowsaspot.wtf",

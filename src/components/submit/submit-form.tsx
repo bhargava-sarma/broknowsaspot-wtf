@@ -4,7 +4,9 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useCallback, useState } from "react";
 
+import { MapPlaceholder } from "@/components/map/map-placeholder";
 import { ChoiceField, TextField } from "@/components/ui/field";
+import { useMounted } from "@/lib/hooks/use-mounted";
 import { type FieldErrors, validateDraft } from "@/lib/spots/validate";
 import {
   ACCESS_LABELS,
@@ -20,16 +22,7 @@ import {
 
 const LocationPicker = dynamic(
   () => import("@/components/map/location-picker"),
-  {
-    ssr: false,
-    loading: () => (
-      <div className="flex h-full w-full items-center justify-center bg-paper-raised">
-        <p className="font-mono text-micro text-faint lowercase">
-          loading map…
-        </p>
-      </div>
-    ),
-  },
+  { ssr: false, loading: () => <MapPlaceholder /> },
 );
 
 type FormState = {
@@ -60,16 +53,20 @@ const EMPTY: FormState = {
   lng: null,
 };
 
-type Status =
-  | { kind: "idle" }
-  | { kind: "submitting" }
-  | { kind: "sent"; name: string }
-  | { kind: "failed"; message: string };
+/**
+ * No `submitting` or `failed` state any more: with nothing to POST to,
+ * validation is synchronous and cannot fail for reasons the fields don't
+ * already explain.
+ */
+type Status = { kind: "idle" } | { kind: "sent"; name: string };
 
 export function SubmitForm() {
   const [form, setForm] = useState<FormState>(EMPTY);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [status, setStatus] = useState<Status>({ kind: "idle" });
+  // Keeps the hydration render identical to the prerendered HTML; see
+  // useMounted for why the static export needs this.
+  const mounted = useMounted();
 
   const set = useCallback(
     <K extends keyof FormState>(key: K, value: FormState[K]) => {
@@ -86,15 +83,17 @@ export function SubmitForm() {
   );
 
   const handleSubmit = useCallback(
-    async (event: React.FormEvent) => {
+    (event: React.FormEvent) => {
       event.preventDefault();
 
-      // Same validator the API route runs — this copy is only for fast
-      // inline feedback, never the enforcement point.
+      // The site deploys as a static export, so there is no endpoint to post
+      // to. `validateDraft` is the same function a server would run — it
+      // moves here wholesale rather than being reimplemented, so the rules
+      // stay in one place for when a backend does exist.
       const result = validateDraft(form);
+
       if (!result.ok) {
         setErrors(result.errors);
-        setStatus({ kind: "idle" });
         // Move focus to the problem rather than leaving it at the button.
         const first = document.querySelector<HTMLElement>(
           "[aria-invalid=true]",
@@ -104,34 +103,9 @@ export function SubmitForm() {
         return;
       }
 
-      setStatus({ kind: "submitting" });
       setErrors({});
-
-      try {
-        const response = await fetch("/api/spots", {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify(result.draft),
-        });
-        const payload = await response.json();
-
-        if (!response.ok) {
-          setErrors(payload?.errors ?? {});
-          setStatus({
-            kind: "failed",
-            message: "the server rejected that — see the fields above.",
-          });
-          return;
-        }
-
-        setStatus({ kind: "sent", name: result.draft.name });
-        setForm(EMPTY);
-      } catch {
-        setStatus({
-          kind: "failed",
-          message: "couldn't reach the server. try again in a moment.",
-        });
-      }
+      setStatus({ kind: "sent", name: result.draft.name });
+      setForm(EMPTY);
     },
     [form],
   );
@@ -145,12 +119,13 @@ export function SubmitForm() {
             received
           </p>
           <h2 className="mt-6 text-h2 font-light text-ink lowercase">
-            {status.name} is logged
+            {status.name} checks out
           </h2>
           <p className="mt-5 max-w-[46ch] text-body text-muted">
-            it validated and the api accepted it. nothing is stored yet —
-            submissions start persisting when the database lands, and this form
-            will keep working exactly as it does now.
+            every field passed validation. to be straight with you: nothing was
+            sent anywhere and nothing is stored — the site is a static build
+            with no server behind it yet. submissions start persisting when the
+            database lands, and this form will work exactly as it does now.
           </p>
           <div className="mt-10 flex flex-wrap gap-x-10 gap-y-4">
             <button
@@ -173,8 +148,6 @@ export function SubmitForm() {
       </section>
     );
   }
-
-  const busy = status.kind === "submitting";
 
   return (
     <form
@@ -275,14 +248,18 @@ export function SubmitForm() {
         </div>
         <div className="lg:col-span-8">
           <div className="h-[46vh] min-h-[280px] border border-rule">
-            <LocationPicker
-              lat={form.lat}
-              lng={form.lng}
-              onPick={(lat, lng) => {
-                set("lat", lat);
-                set("lng", lng);
-              }}
-            />
+            {mounted ? (
+              <LocationPicker
+                lat={form.lat}
+                lng={form.lng}
+                onPick={(lat, lng) => {
+                  set("lat", lat);
+                  set("lng", lng);
+                }}
+              />
+            ) : (
+              <MapPlaceholder />
+            )}
           </div>
 
           <div className="mt-5 grid gap-[var(--gutter)] sm:grid-cols-2">
@@ -339,27 +316,18 @@ export function SubmitForm() {
         {/* ---------------------------------------------------- submit */}
         <div className="lg:col-span-3" />
         <div className="lg:col-span-8">
-          {status.kind === "failed" ? (
-            <p
-              role="alert"
-              className="mb-6 font-mono text-micro text-accent lowercase"
-            >
-              {status.message}
-            </p>
-          ) : null}
-
           <button
             type="submit"
-            disabled={busy}
-            className="tap touch-target inline-flex items-center gap-3 border-b border-rule-strong pb-2 font-mono text-tiny tracking-[0.04em] text-ink lowercase disabled:opacity-50"
+            className="tap touch-target inline-flex items-center gap-3 border-b border-rule-strong pb-2 font-mono text-tiny tracking-[0.04em] text-ink lowercase"
           >
-            {busy ? "sending…" : "submit the spot"}
+            submit the spot
             <span aria-hidden="true">→</span>
           </button>
 
           <p className="mt-5 max-w-[46ch] font-mono text-micro text-faint lowercase">
-            no account, no email. the api validates and accepts submissions
-            today but does not persist them until the database lands.
+            no account, no email. the site is a static build with no server
+            behind it — your entry is validated here in the browser and nothing
+            is sent or stored until the database lands.
           </p>
         </div>
       </div>

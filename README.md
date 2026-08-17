@@ -85,7 +85,7 @@ Then open <http://localhost:3000>.
 | `/explore`     | Leaflet map + faceted filters over the seed index             |
 | `/spot/[slug]` | detail: plates, write-up, access notes, dated community notes |
 | `/submit`      | submission form with a map picker                             |
-| `/api/spots`   | mock API — `GET` lists, `POST` validates and accepts          |
+| `/api/spots`   | the seed index as JSON (`force-static`, so it exports too)    |
 
 Spot pages are statically generated from `generateStaticParams`, so all 14
 seed entries prerender.
@@ -95,19 +95,71 @@ seed entries prerender.
 `src/lib/data/spots.ts` is the stand-in for the database. Coordinates are
 real; write-ups are illustrative.
 
-`src/lib/spots/validate.ts` holds **one** validator, used by both the
-submission form (for inline feedback) and the API route (for enforcement) —
-the client copy is a convenience, never the gate.
+`src/lib/spots/validate.ts` holds **one** validator. It runs in the browser
+for the submission form today, and it is the same function a server will run
+once there is one — so the rules never get reimplemented on two sides and
+drift apart.
 
-`POST /api/spots` validates and returns `201` with the accepted draft, but
-does not persist: the process is stateless, and an in-memory store would
-start lying the moment there were two instances. The handler bodies are the
-only thing that needs replacing when Supabase lands.
+Nothing is persisted anywhere yet. `SpotDraft` is already the payload shape
+and `validateDraft` is already the contract, so adding `POST` back alongside
+a Supabase-backed runtime is additive rather than a rewrite.
 
 Photography doesn't exist yet, so `photos[].src` is `null` throughout and
 the gallery renders a deterministic terrain plate per caption. Populating
 the field with real URLs is a data change — `SpotPlate` already renders
 `next/image` when a `src` is present.
+
+## deploying to github pages
+
+`.github/workflows/deploy-pages.yml` builds a static export on every push to
+`main` and publishes it.
+
+**Two things you have to do by hand, once:**
+
+1. **The repo has to be public** — or the account needs GitHub Pro/Team/
+   Enterprise. Pages will not publish from a private repo on the Free plan.
+2. **Settings → Pages → Source → "GitHub Actions"**. The workflow can't
+   select its own source.
+
+Then it deploys to `https://<owner>.github.io/<repo>/`.
+
+### how the static build differs
+
+Static export is opt-in, so `npm run build` stays an ordinary Node build.
+The workflow sets three variables:
+
+| variable                | effect                                              |
+| ----------------------- | --------------------------------------------------- |
+| `STATIC_EXPORT=true`    | `output: export`, `trailingSlash`, unoptimized images |
+| `NEXT_PUBLIC_BASE_PATH` | prefixes assets and routes for the project subpath   |
+| `NEXT_PUBLIC_SITE_URL`  | absolute URLs in OG metadata                          |
+
+Build it locally exactly as CI does:
+
+```bash
+STATIC_EXPORT=true \
+NEXT_PUBLIC_BASE_PATH=/broknowsaspot-wtf \
+NEXT_PUBLIC_SITE_URL=https://<owner>.github.io/broknowsaspot-wtf \
+npm run build
+```
+
+Everything still works on a static host — the 3D hero, the map, filters,
+theming, and form validation are all client-side. What changes:
+
+- **There is no `POST`.** A static host has no server. `GET /api/spots` is
+  marked `force-static` and exports as a JSON file, so the same URL works in
+  both modes; the submission form runs `validateDraft` in the browser and
+  says plainly that nothing is stored.
+- `trailingSlash` is on, so routes are `/explore/`, not `/explore`. Next's
+  client router prefetches the directory form; without it those prefetches
+  miss and every navigation falls back to a full page load.
+
+### moving to a custom domain
+
+Drop `NEXT_PUBLIC_BASE_PATH` from the workflow, set `NEXT_PUBLIC_SITE_URL`
+to the domain, and add a `CNAME` file to `public/`. No component changes —
+nothing reads the base path directly; Next applies it to `<Link>` and
+`next/image` itself.
 
 ## known gaps
 
@@ -122,5 +174,6 @@ the field with real URLs is a data change — `SpotPlate` already renders
 
 ## status
 
-Scaffold stage. Data is served from an in-repo seed set through a mock API
-route; Supabase/Postgres and auth land in a follow-up.
+Scaffold stage, deployable to GitHub Pages as a static export. Data comes
+from an in-repo seed set; Supabase/Postgres, auth and real persistence land
+in a follow-up.
