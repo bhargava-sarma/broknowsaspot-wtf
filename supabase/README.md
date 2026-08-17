@@ -6,6 +6,8 @@ Postgres on Supabase, with PostGIS. Migrations run in filename order.
 | --------------------------------- | ------------------------------------- |
 | `20260817090000_init.sql`         | extensions, enums, tables, indexes, RLS |
 | `20260817090100_seed_spots.sql`   | the 14 seed spots and their notes     |
+| `20260817120000_fix_function_search_path.sql` | pins the trigger's search_path |
+| `20260817140000_submissions_and_reports.sql`  | write path, reports, auto-hide |
 
 ## applying them
 
@@ -66,3 +68,39 @@ machine:
 ```bash
 npm run seed:sql
 ```
+
+## moderation
+
+A spot auto-hides once **10 distinct people** report it. Every reason counts
+the same — there is no fast lane for safety reports. That was a deliberate
+product call.
+
+Two things make the count mean something:
+
+- `unique (spot_id, reporter_key)` — one report per person per spot, enforced
+  by the database. One person clicking ten times moves the count to 1.
+- `reporter_key` is an HMAC of the client address, never the address itself.
+  It is a weak identity (shared behind NAT, trivially rotated with a VPN) and
+  is treated as one: it raises the cost of gaming the threshold rather than
+  making it impossible.
+
+**The threshold lives only in `apply_report_threshold()`.** It is never sent
+to the client and never shown in the UI, because publishing "10 reports
+removes a spot" is an instruction manual for brigading.
+
+Hiding sets `hidden_at`; nothing is deleted. A threshold can be reached by a
+coordinated group as easily as a genuine one, so it has to be reversible and
+has to leave the evidence in place.
+
+### moderating by hand, for now
+
+Until the admin screen exists, use the Table Editor:
+
+- **hide** — set `spots.hidden_at` to now
+- **restore** — clear `spots.hidden_at` and `hidden_reason`
+- **who reported what** — query `spot_reports` by `spot_id`
+- **trace a spammer** — `submission_log` links `submitter_key` to every spot
+  that key submitted
+
+Changes appear on the site within five minutes (ISR), or immediately on the
+next deploy.

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useCallback, useState } from "react";
 
 import { MapPlaceholder } from "@/components/map/map-placeholder";
+import { TurnstileWidget } from "@/components/security/turnstile-widget";
 import { ChoiceField, TextField } from "@/components/ui/field";
 import { useMounted } from "@/lib/hooks/use-mounted";
 import { type FieldErrors, validateDraft } from "@/lib/spots/validate";
@@ -53,19 +54,19 @@ const EMPTY: FormState = {
   lng: null,
 };
 
-/**
- * No `submitting` or `failed` state any more: with nothing to POST to,
- * validation is synchronous and cannot fail for reasons the fields don't
- * already explain.
- */
-type Status = { kind: "idle" } | { kind: "sent"; name: string };
+type Status =
+  | { kind: "idle" }
+  | { kind: "submitting" }
+  | { kind: "sent"; name: string; url: string }
+  | { kind: "failed"; message: string };
 
 export function SubmitForm() {
   const [form, setForm] = useState<FormState>(EMPTY);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [status, setStatus] = useState<Status>({ kind: "idle" });
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
   // Keeps the hydration render identical to the prerendered HTML; see
-  // useMounted for why the static export needs this.
+  // useMounted for why this is needed.
   const mounted = useMounted();
 
   const set = useCallback(
@@ -83,17 +84,16 @@ export function SubmitForm() {
   );
 
   const handleSubmit = useCallback(
-    (event: React.FormEvent) => {
+    async (event: React.FormEvent) => {
       event.preventDefault();
 
-      // The site deploys as a static export, so there is no endpoint to post
-      // to. `validateDraft` is the same function a server would run — it
-      // moves here wholesale rather than being reimplemented, so the rules
-      // stay in one place for when a backend does exist.
+      // Same validator the API route runs. This copy is for fast inline
+      // feedback only — the server re-runs it and is the enforcement point.
       const result = validateDraft(form);
 
       if (!result.ok) {
         setErrors(result.errors);
+        setStatus({ kind: "idle" });
         // Move focus to the problem rather than leaving it at the button.
         const first = document.querySelector<HTMLElement>(
           "[aria-invalid=true]",
@@ -104,10 +104,43 @@ export function SubmitForm() {
       }
 
       setErrors({});
-      setStatus({ kind: "sent", name: result.draft.name });
-      setForm(EMPTY);
+      setStatus({ kind: "submitting" });
+
+      try {
+        const response = await fetch("/api/spots", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ ...result.draft, turnstileToken }),
+        });
+        const payload = await response.json();
+
+        if (!response.ok) {
+          // 422 carries per-field errors; everything else is a single
+          // message about the request rather than about the content.
+          if (payload?.errors) setErrors(payload.errors);
+          setStatus({
+            kind: "failed",
+            message:
+              payload?.message ??
+              "the server rejected that — see the fields above.",
+          });
+          return;
+        }
+
+        setStatus({
+          kind: "sent",
+          name: result.draft.name,
+          url: payload.url ?? "/explore",
+        });
+        setForm(EMPTY);
+      } catch {
+        setStatus({
+          kind: "failed",
+          message: "couldn't reach the server. try again in a moment.",
+        });
+      }
     },
-    [form],
+    [form, turnstileToken],
   );
 
   if (status.kind === "sent") {
@@ -119,15 +152,21 @@ export function SubmitForm() {
             received
           </p>
           <h2 className="mt-6 text-h2 font-light text-ink lowercase">
-            {status.name} checks out
+            {status.name} is on the map
           </h2>
           <p className="mt-5 max-w-[46ch] text-body text-muted">
-            every field passed validation. to be straight with you: nothing was
-            sent anywhere and nothing is stored — the site is a static build
-            with no server behind it yet. submissions start persisting when the
-            database lands, and this form will work exactly as it does now.
+            it&rsquo;s live now — no queue, no moderation wait. if it turns out
+            to be wrong or unsafe, anyone can report it and enough reports take
+            it down again.
           </p>
           <div className="mt-10 flex flex-wrap gap-x-10 gap-y-4">
+            <Link
+              href={status.url}
+              className="tap touch-target inline-flex items-center gap-3 border-b border-accent pb-2 font-mono text-tiny tracking-[0.04em] text-accent lowercase"
+            >
+              see the entry
+              <span aria-hidden="true">→</span>
+            </Link>
             <button
               type="button"
               onClick={() => setStatus({ kind: "idle" })}
@@ -316,18 +355,31 @@ export function SubmitForm() {
         {/* ---------------------------------------------------- submit */}
         <div className="lg:col-span-3" />
         <div className="lg:col-span-8">
+          <div className="mb-6">
+            <TurnstileWidget onToken={setTurnstileToken} />
+          </div>
+
+          {status.kind === "failed" ? (
+            <p
+              role="alert"
+              className="mb-6 font-mono text-micro text-accent lowercase"
+            >
+              {status.message}
+            </p>
+          ) : null}
+
           <button
             type="submit"
-            className="tap touch-target inline-flex items-center gap-3 border-b border-rule-strong pb-2 font-mono text-tiny tracking-[0.04em] text-ink lowercase"
+            disabled={status.kind === "submitting"}
+            className="tap touch-target inline-flex items-center gap-3 border-b border-rule-strong pb-2 font-mono text-tiny tracking-[0.04em] text-ink lowercase disabled:opacity-50"
           >
-            submit the spot
+            {status.kind === "submitting" ? "sending…" : "submit the spot"}
             <span aria-hidden="true">→</span>
           </button>
 
           <p className="mt-5 max-w-[46ch] font-mono text-micro text-faint lowercase">
-            no account, no email. the site is a static build with no server
-            behind it — your entry is validated here in the browser and nothing
-            is sent or stored until the database lands.
+            no account, no email. it goes live immediately — and anyone can
+            report it, so please be accurate about access and difficulty.
           </p>
         </div>
       </div>
