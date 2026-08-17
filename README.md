@@ -85,7 +85,7 @@ Then open <http://localhost:3000>.
 | `/explore`     | Leaflet map + faceted filters over the seed index             |
 | `/spot/[slug]` | detail: plates, write-up, access notes, dated community notes |
 | `/submit`      | submission form with a map picker                             |
-| `/api/spots`   | the seed index as JSON (`force-static`, so it exports too)    |
+| `/api/spots`   | the seed index as JSON (`GET` only until the database lands)  |
 
 Spot pages are statically generated from `generateStaticParams`, so all 14
 seed entries prerender.
@@ -109,57 +109,24 @@ the gallery renders a deterministic terrain plate per caption. Populating
 the field with real URLs is a data change — `SpotPlate` already renders
 `next/image` when a `src` is present.
 
-## deploying to github pages
+## deploying
 
-`.github/workflows/deploy-pages.yml` builds a static export on every push to
-`main` and publishes it.
+Production is **Vercel**, deployed from `main`. Nothing special is required:
+Next.js is detected automatically and the default build settings are correct.
 
-**Two things you have to do by hand, once:**
+Environment variables live in the Vercel dashboard. Anything prefixed
+`NEXT_PUBLIC_` is compiled into the browser bundle and is readable by anyone;
+everything else stays server-side.
 
-1. **The repo has to be public** — or the account needs GitHub Pro/Team/
-   Enterprise. Pages will not publish from a private repo on the Free plan.
-2. **Settings → Pages → Source → "GitHub Actions"**. The workflow can't
-   select its own source.
+| variable                        | exposure | notes                              |
+| ------------------------------- | -------- | ---------------------------------- |
+| `NEXT_PUBLIC_SUPABASE_URL`      | public   | project URL                        |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | public   | publishable / anon key             |
+| `SUPABASE_SERVICE_ROLE_KEY`     | secret   | server-only, never `NEXT_PUBLIC_`  |
+| `NEXT_PUBLIC_SITE_URL`          | public   | absolute URLs in OG metadata       |
 
-Then it deploys to `https://<owner>.github.io/<repo>/`.
+The Supabase → Vercel integration syncs the first three automatically.
 
-### how the static build differs
-
-Static export is opt-in, so `npm run build` stays an ordinary Node build.
-The workflow sets three variables:
-
-| variable                | effect                                              |
-| ----------------------- | --------------------------------------------------- |
-| `STATIC_EXPORT=true`    | `output: export`, `trailingSlash`, unoptimized images |
-| `NEXT_PUBLIC_BASE_PATH` | prefixes assets and routes for the project subpath   |
-| `NEXT_PUBLIC_SITE_URL`  | absolute URLs in OG metadata                          |
-
-Build it locally exactly as CI does:
-
-```bash
-STATIC_EXPORT=true \
-NEXT_PUBLIC_BASE_PATH=/broknowsaspot-wtf \
-NEXT_PUBLIC_SITE_URL=https://<owner>.github.io/broknowsaspot-wtf \
-npm run build
-```
-
-Everything still works on a static host — the 3D hero, the map, filters,
-theming, and form validation are all client-side. What changes:
-
-- **There is no `POST`.** A static host has no server. `GET /api/spots` is
-  marked `force-static` and exports as a JSON file, so the same URL works in
-  both modes; the submission form runs `validateDraft` in the browser and
-  says plainly that nothing is stored.
-- `trailingSlash` is on, so routes are `/explore/`, not `/explore`. Next's
-  client router prefetches the directory form; without it those prefetches
-  miss and every navigation falls back to a full page load.
-
-### moving to a custom domain
-
-Drop `NEXT_PUBLIC_BASE_PATH` from the workflow, set `NEXT_PUBLIC_SITE_URL`
-to the domain, and add a `CNAME` file to `public/`. No component changes —
-nothing reads the base path directly; Next applies it to `<Link>` and
-`next/image` itself.
 
 ## known gaps
 
@@ -174,6 +141,5 @@ nothing reads the base path directly; Next applies it to `<Link>` and
 
 ## status
 
-Scaffold stage, deployable to GitHub Pages as a static export. Data comes
-from an in-repo seed set; Supabase/Postgres, auth and real persistence land
-in a follow-up.
+Live on Vercel, reading from an in-repo seed set. Supabase/Postgres, real
+persistence, submissions and admin moderation land next.
