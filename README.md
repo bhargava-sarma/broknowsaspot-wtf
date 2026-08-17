@@ -130,11 +130,10 @@ The Supabase → Vercel integration syncs the first three automatically.
 
 ## known gaps
 
-- **Tiles are unverified from CI.** CARTO basemap tiles (and any remote
-  image host) are blocked by the sandbox's egress policy, so the map was
-  verified with markers, controls and interaction but never with raster
-  tiles actually painted. Swap `TILE_URL` in the map components for another
-  provider if needed.
+- **Tiles are on CARTO's free basemaps**, which are not a production plan.
+  Verified rendering in both themes on the live deploy; get a proper tile
+  account (CARTO, MapTiler, Mapbox) before any real traffic. Swapping
+  provider is a one-line change to `TILE_URL` in the map components.
 - Filters are component state, not URL state — no shareable filtered views
   yet.
 - No persistence, no auth. Both land with the database.

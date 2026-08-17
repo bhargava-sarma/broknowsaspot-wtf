@@ -422,9 +422,17 @@
 }
 
 /* Third-party rasters; nudged toward the page ground so they sit inside
-   the palette instead of glowing against it. */
+   the palette instead of glowing against it.
+   Light only: the dark basemap is already close to the page ground, and
+   dimming it collapses the land/ocean separation into one murky field.
+   `data-theme` is always stamped by ThemeScript before first paint, so
+   this attribute selector is safe to rely on here. */
 .leaflet-tile-pane {
   opacity: 0.92;
+}
+
+[data-theme="dark"] .leaflet-tile-pane {
+  opacity: 1;
 }
 
 /* ------------------------------------------------------------------ *
