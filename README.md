@@ -85,24 +85,32 @@ Then open <http://localhost:3000>.
 | `/explore`     | Leaflet map + faceted filters over the seed index             |
 | `/spot/[slug]` | detail: plates, write-up, access notes, dated community notes |
 | `/submit`      | submission form with a map picker                             |
-| `/api/spots`   | the seed index as JSON (`GET` only until the database lands)  |
+| `/api/spots`   | the index as JSON (`GET` only until submissions land)         |
 
-Spot pages are statically generated from `generateStaticParams`, so all 14
-seed entries prerender.
+Spot pages prerender from `generateStaticParams` and revalidate every five
+minutes, so an added spot appears without a redeploy. `dynamicParams` is on,
+so a slug created after the last build renders on demand instead of 404ing.
 
 ## data
 
-`src/lib/data/spots.ts` is the stand-in for the database. Coordinates are
-real; write-ups are illustrative.
+Postgres on Supabase, with PostGIS. Schema, migrations and the reasoning
+behind them live in [`supabase/README.md`](supabase/README.md).
+
+`src/lib/data/spots-repo.ts` is the only way pages read spots, and **every
+read falls back to the in-repo seed set** when the database is unreachable.
+That is load-bearing rather than defensive decoration: Supabase's Vercel
+integration syncs credentials as soon as the projects are linked, which is
+*before* anyone runs the migrations. Without the fallback the live site
+would 500 on every page during that window.
+
+The ladder is: no credentials → seed; credentials but the query fails or
+throws → log and seed; query succeeds → real data. The site is never down
+because of a half-finished migration.
 
 `src/lib/spots/validate.ts` holds **one** validator. It runs in the browser
-for the submission form today, and it is the same function a server will run
-once there is one — so the rules never get reimplemented on two sides and
-drift apart.
-
-Nothing is persisted anywhere yet. `SpotDraft` is already the payload shape
-and `validateDraft` is already the contract, so adding `POST` back alongside
-a Supabase-backed runtime is additive rather than a rewrite.
+for the submission form today, and it is the same function the server will
+run once `POST` exists — so the rules never get reimplemented on two sides
+and drift apart.
 
 Photography doesn't exist yet, so `photos[].src` is `null` throughout and
 the gallery renders a deterministic terrain plate per caption. Populating
@@ -136,9 +144,12 @@ The Supabase → Vercel integration syncs the first three automatically.
   provider is a one-line change to `TILE_URL` in the map components.
 - Filters are component state, not URL state — no shareable filtered views
   yet.
-- No persistence, no auth. Both land with the database.
+- No writes yet: `POST` returns with submissions, moderation and admin auth.
+- Reports and the auto-hide threshold are not built; `hidden_at` exists in
+  the schema ready for them.
 
 ## status
 
-Live on Vercel, reading from an in-repo seed set. Supabase/Postgres, real
-persistence, submissions and admin moderation land next.
+Live on Vercel. Reads come from Supabase once the migrations are applied,
+with a seed fallback until then. Submissions, reports and admin moderation
+land next.
