@@ -5,7 +5,9 @@ import { useCallback, useMemo, useRef, useState } from "react";
 
 import { FilterRail } from "@/components/explore/filter-rail";
 import { SpotRow } from "@/components/explore/spot-row";
+import { MapPlaceholder } from "@/components/map/map-placeholder";
 import { ActionLink } from "@/components/ui/action-link";
+import { useMounted } from "@/lib/hooks/use-mounted";
 import {
   EMPTY_FILTERS,
   filterSpots,
@@ -20,17 +22,16 @@ import type { Spot } from "@/lib/types/spot";
  */
 const SpotMap = dynamic(() => import("@/components/map/spot-map"), {
   ssr: false,
-  loading: () => (
-    <div className="flex h-full w-full items-center justify-center bg-paper-raised">
-      <p className="font-mono text-micro text-faint lowercase">loading map…</p>
-    </div>
-  ),
+  loading: () => <MapPlaceholder />,
 });
 
 export function ExploreView({ spots }: { spots: Spot[] }) {
   const [filters, setFilters] = useState<SpotFilters>(EMPTY_FILTERS);
   const [selected, setSelected] = useState<string | null>(null);
   const listRef = useRef<HTMLUListElement>(null);
+  // Keeps the hydration render identical to the prerendered HTML; see
+  // useMounted for why the static export needs this.
+  const mounted = useMounted();
 
   const visible = useMemo(() => filterSpots(spots, filters), [spots, filters]);
 
@@ -66,11 +67,15 @@ export function ExploreView({ spots }: { spots: Spot[] }) {
             the whole list; the grid reorders it on desktop. */}
         <div className="order-1 lg:order-2 lg:col-span-7">
           <div className="rule-b h-[58vh] min-h-[320px] lg:sticky lg:top-[var(--bar-h)] lg:h-[calc(100dvh-var(--bar-h))] lg:border-b-0 lg:border-l lg:border-rule">
-            <SpotMap
-              spots={visible}
-              selectedSlug={selected}
-              onSelect={handleSelect}
-            />
+            {mounted ? (
+              <SpotMap
+                spots={visible}
+                selectedSlug={selected}
+                onSelect={handleSelect}
+              />
+            ) : (
+              <MapPlaceholder />
+            )}
           </div>
         </div>
 

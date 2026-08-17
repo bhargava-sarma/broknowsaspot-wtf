@@ -1,49 +1,26 @@
 import { NextResponse } from "next/server";
 
 import { SPOTS } from "@/lib/data/spots";
-import { validateDraft } from "@/lib/spots/validate";
 
 /**
- * Mock API over the seed set.
+ * The seed index as JSON.
  *
- * Deliberately shaped like the real thing — same payloads, same validation,
- * same status codes — so swapping the body of these handlers for Supabase
- * queries is the only change needed later. Submissions are accepted,
- * validated and echoed back, but nothing is persisted: the process is
- * stateless and any in-memory store would be a lie the moment there are two
- * server instances.
+ * `force-static` matters: it lets this handler survive `output: export`,
+ * where it is emitted as a plain JSON file rather than a running route. The
+ * same URL therefore works on GitHub Pages and on a Node host, which keeps
+ * the static build from being a different application.
+ *
+ * There is deliberately no POST. A static host has no server to accept one,
+ * and the previous mock handler validated and then discarded the payload —
+ * so removing it costs nothing real. The submission form now runs the same
+ * validator client-side and says plainly that nothing is stored.
+ *
+ * When Supabase lands, POST comes back here alongside a server runtime:
+ * `validateDraft` in lib/spots/validate.ts is already the shared contract,
+ * and `SpotDraft` is already the payload shape.
  */
+export const dynamic = "force-static";
 
-export async function GET() {
+export function GET() {
   return NextResponse.json({ spots: SPOTS, total: SPOTS.length });
-}
-
-export async function POST(request: Request) {
-  let payload: unknown;
-  try {
-    payload = await request.json();
-  } catch {
-    return NextResponse.json(
-      { ok: false, errors: { _: "request body was not valid json" } },
-      { status: 400 },
-    );
-  }
-
-  const result = validateDraft(payload);
-  if (!result.ok) {
-    return NextResponse.json(
-      { ok: false, errors: result.errors },
-      { status: 422 },
-    );
-  }
-
-  return NextResponse.json(
-    {
-      ok: true,
-      // The id a database would have assigned.
-      received: { ...result.draft, submittedAt: new Date().toISOString() },
-      message: "submission accepted — not persisted until the database lands",
-    },
-    { status: 201 },
-  );
 }

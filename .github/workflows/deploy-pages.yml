@@ -1,0 +1,63 @@
+name: deploy to github pages
+
+on:
+  push:
+    branches: [main]
+  # Lets you re-publish without a commit (e.g. after flipping repo visibility).
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Never let two publishes race; queue instead of cancelling, so an in-flight
+# deploy always finishes rather than leaving the site half-updated.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      STATIC_EXPORT: "true"
+      # Project sites are served from /<repo>/, so assets and routes need the
+      # prefix. Delete these two lines (and add a CNAME) for a custom domain.
+      NEXT_PUBLIC_BASE_PATH: /${{ github.event.repository.name }}
+      NEXT_PUBLIC_SITE_URL: https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: install
+        run: npm ci
+
+      - name: build static export
+        run: npm run build
+
+      - name: disable jekyll
+        # The Actions deploy path doesn't run Jekyll, but this costs nothing
+        # and stops _next/ being silently stripped if anyone ever switches
+        # back to a branch-based publish.
+        run: touch out/.nojekyll
+
+      - uses: actions/configure-pages@v5
+
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: out
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
