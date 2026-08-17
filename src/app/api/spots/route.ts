@@ -1,26 +1,23 @@
 import { NextResponse } from "next/server";
 
-import { SPOTS } from "@/lib/data/spots";
+import { listSpots } from "@/lib/data/spots-repo";
 
 /**
- * The seed index as JSON.
+ * The index as JSON.
  *
- * `force-static` matters: it lets this handler survive `output: export`,
- * where it is emitted as a plain JSON file rather than a running route. The
- * same URL therefore works on GitHub Pages and on a Node host, which keeps
- * the static build from being a different application.
+ * Reads through the same repository the pages use, so it shows exactly
+ * what the site shows — including the seed fallback while the database is
+ * still being set up.
  *
- * There is deliberately no POST. A static host has no server to accept one,
- * and the previous mock handler validated and then discarded the payload —
- * so removing it costs nothing real. The submission form now runs the same
- * validator client-side and says plainly that nothing is stored.
- *
- * When Supabase lands, POST comes back here alongside a server runtime:
- * `validateDraft` in lib/spots/validate.ts is already the shared contract,
- * and `SpotDraft` is already the payload shape.
+ * There is deliberately no POST yet. It returns with the submission work,
+ * where it will run on the server with the service role key so that
+ * validation, rate limiting and bot checks happen somewhere a client
+ * cannot skip. `validateDraft` in lib/spots/validate.ts is already the
+ * shared contract, and `SpotDraft` is already the payload shape.
  */
-export const dynamic = "force-static";
+export const revalidate = 300;
 
-export function GET() {
-  return NextResponse.json({ spots: SPOTS, total: SPOTS.length });
+export async function GET() {
+  const spots = await listSpots();
+  return NextResponse.json({ spots, total: spots.length });
 }

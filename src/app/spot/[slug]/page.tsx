@@ -9,13 +9,20 @@ import {
   CategoryTag,
   DifficultyMeter,
 } from "@/components/ui/spot-tags";
-import { allSlugs, getSpot } from "@/lib/data/spots";
+import { getSpotBySlug, listSpotSlugs } from "@/lib/data/spots-repo";
 import { ACCESS_NOTES } from "@/lib/types/spot";
 
 type Params = { slug: string };
 
-export function generateStaticParams(): Params[] {
-  return allSlugs().map((slug) => ({ slug }));
+/** Rebuild at most every 5 minutes; see the explore page for why. */
+export const revalidate = 300;
+
+/** Slugs added after the last build render on demand rather than 404ing. */
+export const dynamicParams = true;
+
+export async function generateStaticParams(): Promise<Params[]> {
+  const slugs = await listSpotSlugs();
+  return slugs.map((slug) => ({ slug }));
 }
 
 export async function generateMetadata({
@@ -24,7 +31,7 @@ export async function generateMetadata({
   params: Promise<Params>;
 }): Promise<Metadata> {
   const { slug } = await params;
-  const spot = getSpot(slug);
+  const spot = await getSpotBySlug(slug);
   if (!spot) return { title: "not found" };
 
   return {
@@ -57,7 +64,7 @@ export default async function SpotPage({
   params: Promise<Params>;
 }) {
   const { slug } = await params;
-  const spot = getSpot(slug);
+  const spot = await getSpotBySlug(slug);
   if (!spot) notFound();
 
   return (
