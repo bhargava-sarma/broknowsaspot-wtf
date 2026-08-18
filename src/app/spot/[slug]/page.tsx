@@ -12,6 +12,7 @@ import {
   DifficultyMeter,
 } from "@/components/ui/spot-tags";
 import { getSpotBySlug, listSpotSlugs } from "@/lib/data/spots-repo";
+import { SITE_TITLE } from "@/lib/site";
 import { formatDate } from "@/lib/utils/date";
 import { ACCESS_NOTES } from "@/lib/types/spot";
 
@@ -41,7 +42,7 @@ export async function generateMetadata({
     title: spot.name,
     description: spot.summary,
     openGraph: {
-      title: `${spot.name} — broknowsaspot.wtf`,
+      title: `${spot.name} — ${SITE_TITLE}`,
       description: spot.summary,
       type: "article",
     },

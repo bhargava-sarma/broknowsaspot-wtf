@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 
 import { ThemeToggle } from "@/components/ui/theme-toggle";
 import { isActivePath, NAV_ITEMS } from "@/lib/nav";
+import { SITE_NAME, SITE_TLD } from "@/lib/site";
 import { cn } from "@/lib/utils/cn";
 
 /**
@@ -24,8 +25,8 @@ export function SiteHeader() {
           href="/"
           className="tap font-mono text-tiny tracking-[0.02em] text-ink lowercase"
         >
-          broknowsaspot
-          <span className="text-accent">.wtf</span>
+          {SITE_NAME}
+          <span className="text-accent">{SITE_TLD}</span>
         </Link>
 
         <div className="flex items-center gap-[calc(var(--gutter)*0.85)]">

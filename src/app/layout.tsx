@@ -4,34 +4,29 @@ import { MobileBar } from "@/components/layout/mobile-bar";
 import { SiteFooter } from "@/components/layout/site-footer";
 import { SiteHeader } from "@/components/layout/site-header";
 import { fontVariables } from "@/lib/fonts";
+import {
+  SITE_DESCRIPTION,
+  SITE_DESCRIPTION_SHORT,
+  SITE_TITLE,
+  SITE_URL,
+} from "@/lib/site";
 import { ThemeProvider } from "@/lib/theme/theme-provider";
 import { ThemeScript } from "@/lib/theme/theme-script";
 
 import "./globals.css";
 
-/**
- * Absolute URLs in OG tags have to match wherever this is actually served.
- * The Pages workflow sets this to the project-site URL; it falls back to the
- * eventual custom domain so local builds and a future root-domain deploy
- * both produce sane metadata.
- */
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://broknowsaspot.wtf";
-
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "broknowsaspot.wtf — a guide to the spots regular people don't go",
-    template: "%s — broknowsaspot.wtf",
+    default: `${SITE_TITLE} — a guide to the spots regular people don't go`,
+    template: `%s — ${SITE_TITLE}`,
   },
-  description:
-    "a crowdsourced index of hidden, offbeat and adventurous places, for people who don't stick to the tourist path.",
+  description: SITE_DESCRIPTION,
   openGraph: {
     type: "website",
-    siteName: "broknowsaspot.wtf",
-    title: "broknowsaspot.wtf",
-    description:
-      "a crowdsourced index of hidden, offbeat and adventurous places.",
+    siteName: SITE_TITLE,
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION_SHORT,
   },
   robots: { index: true, follow: true },
 };
