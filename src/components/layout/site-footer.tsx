@@ -39,8 +39,8 @@ export function SiteFooter() {
         <div className="col-span-6 mt-8 sm:col-span-3 sm:mt-0 lg:col-span-2">
           <p className="label">status</p>
           <ul className="mt-3 space-y-1.5 font-mono text-micro text-muted lowercase">
-            <li>scaffold / v0.1</li>
-            <li>seed data — no db yet</li>
+            <li>v0.1</li>
+            <li>postgres · postgis</li>
             <li>
               <span className="text-accent">●</span> open to submissions
             </li>

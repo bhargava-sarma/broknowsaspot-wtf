@@ -13,11 +13,13 @@
     "typecheck": "tsc --noEmit",
     "check:contrast": "node scripts/check-contrast.mjs",
     "check": "npm run typecheck && npm run lint && npm run check:contrast && npm run format:check",
-    "seed:sql": "node scripts/generate-seed-sql.mjs"
+    "seed:sql": "node scripts/generate-seed-sql.mjs",
+    "db:test": "supabase/tests/run.sh"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.8",
     "@react-three/fiber": "^9.7.0",
+    "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.112.3",
     "framer-motion": "^13.1.0",
     "leaflet": "^1.9.4",
