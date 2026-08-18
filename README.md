@@ -165,6 +165,9 @@ people reporting an entry auto-hides it, every reason counting the same.
 by Postgres rather than by the app: admin pages read as the signed-in user
 under row level security, so a bug in the app's own check leaks nothing.
 
+`anon` holds no EXECUTE on any admin function either, so an anonymous
+client cannot reach even the membership check.
+
 There is **no INSERT, UPDATE or DELETE policy anywhere in the schema**, for
 any role, admins included. Every visibility change goes through one
 function that writes the change and its audit row in a single transaction,
