@@ -14,16 +14,21 @@
     "check:contrast": "node scripts/check-contrast.mjs",
     "check": "npm run typecheck && npm run lint && npm run check:contrast && npm run format:check",
     "seed:sql": "node scripts/generate-seed-sql.mjs",
-    "db:test": "supabase/tests/run.sh"
+    "db:test": "supabase/tests/run.sh",
+    "appwrite:provision": "node --no-warnings=MODULE_TYPELESS_PACKAGE_JSON scripts/appwrite-provision.mts",
+    "appwrite:seed": "node --no-warnings=MODULE_TYPELESS_PACKAGE_JSON scripts/appwrite-seed.mts",
+    "appwrite:verify": "node --no-warnings=MODULE_TYPELESS_PACKAGE_JSON scripts/appwrite-verify.mts"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.8",
     "@react-three/fiber": "^9.7.0",
     "@supabase/ssr": "^0.12.4",
     "@supabase/supabase-js": "^2.112.3",
+    "appwrite": "^26.2.0",
     "framer-motion": "^13.1.0",
     "leaflet": "^1.9.4",
     "next": "^16.3.1",
+    "node-appwrite": "^28.0.0",
     "react": "^19.2.0",
     "react-dom": "^19.2.0",
     "react-leaflet": "^5.0.0",

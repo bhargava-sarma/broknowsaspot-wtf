@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { NAV_ITEMS } from "@/lib/nav";
+import { SITE_NAME, SITE_TLD } from "@/lib/site";
 
 /**
  * Terminal block. Reads like a device's back-panel legend: a column of
@@ -12,7 +13,8 @@ export function SiteFooter() {
       <div className="shell grid-swiss py-[clamp(2rem,1.4rem+2.4vw,3.5rem)]">
         <div className="col-span-12 sm:col-span-6 lg:col-span-5">
           <p className="font-mono text-tiny text-ink lowercase">
-            broknowsaspot<span className="text-accent">.wtf</span>
+            {SITE_NAME}
+            <span className="text-accent">{SITE_TLD}</span>
           </p>
           <p className="mt-3 max-w-[38ch] text-small text-muted">
             a crowdsourced index of places that never made the guidebook. go

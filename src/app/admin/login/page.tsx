@@ -1,5 +1,6 @@
 import { PageHeader } from "@/components/layout/page-header";
 import { LoginForm } from "@/components/admin/login-form";
+import { SITE_TITLE } from "@/lib/site";
 import { isAuthConfigured } from "@/lib/supabase/server-client";
 
 /**
@@ -13,7 +14,7 @@ export default function AdminLoginPage() {
       <PageHeader
         eyebrow="restricted"
         title="admin"
-        lede="moderation for broknowsaspot.wtf. accounts are issued by hand — there is no sign-up."
+        lede={`moderation for ${SITE_TITLE}. accounts are issued by hand — there is no sign-up.`}
       />
 
       <section className="shell py-[clamp(2.5rem,1.8rem+4vw,5rem)]">
