@@ -36,3 +36,26 @@ do $$ begin create role service_role nologin bypassrls;
 
 grant usage on schema public, auth, extensions
   to anon, authenticated, service_role;
+
+-- ---------------------------------------------------------------------
+-- Supabase's default privileges, and the reason they live *here* rather
+-- than in a file that runs after the migrations.
+--
+-- Supabase grants the API roles access to everything in `public` by
+-- default and lets RLS do the narrowing for tables. Crucially these are
+-- DEFAULT privileges: they attach at CREATE time, so a migration that
+-- ends with `revoke execute ... from anon` wins, exactly as it does on a
+-- real project.
+--
+-- This file used to hand out the same grants *after* the migrations ran,
+-- which silently undid every REVOKE they performed and made
+-- anon_admin_access look clean locally while it was 5 in production.
+-- Setting them up front is the only faithful order.
+-- ---------------------------------------------------------------------
+
+alter default privileges in schema public
+  grant all on tables    to anon, authenticated, service_role;
+alter default privileges in schema public
+  grant all on functions to anon, authenticated, service_role;
+alter default privileges in schema public
+  grant all on sequences to anon, authenticated, service_role;

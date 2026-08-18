@@ -9,6 +9,7 @@ Postgres on Supabase, with PostGIS. Migrations run in filename order.
 | `20260817120000_fix_function_search_path.sql` | pins the trigger's search_path |
 | `20260817140000_submissions_and_reports.sql`  | write path, reports, auto-hide |
 | `20260818090000_admin_moderation.sql`         | admins, moderation log, RPCs   |
+| `20260818140000_revoke_anon_function_grants.sql` | takes EXECUTE back from anon |
 
 ## applying them
 
@@ -63,7 +64,7 @@ having lost anything.
 ## testing the security model
 
 The claims above are asserted, not asserted-in-a-comment. `supabase/tests`
-applies every migration to a scratch database and checks 76 things:
+applies every migration to a scratch database and checks 83 things:
 
 ```bash
 npm run db:test      # needs a local postgres with postgis available
@@ -91,6 +92,21 @@ The harness creates `auth.users`, `auth.uid()` and the anon /
 authenticated / service_role roles, because a plain Postgres has none of
 them and the migrations will not apply without them. **Never point it at a
 Supabase project.**
+
+It also reproduces Supabase's *default privileges*, and does so **before**
+the migrations run rather than after. That ordering is load-bearing and
+was wrong once: the harness used to grant EXECUTE to the API roles after
+every migration, silently undoing their REVOKEs, so the suite passed while
+`anon` still held EXECUTE on `is_admin()`, `moderate_spot()` and
+`admin_spot_queue()` in production. `verify.sql` caught it there. The
+lesson is in the file — a harness that does not match the real
+environment's grants tests nothing about grants.
+
+Which is also why `03-security.sql` asserts on `has_function_privilege`
+directly and not only through probes. A probe cannot tell the difference:
+`anon calls the queue` returns `42501` whether the call was refused by a
+missing grant or by the function's own membership check, and it passed
+throughout the period the grant was wrong.
 
 `verify.sql` is the one to run *on* Supabase, in the SQL Editor, after
 applying migrations. It is read-only and deliberately a single statement:
@@ -178,6 +194,9 @@ Three checks, and they fail independently:
 | `src/proxy.ts` | redirects signed-out requests off `/admin` | someone sees a page that then refuses them |
 | `readAdminGate()` | re-checks membership per render | the queue query is refused instead |
 | `is_admin()` in Postgres | governs every policy and both RPCs | **nothing** — this is the real gate |
+
+Underneath all three, `anon` holds no EXECUTE on any admin function, so an
+anonymous client cannot reach even the membership check.
 
 The third one is the one that matters. Admin reads run as the signed-in
 user under RLS, so a bug in the first two leaks nothing: Postgres returns

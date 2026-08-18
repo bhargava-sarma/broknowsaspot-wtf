@@ -29,7 +29,6 @@ for migration in "$HERE"/../migrations/*.sql; do
   echo "  applying $(basename "$migration")"
   run "$migration"
 done
-run "$HERE/01-grants.sql"
 run "$HERE/02-probe.sql"
 
 echo

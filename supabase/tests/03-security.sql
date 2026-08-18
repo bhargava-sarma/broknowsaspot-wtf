@@ -103,6 +103,33 @@ from (values
   ('admin deletes from the log',      'rows:0',
     public.probe(:A, 'delete from public.moderation_log')),
 
+  -- ------------------------------------------------- the grants
+  --
+  -- The probes above cannot see this. `anon calls the queue` returns
+  -- 42501 whether the call was stopped by a missing EXECUTE grant or by
+  -- the function's own membership check — so it passed happily while anon
+  -- still held EXECUTE on all five. These read the grant directly.
+  --
+  -- Supabase's default privileges grant EXECUTE to anon, authenticated
+  -- and service_role by name, so `revoke ... from public` does not touch
+  -- them. Each has to be revoked explicitly.
+  ('anon may execute is_admin',       'false',
+    has_function_privilege('anon', 'public.is_admin()', 'execute')::text),
+  ('anon may execute the queue',      'false',
+    has_function_privilege('anon', 'public.admin_spot_queue()', 'execute')::text),
+  ('anon may execute moderate_spot',  'false',
+    has_function_privilege('anon', 'public.moderate_spot(text,text,text)', 'execute')::text),
+  ('anon may execute unique_slug',    'false',
+    has_function_privilege('anon', 'public.unique_slug(text)', 'execute')::text),
+  ('a session may execute unique_slug', 'false',
+    has_function_privilege('authenticated', 'public.unique_slug(text)', 'execute')::text),
+
+  -- ...and the two that must keep working, or the site breaks quietly.
+  ('an admin session may call the queue', 'true',
+    has_function_privilege('authenticated', 'public.admin_spot_queue()', 'execute')::text),
+  ('the submit route may slug',           'true',
+    has_function_privilege('service_role', 'public.unique_slug(text)', 'execute')::text),
+
   -- ------------------------------------------- moderate_spot's inputs
   ('unknown action',                  '22023',
     public.probe(:A, $q$select 1 from public.moderate_spot('vikos-balcony','nuke',null)$q$)),
