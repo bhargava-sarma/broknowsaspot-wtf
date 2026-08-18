@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 
 import { Reveal, RevealGroup } from "@/components/motion/reveal";
 import { ReportControl } from "@/components/spot/report-control";
+import { SpotNotes } from "@/components/spot/spot-notes";
 import { SpotPlate } from "@/components/spot/spot-plate";
 import { ActionLink } from "@/components/ui/action-link";
 import {
@@ -174,34 +175,7 @@ export default async function SpotPage({
           </div>
 
           <div className="col-span-12 mt-6 lg:col-span-8 lg:mt-0">
-            {spot.notes.length === 0 ? (
-              <p className="text-small text-muted">
-                nobody has logged a note here yet.
-              </p>
-            ) : (
-              <ul className="border-t border-rule">
-                {[...spot.notes]
-                  .sort((a, b) => b.date.localeCompare(a.date))
-                  .map((note) => (
-                    <li key={note.id} className="border-b border-rule py-5">
-                      <div className="flex items-baseline justify-between gap-4">
-                        <p className="font-mono text-micro text-ink lowercase">
-                          {note.author}
-                        </p>
-                        <time
-                          dateTime={note.date}
-                          className="shrink-0 font-mono text-micro text-faint lowercase tabular-nums"
-                        >
-                          {formatDate(note.date)}
-                        </time>
-                      </div>
-                      <p className="mt-3 max-w-[60ch] text-small text-muted">
-                        {note.body}
-                      </p>
-                    </li>
-                  ))}
-              </ul>
-            )}
+            <SpotNotes slug={spot.slug} notes={spot.notes} />
           </div>
         </div>
       </section>

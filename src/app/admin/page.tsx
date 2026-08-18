@@ -1,8 +1,14 @@
 import { ModerationRow } from "@/components/admin/moderation-row";
+import { NoteRow } from "@/components/admin/note-row";
 import { SignOut } from "@/components/admin/sign-out";
 import { PageHeader } from "@/components/layout/page-header";
 import { ActionLink } from "@/components/ui/action-link";
-import { readQueue, readLog, type QueueEntry } from "@/lib/admin/queue";
+import {
+  readQueue,
+  readLog,
+  readNoteQueue,
+  type QueueEntry,
+} from "@/lib/admin/queue";
 import { readAdminGate } from "@/lib/admin/session";
 import { formatTimestamp } from "@/lib/utils/date";
 
@@ -81,7 +87,11 @@ export default async function AdminPage() {
     );
   }
 
-  const [queue, log] = await Promise.all([readQueue(), readLog()]);
+  const [queue, notes, log] = await Promise.all([
+    readQueue(),
+    readNoteQueue(),
+    readLog(),
+  ]);
 
   if (!queue.ok) {
     return (
@@ -111,7 +121,7 @@ export default async function AdminPage() {
 
       {/* ------------------------------------------------------ readout */}
       <section className="rule-b">
-        <div className="shell grid grid-cols-2 gap-y-6 py-[clamp(1.5rem,1.2rem+1.2vw,2.25rem)] sm:grid-cols-4">
+        <div className="shell grid grid-cols-2 gap-y-6 py-[clamp(1.5rem,1.2rem+1.2vw,2.25rem)] sm:grid-cols-3 lg:grid-cols-5">
           {[
             { label: "in the index", value: queue.entries.length },
             {
@@ -125,6 +135,10 @@ export default async function AdminPage() {
             {
               label: "removed",
               value: queue.entries.filter((e) => e.state === "removed").length,
+            },
+            {
+              label: "notes",
+              value: notes.ok ? notes.entries.length : "—",
             },
           ].map((stat) => (
             <div key={stat.label}>
@@ -172,6 +186,35 @@ export default async function AdminPage() {
           </ul>
         </section>
       ) : null}
+
+      {/* ---------------------------------------------------- the notes */}
+      <section>
+        <div className="shell rule-b py-[clamp(1.5rem,1.2rem+1.2vw,2.25rem)]">
+          <p className="label">community notes</p>
+          <p className="mt-3 max-w-[46ch] text-small text-muted">
+            newest first, hidden ones included. notes can&rsquo;t be reported,
+            so this list is the only place they get read.
+          </p>
+        </div>
+
+        {!notes.ok ? (
+          <div className="shell rule-b py-[clamp(2rem,1.5rem+2vw,3.5rem)]">
+            <p className="max-w-[46ch] text-body text-muted">{notes.message}</p>
+          </div>
+        ) : notes.entries.length > 0 ? (
+          <ul>
+            {notes.entries.map((note) => (
+              <NoteRow key={note.id} entry={note} />
+            ))}
+          </ul>
+        ) : (
+          <div className="shell rule-b py-[clamp(2rem,1.5rem+2vw,3.5rem)]">
+            <p className="max-w-[46ch] text-body text-muted">
+              nobody has left a note yet.
+            </p>
+          </div>
+        )}
+      </section>
 
       {/* ------------------------------------------------------ the log */}
       <section className="pb-[clamp(4rem,3rem+6vw,9rem)]">

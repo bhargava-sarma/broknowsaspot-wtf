@@ -130,6 +130,33 @@ from (values
   ('the submit route may slug',           'true',
     has_function_privilege('service_role', 'public.unique_slug(text)', 'execute')::text),
 
+  -- ------------------------------------------------ the note path
+  --
+  -- note_log carries the rate-limit key, which is why it must never be
+  -- readable by anyone but an admin. Putting that key on spot_notes
+  -- instead would have leaked it through the public SELECT policy, since
+  -- RLS filters rows and not columns.
+  ('anon reads the note log',        'rows:0',
+    public.probe(null, 'select 1 from public.note_log')),
+  ('non-admin reads the note log',   'rows:0',
+    public.probe(:N, 'select 1 from public.note_log')),
+  ('anon may execute moderate_note', 'false',
+    has_function_privilege('anon', 'public.moderate_note(uuid,text,text)', 'execute')::text),
+  ('anon may execute the note queue','false',
+    has_function_privilege('anon', 'public.admin_note_queue(int)', 'execute')::text),
+  ('non-admin calls the note queue', '42501',
+    public.probe(:N, 'select 1 from public.admin_note_queue()')),
+  ('admin reads the note queue',     'rows:16',
+    public.probe(:A, 'select 1 from public.admin_note_queue()')),
+  ('admin updates a note directly',  'rows:0',
+    public.probe(:A, 'update public.spot_notes set hidden_at = now()')),
+  ('admin deletes a note',           'rows:0',
+    public.probe(:A, 'delete from public.spot_notes')),
+  -- notes have no permanent tier; asking for one has to fail, not no-op
+  ('remove is not a note action',    '22023',
+    public.probe(:A, $q$select 1 from public.moderate_note(
+      (select id from public.spot_notes limit 1), 'remove', null)$q$)),
+
   -- ------------------------------------------- moderate_spot's inputs
   ('unknown action',                  '22023',
     public.probe(:A, $q$select 1 from public.moderate_spot('vikos-balcony','nuke',null)$q$)),

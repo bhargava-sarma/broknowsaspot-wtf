@@ -208,6 +208,40 @@
     color: var(--color-accent-ink);
   }
 
+  /* The native date picker is worth keeping — it is accessible, it is the
+     right control on a phone, and it works with no JavaScript — but its
+     indicator arrives as unstyled browser chrome in a page that has no
+     other icons. Dim it to sit at the weight of a label, and give it the
+     same hover-is-opacity behaviour as every other control here.
+
+     The dark rule is a filter rather than a colour because the glyph is a
+     browser-drawn bitmap, not something a colour property can reach. */
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.4;
+    transition: opacity 200ms var(--ease-damped);
+  }
+  input[type="date"]:hover::-webkit-calendar-picker-indicator,
+  input[type="date"]:focus::-webkit-calendar-picker-indicator {
+    opacity: 0.75;
+  }
+  [data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1);
+    opacity: 0.45;
+  }
+  [data-theme="dark"]
+    input[type="date"]:hover::-webkit-calendar-picker-indicator,
+  [data-theme="dark"]
+    input[type="date"]:focus::-webkit-calendar-picker-indicator {
+    opacity: 0.8;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    input[type="date"]::-webkit-calendar-picker-indicator {
+      transition: none;
+    }
+  }
+
   /* Firefox */
   * {
     scrollbar-color: var(--color-rule) transparent;

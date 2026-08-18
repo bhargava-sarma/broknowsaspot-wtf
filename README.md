@@ -88,6 +88,7 @@ Then open <http://localhost:3000>.
 | `/admin`       | moderation queue — hidden entries, report counts, audit log   |
 | `/admin/login` | admin sign-in. no sign-up link, deliberately                  |
 | `/api/spots`   | `GET` the index · `POST` a submission                         |
+| `/api/spots/[slug]/notes`  | `POST` a community note                           |
 | `/api/spots/[slug]/report` | `POST` a report                                   |
 
 Spot pages prerender from `generateStaticParams` and revalidate every five
@@ -155,6 +156,19 @@ The Supabase → Vercel integration syncs the first three automatically.
 - No email flows: an admin who forgets their password needs a reset from
   the Supabase dashboard.
 
+## notes
+
+A spot entry is written once; conditions are not. A gate gets chained, a
+path washes out, a landowner puts up signs — and a dated note from someone
+who went last month is the only thing that carries that to the next
+person. Hence `noted_on` being separate from `created_at`: *when the visit
+happened* is what decides whether the information is still worth anything.
+
+No account, published immediately, 10 per hour per person. The rate-limit
+key lives in its own table rather than on `spot_notes`, because RLS
+filters rows and not columns — a key stored alongside a publicly readable
+note is a publicly readable key.
+
 ## moderation
 
 Submissions publish immediately — nothing waits in a queue. Ten distinct
@@ -176,5 +190,6 @@ reasoning is in [`supabase/README.md`](supabase/README.md).
 
 ## status
 
-Live on Vercel, reading and writing Supabase, with admin moderation.
-Photo uploads are next.
+Live on Vercel, reading and writing Supabase. Spots and notes are both
+open for contribution, and both are moderated from `/admin`. Photo uploads
+are next.

@@ -10,6 +10,7 @@ Postgres on Supabase, with PostGIS. Migrations run in filename order.
 | `20260817140000_submissions_and_reports.sql`  | write path, reports, auto-hide |
 | `20260818090000_admin_moderation.sql`         | admins, moderation log, RPCs   |
 | `20260818140000_revoke_anon_function_grants.sql` | takes EXECUTE back from anon |
+| `20260818160000_note_submissions.sql`         | the write path for notes       |
 
 ## applying them
 
@@ -64,7 +65,7 @@ having lost anything.
 ## testing the security model
 
 The claims above are asserted, not asserted-in-a-comment. `supabase/tests`
-applies every migration to a scratch database and checks 83 things:
+applies every migration to a scratch database and checks 109 things:
 
 ```bash
 npm run db:test      # needs a local postgres with postgis available
@@ -76,6 +77,7 @@ It runs three suites:
 | ------------------------- | -------------------------------------------------------- |
 | `03-security.sql`         | who can read and write what, as anon / signed-in / admin / revoked admin |
 | `04-moderation-flow.sql`  | brigade → auto-hide → admin restores → 11th report re-hides |
+| `05-note-flow.sql`        | hiding and restoring a note, and what the public sees |
 | `../verify.sql`           | the schema itself: RLS on, zero write policies, no mutable search_path |
 
 Every row must read `ok`. A FAIL in `03-security.sql` is a hole, not a
@@ -112,6 +114,45 @@ throughout the period the grant was wrong.
 applying migrations. It is read-only and deliberately a single statement:
 the editor only renders the result of the last statement it runs, so a
 multi-statement script silently hides every check but the final one.
+
+## notes
+
+Anyone can leave a dated note on a visible spot. No account, published
+immediately, same guard order as a submission: shape, then Turnstile, then
+a rate limit counted in Postgres.
+
+Three details are deliberate.
+
+**The rate-limit key is not on `spot_notes`.** It lives in `note_log`,
+which has no policy for anon or authenticated at all. RLS filters rows,
+not columns — a `submitter_key` column on `spot_notes` would be handed to
+anyone holding the publishable key who thought to ask for it, and the
+public SELECT policy on that table is what makes notes readable in the
+first place.
+
+**`note_log` is separate from `submission_log`** rather than one table
+with a `kind` column, because the two deserve different budgets. Adding a
+spot is a much larger act than leaving a note — someone reporting back on
+four places they walked this weekend is normal — so notes get 10/hour
+against submissions' 5, and neither can exhaust the other.
+
+**Hidden and removed spots refuse notes.** An entry pulled down by reports
+should not keep accumulating discussion while it is under review.
+
+Notes cannot be reported. The report flow targets a spot, and an admin
+reviewing a reported spot sees its notes alongside it, so abuse in a note
+is reachable today. Note-level reports would mean a second threshold, a
+second reporter-key namespace and a second auto-hide path — worth building
+when notes outgrow one person reading them, and not before.
+
+`moderate_note()` supports hide and restore only. `remove` exists for
+spots because a takedown at a landowner's request is worth distinguishing
+from a reversible hide; a note is two sentences, and there is nothing that
+distinction would express.
+
+`noted_on` — when the visit happened — is validated in the route rather
+than the schema. A CHECK constraint cannot call `current_date`: Postgres
+requires IMMUTABLE functions there and `current_date` is only STABLE.
 
 ## regenerating the seed
 

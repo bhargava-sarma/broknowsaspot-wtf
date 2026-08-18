@@ -58,6 +58,9 @@ from (
     ('rls_on_modlog',   'true',
       (select relrowsecurity::text from pg_class
         where oid = 'public.moderation_log'::regclass)),
+    ('rls_on_note_log', 'true',
+      (select relrowsecurity::text from pg_class
+        where oid = 'public.note_log'::regclass)),
 
     -- **The single most important row in this file.** There is no
     -- INSERT, UPDATE or DELETE policy anywhere in the schema, for any
@@ -67,7 +70,7 @@ from (
     ('write_policies',  '0',
       (select count(*)::text from pg_policies
         where schemaname = 'public' and cmd <> 'SELECT')),
-    ('policies_total',  '8',
+    ('policies_total',  '9',
       (select count(*)::text from pg_policies where schemaname = 'public')),
 
     -- Exactly two tables are readable without signing in. Reports,
@@ -88,6 +91,7 @@ from (
         join pg_namespace n on n.oid = p.pronamespace
         where n.nspname = 'public'
           and p.proname in ('is_admin', 'moderate_spot', 'admin_spot_queue',
+                            'moderate_note', 'admin_note_queue',
                             'slugify', 'unique_slug')
           and has_function_privilege('anon', p.oid, 'execute'))),
 

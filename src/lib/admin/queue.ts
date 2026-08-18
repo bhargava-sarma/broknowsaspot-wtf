@@ -103,6 +103,79 @@ export async function readQueue(): Promise<QueueResult> {
   }
 }
 
+/* ------------------------------------------------------------ notes -- */
+
+export type NoteEntry = {
+  id: string;
+  spotSlug: string;
+  spotName: string;
+  author: string;
+  body: string;
+  notedOn: string;
+  createdAt: string;
+  hidden: boolean;
+};
+
+type NoteRow = {
+  id: string;
+  spot_slug: string;
+  spot_name: string;
+  author: string;
+  body: string;
+  noted_on: string;
+  created_at: string;
+  hidden_at: string | null;
+};
+
+export type NoteQueueResult =
+  { ok: true; entries: NoteEntry[] } | { ok: false; message: string };
+
+/**
+ * Recent community notes, newest first, hidden ones included.
+ *
+ * No report threshold pushes a note upward the way it does a spot, so
+ * recency is the only useful order: what a moderator wants is "what
+ * arrived since I last looked".
+ */
+export async function readNoteQueue(): Promise<NoteQueueResult> {
+  const supabase = await getServerSupabase();
+  if (!supabase) {
+    return { ok: false, message: "no database connection." };
+  }
+
+  try {
+    const { data, error } = await supabase.rpc("admin_note_queue");
+
+    if (error) {
+      console.error("[admin] note queue failed", error);
+      return {
+        ok: false,
+        message:
+          error.code === "42501"
+            ? "the database refused this account. it is not an admin."
+            : "couldn't load the notes.",
+      };
+    }
+
+    return {
+      ok: true,
+      entries: (data as NoteRow[]).map((row) => ({
+        id: row.id,
+        spotSlug: row.spot_slug,
+        spotName: row.spot_name,
+        author: row.author,
+        body: row.body,
+        notedOn: row.noted_on,
+        createdAt: row.created_at,
+        hidden: row.hidden_at !== null,
+      })),
+    };
+  } catch (thrown) {
+    console.error("[admin] note queue threw", thrown);
+    return { ok: false, message: "couldn't reach the database." };
+  }
+}
+
 /** Recent moderation decisions, newest first. */
 export type LogEntry = {
   id: string;

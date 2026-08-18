@@ -38,6 +38,9 @@ echo
 echo "=== moderation flow ==="
 $PSQL -q -f "$HERE/04-moderation-flow.sql"
 echo
+echo "=== note moderation flow ==="
+$PSQL -q -f "$HERE/05-note-flow.sql"
+echo
 echo "=== schema check (supabase/verify.sql) ==="
 # The probe helpers are test scaffolding and would be counted by the
 # function audit in verify.sql, so drop them first.
