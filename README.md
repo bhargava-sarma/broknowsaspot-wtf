@@ -85,6 +85,8 @@ Then open <http://localhost:3000>.
 | `/explore`     | Leaflet map + faceted filters over the seed index             |
 | `/spot/[slug]` | detail: plates, write-up, access notes, dated community notes |
 | `/submit`      | submission form with a map picker                             |
+| `/admin`       | moderation queue — hidden entries, report counts, audit log   |
+| `/admin/login` | admin sign-in. no sign-up link, deliberately                  |
 | `/api/spots`   | `GET` the index · `POST` a submission                         |
 | `/api/spots/[slug]/report` | `POST` a report                                   |
 
@@ -147,13 +149,29 @@ The Supabase → Vercel integration syncs the first three automatically.
   provider is a one-line change to `TILE_URL` in the map components.
 - Filters are component state, not URL state — no shareable filtered views
   yet.
-- **No admin screen yet.** Moderation happens in the Supabase Table Editor:
-  set `hidden_at` to hide, clear it to restore. The admin UI is next.
-- Report counts are only visible in the database, by design.
+- Report counts are visible to admins only, by design — publishing how
+  close an entry is to the threshold is a progress bar for brigading.
 - No photo uploads; `photos[].src` is still `null` everywhere.
+- No email flows: an admin who forgets their password needs a reset from
+  the Supabase dashboard.
+
+## moderation
+
+Submissions publish immediately — nothing waits in a queue. Ten distinct
+people reporting an entry auto-hides it, every reason counting the same.
+
+`/admin` is where that gets reviewed. It is gated on membership in
+`public.admins`, not on merely being signed in, and the gate is enforced
+by Postgres rather than by the app: admin pages read as the signed-in user
+under row level security, so a bug in the app's own check leaks nothing.
+
+There is **no INSERT, UPDATE or DELETE policy anywhere in the schema**, for
+any role, admins included. Every visibility change goes through one
+function that writes the change and its audit row in a single transaction,
+which is what makes the moderation log complete by construction. The full
+reasoning is in [`supabase/README.md`](supabase/README.md).
 
 ## status
 
-Live on Vercel, reading and writing Supabase. Submissions publish
-immediately and are reportable; ten distinct reports auto-hide an entry.
-Admin moderation UI and photo uploads are next.
+Live on Vercel, reading and writing Supabase, with admin moderation.
+Photo uploads are next.

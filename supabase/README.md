@@ -8,6 +8,7 @@ Postgres on Supabase, with PostGIS. Migrations run in filename order.
 | `20260817090100_seed_spots.sql`   | the 14 seed spots and their notes     |
 | `20260817120000_fix_function_search_path.sql` | pins the trigger's search_path |
 | `20260817140000_submissions_and_reports.sql`  | write path, reports, auto-hide |
+| `20260818090000_admin_moderation.sql`         | admins, moderation log, RPCs   |
 
 ## applying them
 
@@ -59,6 +60,43 @@ key is server-only and never carries a `NEXT_PUBLIC_` prefix.
 that a spot pulled down by a report threshold can be restored without
 having lost anything.
 
+## testing the security model
+
+The claims above are asserted, not asserted-in-a-comment. `supabase/tests`
+applies every migration to a scratch database and checks 76 things:
+
+```bash
+npm run db:test      # needs a local postgres with postgis available
+```
+
+It runs three suites:
+
+| file                      | asks                                                     |
+| ------------------------- | -------------------------------------------------------- |
+| `03-security.sql`         | who can read and write what, as anon / signed-in / admin / revoked admin |
+| `04-moderation-flow.sql`  | brigade → auto-hide → admin restores → 11th report re-hides |
+| `../verify.sql`           | the schema itself: RLS on, zero write policies, no mutable search_path |
+
+Every row must read `ok`. A FAIL in `03-security.sql` is a hole, not a
+broken test — the rows are things someone might actually try:
+
+```
+ admin forges a log row        | 42501    | 42501   | ok
+ admin promotes a friend       | 42501    | 42501   | ok
+ admin updates a spot directly | rows:0   | rows:0  | ok
+ revoked admin moderates       | 42501    | 42501   | ok
+```
+
+The harness creates `auth.users`, `auth.uid()` and the anon /
+authenticated / service_role roles, because a plain Postgres has none of
+them and the migrations will not apply without them. **Never point it at a
+Supabase project.**
+
+`verify.sql` is the one to run *on* Supabase, in the SQL Editor, after
+applying migrations. It is read-only and deliberately a single statement:
+the editor only renders the result of the last statement it runs, so a
+multi-statement script silently hides every check but the final one.
+
 ## regenerating the seed
 
 The seed migration is generated from `src/lib/data/spots.ts` rather than
@@ -92,15 +130,75 @@ Hiding sets `hidden_at`; nothing is deleted. A threshold can be reached by a
 coordinated group as easily as a genuine one, so it has to be reversible and
 has to leave the evidence in place.
 
-### moderating by hand, for now
+### the admin screen
 
-Until the admin screen exists, use the Table Editor:
+`/admin` is the moderation surface. It lists every entry — hidden and
+removed included — with report counts and reasons, and offers three verbs:
+**hide**, **restore**, **remove**. All three are reversible and all three
+leave a row in `moderation_log`.
 
-- **hide** — set `spots.hidden_at` to now
-- **restore** — clear `spots.hidden_at` and `hidden_reason`
+Changes appear on the public pages immediately: the actions call
+`revalidatePath` rather than waiting out the five-minute ISR window.
+
+### who can moderate
+
+Being signed in and being an admin are different things. Supabase projects
+accept public sign-ups by default, so the gate is membership in
+`public.admins`, never `auth.uid() is not null`.
+
+Making someone an admin is two deliberate steps, both in the dashboard:
+
+1. **Authentication → Users → Add user.** Give it a real password and tick
+   *Auto Confirm User*. There is no sign-up link on the site and there
+   should never be one.
+2. **SQL Editor**, with the id from step 1:
+
+   ```sql
+   insert into public.admins (user_id, email)
+   values ('<the uuid>', '<the email>');
+   ```
+
+Removing someone is a revoke, not a delete — it keeps their past decisions
+attributable in the log:
+
+```sql
+update public.admins set revoked_at = now() where email = '<the email>';
+```
+
+While you are in Authentication → Providers, **turn off public sign-ups**.
+It is not what stops a stranger moderating — `public.admins` does that —
+but there is no reason to accept accounts nobody will ever use.
+
+### how the gate actually works
+
+Three checks, and they fail independently:
+
+| where | what it does | what happens if it breaks |
+| ----- | ------------ | ------------------------- |
+| `src/proxy.ts` | redirects signed-out requests off `/admin` | someone sees a page that then refuses them |
+| `readAdminGate()` | re-checks membership per render | the queue query is refused instead |
+| `is_admin()` in Postgres | governs every policy and both RPCs | **nothing** — this is the real gate |
+
+The third one is the one that matters. Admin reads run as the signed-in
+user under RLS, so a bug in the first two leaks nothing: Postgres returns
+an empty set or raises `42501`.
+
+**There is no INSERT, UPDATE or DELETE policy anywhere in this schema, for
+any role, admins included.** Moderation goes through `moderate_spot()`,
+which writes the state change and its audit row in one transaction. That
+is what makes "every visibility change is logged" true by construction
+rather than by everyone remembering to use the right button — an admin
+hitting the REST API directly cannot clear `hidden_at` without a log row,
+because they cannot clear it at all.
+
+### digging around by hand
+
+The Table Editor still answers the questions the screen doesn't:
+
 - **who reported what** — query `spot_reports` by `spot_id`
 - **trace a spammer** — `submission_log` links `submitter_key` to every spot
   that key submitted
 
-Changes appear on the site within five minutes (ISR), or immediately on the
-next deploy.
+Editing `spots.hidden_at` directly in the Table Editor still works, because
+the dashboard connects as `postgres` and bypasses RLS. It writes no log
+row. Use the screen.

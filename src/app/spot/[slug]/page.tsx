@@ -11,6 +11,7 @@ import {
   DifficultyMeter,
 } from "@/components/ui/spot-tags";
 import { getSpotBySlug, listSpotSlugs } from "@/lib/data/spots-repo";
+import { formatDate } from "@/lib/utils/date";
 import { ACCESS_NOTES } from "@/lib/types/spot";
 
 type Params = { slug: string };
@@ -44,19 +45,6 @@ export async function generateMetadata({
       type: "article",
     },
   };
-}
-
-const dateFormat = new Intl.DateTimeFormat("en-GB", {
-  day: "2-digit",
-  month: "short",
-  year: "numeric",
-});
-
-function formatDate(iso: string): string {
-  const parsed = new Date(iso);
-  return Number.isNaN(parsed.getTime())
-    ? iso
-    : dateFormat.format(parsed).toLowerCase();
 }
 
 export default async function SpotPage({
