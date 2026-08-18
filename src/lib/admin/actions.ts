@@ -139,3 +139,73 @@ export async function moderateAction(
 
   return { status: "ok", message: `${slug} — ${PAST_TENSE[action]}.` };
 }
+
+// ------------------------------------------------------ moderate note --
+
+const NOTE_ACTIONS = ["hide", "restore"] as const;
+type NoteAction = (typeof NOTE_ACTIONS)[number];
+
+function isNoteAction(value: unknown): value is NoteAction {
+  return NOTE_ACTIONS.includes(value as NoteAction);
+}
+
+/**
+ * Notes have no permanent tier. `remove` exists for spots because a
+ * takedown at a landowner's request is worth distinguishing from a
+ * reversible hide; a note is two sentences, and there is nothing that
+ * distinction would express.
+ */
+export async function moderateNoteAction(
+  _previous: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  const gate = await readAdminGate();
+  if (gate.state !== "admin") {
+    return { status: "error", message: "not authorised." };
+  }
+
+  const noteId = String(formData.get("noteId") ?? "").trim();
+  const slug = String(formData.get("slug") ?? "").trim();
+  const action = formData.get("action");
+  const reason = String(formData.get("reason") ?? "").trim();
+
+  if (!noteId) return { status: "error", message: "no note given." };
+  if (!isNoteAction(action)) {
+    return { status: "error", message: "unknown action." };
+  }
+
+  const supabase = await getServerSupabase();
+  if (!supabase) {
+    return { status: "error", message: "no database connection." };
+  }
+
+  try {
+    const { error } = await supabase.rpc("moderate_note", {
+      target_note_id: noteId,
+      action,
+      reason: reason || null,
+    });
+
+    if (error) {
+      console.error(`[admin] note ${action} failed for ${noteId}`, error);
+      return {
+        status: "error",
+        message:
+          error.code === "42501"
+            ? "the database refused that."
+            : "couldn't apply that.",
+      };
+    }
+  } catch (thrown) {
+    console.error(`[admin] note ${action} threw for ${noteId}`, thrown);
+    return { status: "error", message: "couldn't reach the database." };
+  }
+
+  if (slug) revalidatePath(`/spot/${slug}`);
+  revalidatePath("/admin");
+
+  return {
+    status: "ok",
+    message: action === "hide" ? "note hidden." : "note restored.",
+  };
+}
