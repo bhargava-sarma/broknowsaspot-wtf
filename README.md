@@ -136,6 +136,51 @@ that window is expected rather than a misconfiguration.
 The name lives in `src/lib/site.ts` and nowhere else. It used to be a
 string typed into nine files, which is how a rename gets done eight times.
 
+## the appwrite migration
+
+In progress. The data layer is moving from Supabase to Appwrite for the
+storage and bandwidth headroom, and because a Supabase Free project pauses
+after seven days of inactivity.
+
+Reads dispatch on configuration, in `src/lib/data/spots-repo.ts`:
+
+```ts
+const backend = isAppwriteConfigured ? "appwrite" : "supabase";
+```
+
+So the cutover is an environment change rather than a deploy, and both
+paths end at the same seed fallback — neither can take the site down while
+the other is being stood up. The branch goes away with the Supabase
+modules once production has read from Appwrite long enough to trust it.
+
+| script                     | does                                       |
+| -------------------------- | ------------------------------------------ |
+| `npm run appwrite:provision` | create the database, tables, columns, indexes and the admins team |
+| `npm run appwrite:seed`      | load the 14 seed spots and their notes    |
+| `npm run appwrite:verify`    | assert the security model against a live project |
+
+All three need `APPWRITE_ENDPOINT`, `APPWRITE_PROJECT_ID` and
+`APPWRITE_API_KEY` in the environment.
+
+**The thing to understand before changing anything here.** Supabase
+expressed visibility as a predicate the database evaluated:
+
+```sql
+using (hidden_at is null and removed_at is null)
+```
+
+Appwrite permissions are access-control lists, not predicates over the
+row. So visibility lives in two places — `hiddenAt`/`removedAt` as data,
+and the row's own `$permissions` as enforcement — and those can drift in a
+way Postgres made structurally impossible. Three things hold them
+together: one code path writes both, it does so inside a transaction, and
+`appwrite:verify` asserts every row's permissions match its state. Treat a
+failure there as a live exposure rather than a failing test.
+
+Public reads use a **guest client with no API key**, so the rows that come
+back are exactly the rows a browser could fetch. That is what keeps "a bug
+in the query leaks nothing" true after losing RLS.
+
 ## deploying
 
 Production is **Vercel**, deployed from `main`. Nothing special is required:
