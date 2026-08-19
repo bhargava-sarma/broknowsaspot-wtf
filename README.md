@@ -171,9 +171,16 @@ All of them need `APPWRITE_ENDPOINT`, `APPWRITE_PROJECT_ID` and
 | `documents.read` / `documents.write` | rows |
 | `teams.read` / `teams.write` | the admins team |
 | `users.read` / `users.write` | **`appwrite:admin` only** — the one script that touches accounts |
+| `sessions.write` | **the running app** — `/admin/login` creates sessions server-side |
 
 `appwrite:migrate` additionally needs `SUPABASE_URL`,
 `SUPABASE_SERVICE_ROLE_KEY` and `REPORTER_KEY_SALT`.
+
+The key deployed to Vercel needs `sessions.write` even though no script
+uses it. Appwrite has no cookie-based SSR helper, so `/admin/login`
+creates the session with the API key and puts the returned secret in an
+httpOnly cookie. Without that scope sign-in fails for every password —
+which used to be indistinguishable from getting one wrong.
 
 ### what changed, and what it cost
 

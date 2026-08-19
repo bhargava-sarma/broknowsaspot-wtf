@@ -37,10 +37,19 @@ export async function signInAction(
   if (isAppwriteConfigured) {
     const session = await appwriteAuth.createSession(email, password);
     if (!session.ok) {
-      // One message for every failure mode. Distinguishing "no such user"
-      // from "wrong password" turns the login form into a way to test
-      // whether an address has an account.
-      return { status: "error", message: "that didn't work." };
+      // "that didn't work" for a wrong password — saying whether the
+      // address exists would turn this form into a way to find out.
+      //
+      // But a misconfiguration is ours, and telling someone their
+      // password is wrong when the server never got to check it sends
+      // them to retype it forever. The detail is in the server logs.
+      return {
+        status: "error",
+        message:
+          session.why === "credentials"
+            ? "that didn't work."
+            : "sign-in isn't working right now — this is a problem with the site, not your password. the details are in the server logs.",
+      };
     }
 
     const store = await cookies();

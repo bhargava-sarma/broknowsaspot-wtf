@@ -116,25 +116,62 @@ export async function readAdminGate(): Promise<AdminGate> {
 }
 
 /** Sign in, returning the session secret to be put in a cookie. */
+export type SignInFailure = "credentials" | "misconfigured";
+
+/**
+ * Sign in, returning the session secret to be put in a cookie.
+ *
+ * Two kinds of failure, and conflating them cost an afternoon. A wrong
+ * password and an API key without `sessions.write` both come back as 401
+ * — this used to answer "that didn't work" to either, so a deployment
+ * that could never accept *any* password looked exactly like a typo.
+ *
+ * They are told apart by Appwrite's error `type`, not its status:
+ *
+ *   user_invalid_credentials  the password is wrong, or nobody has that
+ *                             address. Stays deliberately
+ *                             indistinguishable — separating them turns
+ *                             the form into a way to test whether an
+ *                             address has an account.
+ *
+ *   anything else             our problem, not the visitor's. Logged in
+ *                             full, and the page says so rather than
+ *                             blaming their typing.
+ */
 export async function createSession(
   email: string,
   password: string,
-): Promise<{ ok: true; secret: string } | { ok: false }> {
+): Promise<{ ok: true; secret: string } | { ok: false; why: SignInFailure }> {
   const keyed = keyedClient();
-  if (!keyed) return { ok: false };
+  if (!keyed) return { ok: false, why: "misconfigured" };
 
   try {
     const session = (await new Account(keyed).createEmailPasswordSession({
       email,
       password,
     })) as { secret?: string };
-    if (!session.secret) return { ok: false };
+    if (!session.secret) {
+      console.error("[auth] appwrite returned a session with no secret");
+      return { ok: false, why: "misconfigured" };
+    }
     return { ok: true, secret: session.secret };
-  } catch {
-    // One outcome for every failure mode. Distinguishing "no such user"
-    // from "wrong password" turns the login form into a way to test
-    // whether an address has an account.
-    return { ok: false };
+  } catch (error) {
+    const type = (error as { type?: string }).type ?? "";
+
+    if (type === "user_invalid_credentials") {
+      return { ok: false, why: "credentials" };
+    }
+
+    console.error(
+      "[auth] sign-in could not be attempted — this is a configuration " +
+        "problem, not a bad password.",
+      {
+        type,
+        code: (error as { code?: number }).code,
+        message: (error as { message?: string }).message,
+      },
+    );
+    return { ok: false, why: "misconfigured" };
   }
 }
 
