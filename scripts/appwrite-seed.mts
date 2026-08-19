@@ -10,12 +10,18 @@
  * one. `slug` stays a column with a unique index, which is also what
  * makes the uniqueness check on submission a database concern rather
  * than a read-then-write race in the route.
+ *
+ * Run through tsx, which resolves the `@/` alias and does not care which
+ * TypeScript features the local node build happens to ship with. The
+ * previous version leaned on node's own type stripping and died with
+ * ERR_UNKNOWN_FILE_EXTENSION on a node one patch release older than the
+ * one it was written on.
  */
 
 import { Client, TablesDB, ID, Query } from "node-appwrite";
 
-import { DATABASE_ID, TABLES } from "../src/lib/appwrite/schema.ts";
-import { loadSeedSpots } from "./lib/load-seed.mjs";
+import { DATABASE_ID, TABLES } from "@/lib/appwrite/schema";
+import { SPOTS } from "@/lib/data/spots";
 
 const endpoint = process.env.APPWRITE_ENDPOINT;
 const projectId = process.env.APPWRITE_PROJECT_ID;
@@ -59,7 +65,7 @@ type SeedSpot = {
 };
 
 async function main() {
-  const spots = (await loadSeedSpots()) as SeedSpot[];
+  const spots = SPOTS as unknown as SeedSpot[];
   console.log(`seeding ${spots.length} spots\n`);
 
   let created = 0;
