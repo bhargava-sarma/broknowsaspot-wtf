@@ -101,63 +101,101 @@ async function waitForColumns(tableId: string): Promise<void> {
   throw new Error(`columns on ${tableId} never became available`);
 }
 
-async function createColumn(
+/**
+ * Create or assert one column.
+ *
+ * `mode: "assert"` re-applies the column's definition to a table that
+ * already has it. That is what makes re-running fix drift rather than
+ * skip past it — a column created with the wrong `required` stays wrong
+ * forever otherwise, and the failure surfaces somewhere unrelated. It is
+ * also how a half-provisioned table recovers without being dropped.
+ *
+ * Tightening a column to required fails if existing rows hold nulls,
+ * which is the correct outcome: that is data loss waiting to happen and
+ * it should be looked at rather than forced through.
+ */
+async function columnCall(
   tableId: string,
   column: TableSpec["columns"][number],
+  mode: "create" | "assert",
 ): Promise<void> {
   const base = { databaseId: DATABASE_ID, tableId, key: column.name };
+  const create = mode === "create";
 
   switch (column.kind) {
-    case "string":
-      return void (await db.createStringColumn({
+    case "string": {
+      const args = {
         ...base,
         size: column.size,
         required: column.required,
         xdefault: column.required ? undefined : column.def,
-      }));
-    case "text":
-      return void (await db.createTextColumn({
-        ...base,
-        required: column.required,
-      }));
-    case "enum":
-      return void (await db.createEnumColumn({
+      };
+      return void (create
+        ? await db.createStringColumn(args)
+        : await db.updateStringColumn(args));
+    }
+    case "text": {
+      const args = { ...base, required: column.required };
+      return void (create
+        ? await db.createTextColumn(args)
+        : await db.updateTextColumn(args));
+    }
+    case "enum": {
+      const args = {
         ...base,
         elements: [...column.values],
         required: column.required,
-      }));
-    case "float":
-      return void (await db.createFloatColumn({
+      };
+      return void (create
+        ? await db.createEnumColumn(args)
+        : await db.updateEnumColumn(args));
+    }
+    case "float": {
+      const args = {
         ...base,
         required: column.required,
         min: column.min,
         max: column.max,
         xdefault: column.required ? undefined : column.def,
-      }));
-    case "integer":
-      return void (await db.createIntegerColumn({
+      };
+      return void (create
+        ? await db.createFloatColumn(args)
+        : await db.updateFloatColumn(args));
+    }
+    case "integer": {
+      const args = {
         ...base,
         required: column.required,
         min: column.min,
         max: column.max,
         xdefault: column.required ? undefined : column.def,
-      }));
-    case "boolean":
-      return void (await db.createBooleanColumn({
+      };
+      return void (create
+        ? await db.createIntegerColumn(args)
+        : await db.updateIntegerColumn(args));
+    }
+    case "boolean": {
+      const args = {
         ...base,
         required: column.required,
         xdefault: column.required ? undefined : column.def,
-      }));
-    case "datetime":
-      return void (await db.createDatetimeColumn({
-        ...base,
-        required: column.required,
-      }));
-    case "point":
-      return void (await db.createPointColumn({
-        ...base,
-        required: column.required,
-      }));
+      };
+      return void (create
+        ? await db.createBooleanColumn(args)
+        : await db.updateBooleanColumn(args));
+    }
+    case "datetime": {
+      const args = { ...base, required: column.required };
+      return void (create
+        ? await db.createDatetimeColumn(args)
+        : await db.updateDatetimeColumn(args));
+    }
+    case "point": {
+      const args = { ...base, required: column.required };
+      return void (create
+        ? await db.createPointColumn(args)
+        : await db.updatePointColumn(args));
+    }
   }
 }
 
@@ -189,9 +227,20 @@ async function provisionTable(table: TableSpec): Promise<void> {
   );
 
   for (const column of table.columns) {
-    await step(`column ${column.name} (${column.kind})`, () =>
-      createColumn(table.id, column),
-    );
+    try {
+      await columnCall(table.id, column, "create");
+      console.log(`  + column ${column.name} (${column.kind})`);
+    } catch (error) {
+      if (!isConflict(error)) {
+        console.error(`  ! column ${column.name}`);
+        throw error;
+      }
+      // Already there — re-apply the definition so a column created by an
+      // earlier run with different settings converges instead of quietly
+      // staying wrong.
+      await columnCall(table.id, column, "assert");
+      console.log(`  · column ${column.name} (asserted)`);
+    }
   }
 
   process.stdout.write("  … waiting for columns");
@@ -199,6 +248,9 @@ async function provisionTable(table: TableSpec): Promise<void> {
   console.log(" — available");
 
   for (const index of table.indexes) {
+    // A spatial index refuses a nullable column, which is why `location`
+    // is required. If this fails with column_index_invalid, the column's
+    // `required` is the thing to look at, not the index.
     await step(`index ${index.key} (${index.type})`, () =>
       db.createIndex({
         databaseId: DATABASE_ID,

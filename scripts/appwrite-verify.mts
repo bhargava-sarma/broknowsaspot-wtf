@@ -120,6 +120,25 @@ async function main() {
       unavailable.length ? unavailable.join(",") : "all",
     );
 
+    // Presence is not the same as correctness. `location` shipped as
+    // nullable once, which Appwrite accepted happily and then refused to
+    // build a spatial index over — the failure surfaced two steps away
+    // from its cause. Compare the definitions, not just the names.
+    const byKey = new Map(
+      columns.map((c: { key: string }) => [c.key, c as { required?: boolean }]),
+    );
+    const wrongRequired = spec.columns
+      .filter((c) => {
+        const live = byKey.get(c.name);
+        return live && Boolean(live.required) !== c.required;
+      })
+      .map((c) => `${c.name}(want required=${c.required})`);
+    add(
+      `${spec.id} column nullability`,
+      "matches schema",
+      wrongRequired.length ? wrongRequired.join(",") : "matches schema",
+    );
+
     const { indexes } = await admin.listIndexes({
       databaseId: DATABASE_ID,
       tableId: spec.id,
