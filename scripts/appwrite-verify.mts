@@ -466,9 +466,13 @@ async function main() {
   );
 
   let failed = 0;
+  const failedNames: string[] = [];
   for (const check of checks) {
     const ok = check.expected === check.actual;
-    if (!ok) failed += 1;
+    if (!ok) {
+      failed += 1;
+      failedNames.push(check.name);
+    }
     console.log(
       ` ${check.name.padEnd(width)} | ${check.expected.padEnd(ew)} | ${check.actual.padEnd(aw)} | ${ok ? "ok" : "FAIL"}`,
     );
@@ -491,11 +495,43 @@ async function main() {
         "Teams → admins, and this goes green. everything else is clean.",
     );
   } else if (failed > 0) {
-    console.log(
-      "\na FAIL under 'permissions match hidden state' or any 'guest' row\n" +
-        "is a live exposure rather than a flaky check: it means the public\n" +
-        "can reach something the data says is hidden.",
+    // Say which kind of failure this is. Printing "this is a live
+    // exposure" under a stale-schema failure teaches people to skim the
+    // warning, which is the opposite of what it is for.
+    const exposures = failedNames.filter(
+      (name) =>
+        name.includes("public grants") ||
+        name.startsWith("guest ") ||
+        name === "permissions match hidden state",
     );
+    const schemaDrift = failedNames.filter(
+      (name) =>
+        name.includes("table grants") ||
+        name.includes("columns") ||
+        name.includes("indexes") ||
+        name.includes("nullability") ||
+        name.includes("row security"),
+    );
+
+    if (exposures.length > 0) {
+      console.log(
+        `\nEXPOSURE — ${exposures.join(", ")}.\n` +
+          "this is not a flaky check: the public can reach something the\n" +
+          "data says is hidden. fix before doing anything else.",
+      );
+    }
+    if (schemaDrift.length > 0) {
+      console.log(
+        `\nthe schema has drifted from src/lib/appwrite/schema.ts:\n  ` +
+          schemaDrift.join("\n  ") +
+          "\n\nthis usually means the project was provisioned before a schema\n" +
+          "change. `npm run appwrite:provision` re-asserts tables, columns\n" +
+          "and permissions, and is safe to re-run.",
+      );
+    }
+    if (exposures.length === 0 && schemaDrift.length === 0) {
+      console.log(`\nfailed: ${failedNames.join(", ")}`);
+    }
   }
   process.exit(failed > 0 ? 1 : 0);
 }
