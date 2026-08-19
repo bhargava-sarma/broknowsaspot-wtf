@@ -226,11 +226,44 @@ async function main() {
 
   // ---- the moderation record. Worth carrying: it is the history of
   // every decision anyone made, and it does not regenerate.
+  // Who did what. `moderation_log` stores actor_id referencing
+  // public.admins; the email lives on that table. Reading row.actor_email
+  // — which does not exist — silently yielded undefined for every row,
+  // so the migrated log attributed fifteen deliberate human decisions to
+  // nobody, and the admin screen rendered them as automatic hides. An
+  // audit trail that misreports who decided something is worse than one
+  // that is missing.
+  const { data: admins } = await supabase
+    .from("admins")
+    .select("user_id, email");
+  const adminEmails = new Map(
+    ((admins ?? []) as Row[]).map((a) => [String(a.user_id), String(a.email)]),
+  );
+
   const { data: log } = await supabase.from("moderation_log").select("*");
   let logCount = 0;
   for (const row of (log ?? []) as Row[]) {
     const spotId = idMap.get(String(row.spot_id));
     if (!spotId) continue;
+    // The log is append-only and has no natural key, so a re-run would
+    // double every entry. Match on what identifies a decision: the spot,
+    // the verb and when it happened.
+    const seen = await tables.listRows({
+      databaseId: DATABASE_ID,
+      tableId: TABLES.moderationLog,
+      queries: [
+        Query.equal("spotId", spotId),
+        Query.equal("action", String(row.action)),
+        Query.limit(100),
+      ],
+    });
+    const already = (seen.rows as unknown as Row[]).some(
+      (r) =>
+        String(r.$createdAt).slice(0, 19) ===
+        String(row.created_at).slice(0, 19),
+    );
+    if (already) continue;
+
     await tables.createRow({
       databaseId: DATABASE_ID,
       tableId: TABLES.moderationLog,
@@ -241,9 +274,12 @@ async function main() {
         reason: (row.reason as string | null) ?? null,
         // Actor ids do not survive: they referenced supabase auth users,
         // and the appwrite accounts are different rows entirely. The
-        // email is the part a person reads, so it is what is kept.
+        // email is the part a person reads, so it is what is kept —
+        // resolved through public.admins, because the log holds only the
+        // id. A null here means the row genuinely had no actor, which is
+        // what the automatic hides look like.
         actorId: null,
-        actorEmail: (row.actor_email as string | null) ?? null,
+        actorEmail: adminEmails.get(String(row.actor_id)) ?? null,
       },
     });
     logCount += 1;

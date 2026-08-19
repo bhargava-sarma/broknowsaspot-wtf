@@ -24,13 +24,22 @@ const backend = isAppwriteConfigured ? "appwrite" : "supabase";
  *
  * Every function falls back to the in-repo seed set when the database is
  * unreachable — and that is load-bearing, not defensive decoration.
- * Supabase's Vercel integration syncs credentials the moment the projects
- * are linked, which is *before* anyone runs the migrations. Without a
- * fallback, the live site would 500 on every page during that window.
+ * Credentials get synced the moment two services are linked, which is
+ * *before* anyone runs the migrations. Without a fallback, the live site
+ * would 500 on every page during that window.
  *
  * So the ladder is: no credentials -> seed; credentials but the query
- * fails -> log and seed; query succeeds -> real data. The site is never
- * down because of a half-finished migration.
+ * fails or throws -> log and seed; query succeeds -> real data.
+ *
+ * **An empty result is not a failure.** This used to treat zero rows as
+ * "the seed hasn't run yet" and substitute the seed set, which was a fair
+ * reading when nothing could empty the table. It stopped being one the
+ * moment there was an admin screen: fourteen entries were removed on
+ * purpose, with a reason typed into each, and the site went on serving
+ * them from the repo as though nothing had happened. A moderator who
+ * removes everything must see everything gone — otherwise the removal
+ * silently does not take, and the only place that is visible is the
+ * database.
  */
 
 function toSpot(row: SpotRow): Spot {
@@ -76,9 +85,8 @@ export async function listSpots(): Promise<Spot[]> {
     try {
       const spots = await appwrite.listSpots();
       if (!spots) return fallback("appwrite not configured", null, SPOTS);
-      if (spots.length === 0) {
-        return fallback("appwrite has no spots", null, SPOTS);
-      }
+      // Zero rows from a database that answered is the truth, not a
+      // symptom. Render the empty state.
       return spots;
     } catch (thrown) {
       return fallback("appwrite list threw", thrown, SPOTS);
@@ -95,11 +103,7 @@ export async function listSpots(): Promise<Spot[]> {
       .order("created_at", { ascending: false });
 
     if (error) return fallback("could not list spots", error, SPOTS);
-    if (!data || data.length === 0) {
-      // An empty table means the schema exists but the seed hasn't run.
-      // Showing an empty map would look like a bug rather than a state.
-      return fallback("spots table is empty", null, SPOTS);
-    }
+    if (!data) return fallback("spots query returned nothing", null, SPOTS);
 
     return (data as unknown as SpotRow[]).map(toSpot);
   } catch (thrown) {
