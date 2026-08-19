@@ -157,8 +157,14 @@ export const SCHEMA: TableSpec[] = [
       // Derived from lat/lng and written by the same code that writes
       // them. Postgres generated this column and rejected any attempt to
       // set it directly; Appwrite has no generated columns, so the
-      // provisioner's verifier checks the two agree instead.
-      { name: "location", kind: "point", required: false },
+      // verifier checks the two agree instead.
+      //
+      // Required, and not merely as a nicety: Appwrite refuses a spatial
+      // index on a nullable column, and without the index every geo query
+      // degrades to a full scan. It also matches what Postgres did — the
+      // generated column sat over two NOT NULL fields, so it was never
+      // null there either.
+      { name: "location", kind: "point", required: true },
 
       { name: "category", kind: "enum", values: CATEGORIES, required: true },
       {
