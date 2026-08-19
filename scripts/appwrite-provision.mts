@@ -102,6 +102,22 @@ async function waitForColumns(tableId: string): Promise<void> {
 }
 
 /**
+ * `xdefault` on an update call.
+ *
+ * The SDK's types mark it optional on every `update*Column` method. The
+ * runtime disagrees and throws `Missing required parameter: "xdefault"`
+ * when it is undefined — a client-side check, before any request goes
+ * out, which is why the error carries `code: 0` and an empty response.
+ *
+ * `null` passes the check and means "no default", which is also the only
+ * legal value for a required column. So the lie is localised here rather
+ * than cast at fourteen call sites.
+ */
+function updateDefault<T>(value: T | undefined): T | undefined {
+  return (value ?? null) as T | undefined;
+}
+
+/**
  * Create or assert one column.
  *
  * `mode: "assert"` re-applies the column's definition to a table that
@@ -124,77 +140,110 @@ async function columnCall(
 
   switch (column.kind) {
     case "string": {
-      const args = {
-        ...base,
-        size: column.size,
-        required: column.required,
-        xdefault: column.required ? undefined : column.def,
-      };
+      const xdefault = column.required ? undefined : column.def;
       return void (create
-        ? await db.createStringColumn(args)
-        : await db.updateStringColumn(args));
+        ? await db.createStringColumn({
+            ...base,
+            size: column.size,
+            required: column.required,
+            xdefault,
+          })
+        : await db.updateStringColumn({
+            ...base,
+            size: column.size,
+            required: column.required,
+            xdefault: updateDefault(xdefault),
+          }));
     }
     case "text": {
-      const args = { ...base, required: column.required };
       return void (create
-        ? await db.createTextColumn(args)
-        : await db.updateTextColumn(args));
+        ? await db.createTextColumn({ ...base, required: column.required })
+        : await db.updateTextColumn({
+            ...base,
+            required: column.required,
+            xdefault: updateDefault<string>(undefined),
+          }));
     }
     case "enum": {
-      const args = {
-        ...base,
-        elements: [...column.values],
-        required: column.required,
-      };
+      const elements = [...column.values];
       return void (create
-        ? await db.createEnumColumn(args)
-        : await db.updateEnumColumn(args));
+        ? await db.createEnumColumn({
+            ...base,
+            elements,
+            required: column.required,
+          })
+        : await db.updateEnumColumn({
+            ...base,
+            elements,
+            required: column.required,
+            xdefault: updateDefault<string>(undefined),
+          }));
     }
     case "float": {
-      const args = {
-        ...base,
-        required: column.required,
-        min: column.min,
-        max: column.max,
-        xdefault: column.required ? undefined : column.def,
-      };
+      const xdefault = column.required ? undefined : column.def;
       return void (create
-        ? await db.createFloatColumn(args)
-        : await db.updateFloatColumn(args));
+        ? await db.createFloatColumn({
+            ...base,
+            required: column.required,
+            min: column.min,
+            max: column.max,
+            xdefault,
+          })
+        : await db.updateFloatColumn({
+            ...base,
+            required: column.required,
+            min: column.min,
+            max: column.max,
+            xdefault: updateDefault(xdefault),
+          }));
     }
     case "integer": {
-      const args = {
-        ...base,
-        required: column.required,
-        min: column.min,
-        max: column.max,
-        xdefault: column.required ? undefined : column.def,
-      };
+      const xdefault = column.required ? undefined : column.def;
       return void (create
-        ? await db.createIntegerColumn(args)
-        : await db.updateIntegerColumn(args));
+        ? await db.createIntegerColumn({
+            ...base,
+            required: column.required,
+            min: column.min,
+            max: column.max,
+            xdefault,
+          })
+        : await db.updateIntegerColumn({
+            ...base,
+            required: column.required,
+            min: column.min,
+            max: column.max,
+            xdefault: updateDefault(xdefault),
+          }));
     }
     case "boolean": {
-      const args = {
-        ...base,
-        required: column.required,
-        xdefault: column.required ? undefined : column.def,
-      };
+      const xdefault = column.required ? undefined : column.def;
       return void (create
-        ? await db.createBooleanColumn(args)
-        : await db.updateBooleanColumn(args));
+        ? await db.createBooleanColumn({
+            ...base,
+            required: column.required,
+            xdefault,
+          })
+        : await db.updateBooleanColumn({
+            ...base,
+            required: column.required,
+            xdefault: updateDefault(xdefault),
+          }));
     }
     case "datetime": {
-      const args = { ...base, required: column.required };
       return void (create
-        ? await db.createDatetimeColumn(args)
-        : await db.updateDatetimeColumn(args));
+        ? await db.createDatetimeColumn({ ...base, required: column.required })
+        : await db.updateDatetimeColumn({
+            ...base,
+            required: column.required,
+            xdefault: updateDefault<string>(undefined),
+          }));
     }
     case "point": {
-      const args = { ...base, required: column.required };
+      // Geometric columns are the exception: their update methods do
+      // not demand xdefault, so this one stays plain.
       return void (create
-        ? await db.createPointColumn(args)
-        : await db.updatePointColumn(args));
+        ? await db.createPointColumn({ ...base, required: column.required })
+        : await db.updatePointColumn({ ...base, required: column.required }));
     }
   }
 }
