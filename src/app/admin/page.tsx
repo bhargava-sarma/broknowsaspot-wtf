@@ -87,10 +87,13 @@ export default async function AdminPage() {
     );
   }
 
+  // The session secret only exists on the Appwrite path, where the queue
+  // is read as the admin rather than on an API key.
+  const secret = gate.secret;
   const [queue, notes, log] = await Promise.all([
-    readQueue(),
-    readNoteQueue(),
-    readLog(),
+    readQueue(secret),
+    readNoteQueue(secret),
+    readLog(20, secret),
   ]);
 
   if (!queue.ok) {

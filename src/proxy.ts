@@ -40,6 +40,37 @@ export default async function proxy(request: NextRequest) {
   let response = NextResponse.next({ request });
   response.headers.set("cache-control", NO_STORE);
 
+  const { pathname } = request.nextUrl;
+  const onLogin = pathname === "/admin/login";
+
+  // Appwrite path. There is nothing to refresh — the session secret in
+  // the cookie *is* the credential, long-lived, and validated by the page
+  // against the auth server. So this becomes a cookie-presence check with
+  // no network call at all, which is strictly cheaper than what it
+  // replaces. It is routing, not authorisation: the page re-checks, and
+  // Appwrite decides per row what an admin session may read.
+  if (process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID) {
+    const hasSession = Boolean(request.cookies.get("bkas_session")?.value);
+
+    if (!hasSession && !onLogin) {
+      const target = request.nextUrl.clone();
+      target.pathname = "/admin/login";
+      target.search = "";
+      const redirected = NextResponse.redirect(target);
+      redirected.headers.set("cache-control", NO_STORE);
+      return redirected;
+    }
+    if (hasSession && onLogin) {
+      const target = request.nextUrl.clone();
+      target.pathname = "/admin";
+      target.search = "";
+      const redirected = NextResponse.redirect(target);
+      redirected.headers.set("cache-control", NO_STORE);
+      return redirected;
+    }
+    return response;
+  }
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
@@ -69,9 +100,6 @@ export default async function proxy(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  const { pathname } = request.nextUrl;
-  const onLogin = pathname === "/admin/login";
 
   if (!user && !onLogin) {
     const target = request.nextUrl.clone();

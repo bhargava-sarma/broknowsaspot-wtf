@@ -1,5 +1,7 @@
 import "server-only";
 
+import * as appwriteAuth from "@/lib/appwrite/auth";
+import { isAppwriteConfigured } from "@/lib/appwrite/server";
 import {
   getServerSupabase,
   isAuthConfigured,
@@ -17,9 +19,30 @@ export type AdminGate =
   | { state: "unconfigured" }
   | { state: "signed-out" }
   | { state: "not-admin"; email: string }
-  | { state: "admin"; userId: string; email: string };
+  // `secret` is present only on the Appwrite path, where reads run as the
+  // signed-in user rather than on an API key. It is a credential: pass it
+  // to the moderation reads and nowhere else, and never into a component
+  // that renders.
+  | { state: "admin"; userId: string; email: string; secret?: string };
 
 export async function readAdminGate(): Promise<AdminGate> {
+  // Appwrite wins wherever it is configured, so the cutover is an
+  // environment change. The Supabase branch goes away with its modules.
+  if (isAppwriteConfigured) {
+    const gate = await appwriteAuth.readAdminGate();
+    // The session secret rides along on the Appwrite gate because reads
+    // are performed *as the admin*, not with the API key. Strip it here
+    // so page components cannot accidentally render it.
+    return gate.state === "admin"
+      ? {
+          state: "admin",
+          userId: gate.userId,
+          email: gate.email,
+          secret: gate.secret,
+        }
+      : gate;
+  }
+
   if (!isAuthConfigured) return { state: "unconfigured" };
 
   const supabase = await getServerSupabase();
