@@ -73,6 +73,32 @@ async function asGuest(
   }
 }
 
+/**
+ * Did a guest get *nothing* out of this table?
+ *
+ * Appwrite has two ways of saying no and both are correct. A table that
+ * grants guests nothing refuses the request outright with 401 — it does
+ * not even let you ask. A table that permits listing but holds no rows a
+ * guest may see returns an empty list.
+ *
+ * Asserting one exact shape couples the check to an implementation
+ * detail, which is what went wrong here: this expected rows:0 and
+ * production answered 401 — a *stricter* refusal than the one being
+ * tested for, reported as a failure.
+ *
+ * So the check is the property: no rows reached the caller. The raw
+ * outcome is still printed on failure, because "leaked 3 rows" and
+ * "leaked 300" want different reactions.
+ */
+async function guestGetsNothing(
+  run: () => Promise<{ total?: number; rows?: unknown[] }>,
+): Promise<string> {
+  const outcome = await asGuest(run);
+  if (outcome === "rows:0") return "nothing";
+  if (/^\d+$/.test(outcome)) return "nothing"; // refused with an http code
+  return `LEAKED ${outcome}`;
+}
+
 async function main() {
   // ---------------------------------------------------------- schema --
   const { tables } = await admin.listTables({ databaseId: DATABASE_ID });
@@ -257,6 +283,29 @@ async function main() {
 
   // --------------------------------------------------- public exposure --
   //
+  // A caveat that belongs in the output, not just in a comment: these
+  // checks pass vacuously when the table is empty. A misconfigured but
+  // empty `reports` table leaks nothing today and everything tomorrow.
+  // The "table-level grants" rows above are what actually cover that
+  // window, which is why they are asserted separately rather than being
+  // treated as an implementation detail of this section.
+  const privateTables = [
+    TABLES.reports,
+    TABLES.submissionLog,
+    TABLES.noteLog,
+    TABLES.moderationLog,
+  ];
+  const emptyPrivate: string[] = [];
+  for (const tableId of privateTables) {
+    const { total } = await admin.listRows({
+      databaseId: DATABASE_ID,
+      tableId,
+      queries: [Query.limit(1)],
+    });
+    if ((total ?? 0) === 0) emptyPrivate.push(tableId);
+  }
+
+  //
   // Everything below is attempted with no API key — exactly what anyone
   // holding the project id can do from a browser. A FAIL here is a live
   // leak, not a failing test.
@@ -273,15 +322,15 @@ async function main() {
   );
   add(
     "guest reads reports",
-    "rows:0",
-    await asGuest(() =>
+    "nothing",
+    await guestGetsNothing(() =>
       guest.listRows({ databaseId: DATABASE_ID, tableId: TABLES.reports }),
     ),
   );
   add(
     "guest reads the submission log",
-    "rows:0",
-    await asGuest(() =>
+    "nothing",
+    await guestGetsNothing(() =>
       guest.listRows({
         databaseId: DATABASE_ID,
         tableId: TABLES.submissionLog,
@@ -290,15 +339,15 @@ async function main() {
   );
   add(
     "guest reads the note log",
-    "rows:0",
-    await asGuest(() =>
+    "nothing",
+    await guestGetsNothing(() =>
       guest.listRows({ databaseId: DATABASE_ID, tableId: TABLES.noteLog }),
     ),
   );
   add(
     "guest reads the moderation log",
-    "rows:0",
-    await asGuest(() =>
+    "nothing",
+    await guestGetsNothing(() =>
       guest.listRows({
         databaseId: DATABASE_ID,
         tableId: TABLES.moderationLog,
@@ -396,6 +445,14 @@ async function main() {
   }
 
   console.log(`\n${checks.length - failed} ok, ${failed} failed`);
+
+  if (emptyPrivate.length > 0) {
+    console.log(
+      `\nnote: ${emptyPrivate.join(", ")} ${emptyPrivate.length === 1 ? "is" : "are"} empty, so the\n` +
+        "guest-read checks over them passed with nothing to leak. the\n" +
+        "table-level grant rows are what cover them until data arrives.",
+    );
+  }
 
   if (noAdminsYet && failed === 1) {
     console.log(
