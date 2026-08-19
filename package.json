@@ -17,7 +17,8 @@
     "db:test": "supabase/tests/run.sh",
     "appwrite:provision": "node --no-warnings=MODULE_TYPELESS_PACKAGE_JSON scripts/appwrite-provision.mts",
     "appwrite:seed": "node --no-warnings=MODULE_TYPELESS_PACKAGE_JSON scripts/appwrite-seed.mts",
-    "appwrite:verify": "node --no-warnings=MODULE_TYPELESS_PACKAGE_JSON scripts/appwrite-verify.mts"
+    "appwrite:verify": "node --no-warnings=MODULE_TYPELESS_PACKAGE_JSON scripts/appwrite-verify.mts",
+    "appwrite:setup": "npm run appwrite:provision && npm run appwrite:seed && npm run appwrite:verify"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.8",
