@@ -250,6 +250,40 @@ async function columnCall(
   }
 }
 
+type LiveColumn = {
+  key: string;
+  type?: string;
+  required?: boolean;
+  size?: number;
+  elements?: string[];
+};
+
+/**
+ * Is the live column already what the schema asks for?
+ *
+ * Deliberately narrow: `required`, a string's `size`, and an enum's
+ * `elements`. Those are the three the API reports reliably and the three
+ * that change behaviour. Diffing everything the response happens to
+ * contain would produce false differences and trigger updates that fail
+ * for no reason — which is the bug this function exists to prevent, not
+ * one to reintroduce from the other side.
+ */
+function matches(
+  column: TableSpec["columns"][number],
+  live: LiveColumn,
+): boolean {
+  if (Boolean(live.required) !== column.required) return false;
+  if (column.kind === "string" && live.size !== undefined) {
+    if (live.size !== column.size) return false;
+  }
+  if (column.kind === "enum" && Array.isArray(live.elements)) {
+    const want = [...column.values].sort().join(",");
+    const have = [...live.elements].sort().join(",");
+    if (want !== have) return false;
+  }
+  return true;
+}
+
 async function provisionTable(table: TableSpec): Promise<void> {
   console.log(`\n${table.id}`);
 
@@ -277,20 +311,63 @@ async function provisionTable(table: TableSpec): Promise<void> {
     }),
   );
 
+  // What is already there, so only genuine differences are written.
+  //
+  // The previous version re-asserted every column on every run, which
+  // looked harmlessly idempotent and was not: Appwrite refuses to apply
+  // `required: true` to a spatial column once rows exist, even when the
+  // column is already required. A no-op update was rejected as if it were
+  // a schema change, and provisioning could not be re-run against a
+  // populated database at all.
+  const live = new Map<string, LiveColumn>();
+  try {
+    const { columns } = await db.listColumns({
+      databaseId: DATABASE_ID,
+      tableId: table.id,
+    });
+    for (const column of columns as LiveColumn[]) live.set(column.key, column);
+  } catch {
+    // A table created moments ago may not list yet. Every column then
+    // takes the create path, which is correct for a new table.
+  }
+
   for (const column of table.columns) {
-    try {
-      await columnCall(table.id, column, "create");
-      console.log(`  + column ${column.name} (${column.kind})`);
-    } catch (error) {
-      if (!isConflict(error)) {
-        console.error(`  ! column ${column.name}`);
-        throw error;
+    const existing = live.get(column.name);
+
+    if (!existing) {
+      try {
+        await columnCall(table.id, column, "create");
+        console.log(`  + column ${column.name} (${column.kind})`);
+      } catch (error) {
+        if (!isConflict(error)) {
+          console.error(`  ! column ${column.name}`);
+          throw error;
+        }
+        console.log(`  · column ${column.name}`);
       }
-      // Already there — re-apply the definition so a column created by an
-      // earlier run with different settings converges instead of quietly
-      // staying wrong.
+      continue;
+    }
+
+    if (matches(column, existing)) {
+      console.log(`  · column ${column.name}`);
+      continue;
+    }
+
+    // A real difference. Worth attempting, and worth explaining if the
+    // database refuses — tightening a column against existing rows is a
+    // migration, not a settings change, and should be looked at rather
+    // than forced.
+    try {
       await columnCall(table.id, column, "assert");
-      console.log(`  · column ${column.name} (asserted)`);
+      console.log(`  ~ column ${column.name} (changed)`);
+    } catch (error) {
+      console.error(
+        `  ! column ${column.name} differs from the schema and could not ` +
+          `be changed in place.\n` +
+          `    wanted required=${column.required}, found required=${existing.required}\n` +
+          `    appwrite: ${(error as { message?: string }).message ?? error}`,
+      );
+      throw error;
     }
   }
 
