@@ -49,7 +49,10 @@ export default async function proxy(request: NextRequest) {
   // no network call at all, which is strictly cheaper than what it
   // replaces. It is routing, not authorisation: the page re-checks, and
   // Appwrite decides per row what an admin session may read.
-  if (process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID) {
+  if (
+    process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID ??
+    process.env.APPWRITE_PROJECT_ID
+  ) {
     const hasSession = Boolean(request.cookies.get("bkas_session")?.value);
 
     if (!hasSession && !onLogin) {

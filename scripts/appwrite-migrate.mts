@@ -32,7 +32,9 @@ const supabaseUrl =
   process.env.SUPABASE_URL ?? process.env.NEXT_PUBLIC_SUPABASE_URL;
 const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const endpoint = process.env.APPWRITE_ENDPOINT;
-const projectId = process.env.APPWRITE_PROJECT_ID;
+const projectId =
+  process.env.APPWRITE_PROJECT_ID ??
+  process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID;
 const apiKey = process.env.APPWRITE_API_KEY;
 
 if (!supabaseUrl || !serviceKey || !endpoint || !projectId || !apiKey) {
