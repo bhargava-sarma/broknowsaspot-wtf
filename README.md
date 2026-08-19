@@ -161,7 +161,19 @@ the other is being stood up.
 | `npm run appwrite:setup`     | provision, seed and verify in order      |
 
 All of them need `APPWRITE_ENDPOINT`, `APPWRITE_PROJECT_ID` and
-`APPWRITE_API_KEY`.
+`APPWRITE_API_KEY`. The key's scopes:
+
+| scope | for |
+| ----- | --- |
+| `databases.read` / `databases.write` | the database itself |
+| `tables.read` / `tables.write` | tables, columns, indexes |
+| `collections.read` / `collections.write` | the legacy names for the same |
+| `documents.read` / `documents.write` | rows |
+| `teams.read` / `teams.write` | the admins team |
+| `users.read` / `users.write` | **`appwrite:admin` only** — the one script that touches accounts |
+
+`appwrite:migrate` additionally needs `SUPABASE_URL`,
+`SUPABASE_SERVICE_ROLE_KEY` and `REPORTER_KEY_SALT`.
 
 ### what changed, and what it cost
 
