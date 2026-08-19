@@ -13,11 +13,12 @@
     "typecheck": "tsc --noEmit",
     "check:contrast": "node scripts/check-contrast.mjs",
     "check": "npm run typecheck && npm run lint && npm run check:contrast && npm run format:check",
-    "seed:sql": "node scripts/generate-seed-sql.mjs",
+    "seed:sql": "tsx scripts/generate-seed-sql.mjs",
     "db:test": "supabase/tests/run.sh",
-    "appwrite:provision": "node --no-warnings=MODULE_TYPELESS_PACKAGE_JSON scripts/appwrite-provision.mts",
-    "appwrite:seed": "node --no-warnings=MODULE_TYPELESS_PACKAGE_JSON scripts/appwrite-seed.mts",
-    "appwrite:verify": "node --no-warnings=MODULE_TYPELESS_PACKAGE_JSON scripts/appwrite-verify.mts"
+    "appwrite:provision": "tsx scripts/appwrite-provision.mts",
+    "appwrite:seed": "tsx scripts/appwrite-seed.mts",
+    "appwrite:verify": "tsx scripts/appwrite-verify.mts",
+    "appwrite:setup": "npm run appwrite:provision && npm run appwrite:seed && npm run appwrite:verify"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.8",
@@ -47,6 +48,7 @@
     "prettier": "^3.9.6",
     "prettier-plugin-tailwindcss": "^0.8.1",
     "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.12",
     "typescript": "^5.9.3"
   },
   "engines": {

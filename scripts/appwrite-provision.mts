@@ -23,7 +23,7 @@ import {
   DATABASE_ID,
   SCHEMA,
   type TableSpec,
-} from "../src/lib/appwrite/schema.ts";
+} from "@/lib/appwrite/schema";
 
 const endpoint = process.env.APPWRITE_ENDPOINT;
 const projectId = process.env.APPWRITE_PROJECT_ID;
