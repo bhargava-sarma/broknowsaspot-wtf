@@ -358,15 +358,20 @@ async function main() {
   );
 
   // ------------------------------------------------------------ teams --
+  let noAdminsYet = false;
   try {
     const team = (await teams.get({ teamId: ADMIN_TEAM_ID })) as {
       total?: number;
     };
     add("admin team exists", "true", "true");
-    add("…has at least one member", "true", String((team.total ?? 0) > 0));
+    // Expected to fail until someone is invited. Nobody can reach /admin
+    // before that, which is the safe direction to be wrong in — unlike
+    // every other check here, where failing means too much access.
+    noAdminsYet = (team.total ?? 0) === 0;
+    add("admin team has a member", "true", String(!noAdminsYet));
   } catch {
     add("admin team exists", "true", "false");
-    add("…has at least one member", "true", "unknown");
+    add("admin team has a member", "true", "unknown");
   }
 
   // ----------------------------------------------------------- report --
@@ -391,10 +396,18 @@ async function main() {
   }
 
   console.log(`\n${checks.length - failed} ok, ${failed} failed`);
-  if (failed > 0) {
+
+  if (noAdminsYet && failed === 1) {
     console.log(
-      "\na FAIL under 'permissions match hidden state' or any 'guest'\n" +
-        "row is a live exposure, not a flaky check.",
+      "\nthe only failure is that no one has been invited to the admins\n" +
+        "team yet. invite yourself in the appwrite console, under Auth →\n" +
+        "Teams → admins, and this goes green. everything else is clean.",
+    );
+  } else if (failed > 0) {
+    console.log(
+      "\na FAIL under 'permissions match hidden state' or any 'guest' row\n" +
+        "is a live exposure rather than a flaky check: it means the public\n" +
+        "can reach something the data says is hidden.",
     );
   }
   process.exit(failed > 0 ? 1 : 0);
