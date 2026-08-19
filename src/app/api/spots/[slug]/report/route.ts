@@ -5,6 +5,7 @@ import { requestKey } from "@/lib/security/request-key";
 import { verifyTurnstile } from "@/lib/security/turnstile";
 import { isReportReason } from "@/lib/spots/reports";
 import { getAdminSupabase, isWriteEnabled } from "@/lib/supabase/admin";
+import * as writes from "@/lib/data/writes";
 
 /**
  * Report a spot.
@@ -24,7 +25,9 @@ export async function POST(
 ) {
   const { slug } = await params;
 
-  if (!isWriteEnabled) {
+  if (
+    !(writes.useAppwriteWrites ? writes.isAppwriteWritable : isWriteEnabled)
+  ) {
     return NextResponse.json(
       { ok: false, message: "reporting isn't available right now." },
       { status: 503 },
@@ -66,6 +69,43 @@ export async function POST(
   }
 
   const reporterKey = requestKey(request);
+
+  if (writes.useAppwriteWrites) {
+    if (!reporterKey) {
+      return NextResponse.json(
+        { ok: false, message: "reporting isn't available right now." },
+        { status: 503 },
+      );
+    }
+    try {
+      const logged = await writes.reportSpot(
+        slug,
+        body.reason,
+        detail,
+        reporterKey,
+      );
+      if (!logged.ok) {
+        return NextResponse.json(
+          { ok: false, message: "no such spot." },
+          { status: 404 },
+        );
+      }
+      // The threshold may have just hidden it, in which case the cached
+      // page has to go.
+      revalidatePath("/explore");
+      revalidatePath(`/spot/${slug}`);
+      // Never says whether it hid, or how close it is. Publishing that
+      // turns the count into a progress bar for taking an entry down.
+      return NextResponse.json({ ok: true, message: "logged. thanks." });
+    } catch (thrown) {
+      console.error(`[reports] could not record report for "${slug}"`, thrown);
+      return NextResponse.json(
+        { ok: false, message: "couldn't log that. try again in a moment." },
+        { status: 500 },
+      );
+    }
+  }
+
   const supabase = getAdminSupabase();
   if (!reporterKey || !supabase) {
     return NextResponse.json(
