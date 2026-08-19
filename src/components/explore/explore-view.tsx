@@ -82,16 +82,24 @@ export function ExploreView({ spots }: { spots: Spot[] }) {
         <div className="order-2 lg:order-1 lg:col-span-5">
           {visible.length === 0 ? (
             <div className="shell py-[clamp(3rem,2rem+4vw,6rem)]">
+              {/* An empty index and an over-tight filter look identical
+                  from here and are not the same problem. Telling someone
+                  to loosen a filter when there is nothing to filter reads
+                  as a broken page, and the honest version of an empty
+                  index is an invitation. */}
               <p className="text-lead font-light text-ink lowercase">
-                nothing matches that.
+                {spots.length === 0
+                  ? "nothing here yet."
+                  : "nothing matches that."}
               </p>
               <p className="mt-3 max-w-[38ch] text-small text-muted">
-                the index is still small. loosen a filter, or add the place you
-                were looking for.
+                {spots.length === 0
+                  ? "the index is empty. it fills up one spot at a time, and nobody has gone first."
+                  : "the index is still small. loosen a filter, or add the place you were looking for."}
               </p>
               <div className="mt-8">
                 <ActionLink href="/submit" tone="accent">
-                  add a spot
+                  {spots.length === 0 ? "add the first spot" : "add a spot"}
                 </ActionLink>
               </div>
             </div>
