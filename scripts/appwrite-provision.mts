@@ -37,7 +37,9 @@ if (!endpoint || !projectId || !apiKey) {
       "APPWRITE_API_KEY.\n\n" +
       "the api key needs these scopes: databases.read, databases.write,\n" +
       "tables.read, tables.write, collections.read, collections.write,\n" +
-      "documents.read, documents.write, teams.read, teams.write",
+      "documents.read, documents.write, teams.read, teams.write\n\n" +
+      "add users.read and users.write too if the same key will run\n" +
+      "appwrite:admin, which is the only script that touches accounts.",
   );
   process.exit(1);
 }

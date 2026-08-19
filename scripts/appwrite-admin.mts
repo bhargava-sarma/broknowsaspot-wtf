@@ -33,7 +33,9 @@ const password = process.env.ADMIN_PASSWORD;
 
 if (!endpoint || !projectId || !apiKey) {
   console.error(
-    "set APPWRITE_ENDPOINT, APPWRITE_PROJECT_ID and APPWRITE_API_KEY",
+    "set APPWRITE_ENDPOINT, APPWRITE_PROJECT_ID and APPWRITE_API_KEY\n\n" +
+      "this script needs users.read and users.write on top of the scopes\n" +
+      "the other scripts use — it is the only one that touches accounts.",
   );
   process.exit(1);
 }
@@ -108,7 +110,24 @@ async function main() {
 }
 
 main().catch((error) => {
+  const message = String((error as { message?: string }).message ?? error);
+
+  // Appwrite names the missing scope but not where to add it, and this is
+  // the only script that needs users.* — an API key made for the other
+  // scripts will not have it.
+  const missing = message.match(/missing scopes \(\[(.+?)\]\)/);
+  if (missing) {
+    console.error(
+      `\nthe api key is missing ${missing[1]}.\n\n` +
+        "appwrite console -> your project -> settings -> api keys -> the key\n" +
+        "you are using -> add the scope, update, and run this again.\n\n" +
+        "this script needs users.read and users.write, which the provisioning\n" +
+        "scripts do not — those never touch accounts.",
+    );
+    process.exit(1);
+  }
+
   console.error("\nfailed:");
-  console.error((error as { message?: string }).message ?? error);
+  console.error(message);
   process.exit(1);
 });
