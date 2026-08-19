@@ -138,11 +138,11 @@ string typed into nine files, which is how a rename gets done eight times.
 
 ## the appwrite migration
 
-In progress. The data layer is moving from Supabase to Appwrite for the
-storage and bandwidth headroom, and because a Supabase Free project pauses
-after seven days of inactivity.
+The data layer moved from Supabase to Appwrite, for the storage and
+bandwidth headroom and because a Supabase Free project pauses after seven
+days of inactivity.
 
-Reads dispatch on configuration, in `src/lib/data/spots-repo.ts`:
+Reads and writes dispatch on configuration:
 
 ```ts
 const backend = isAppwriteConfigured ? "appwrite" : "supabase";
@@ -150,20 +150,22 @@ const backend = isAppwriteConfigured ? "appwrite" : "supabase";
 
 So the cutover is an environment change rather than a deploy, and both
 paths end at the same seed fallback — neither can take the site down while
-the other is being stood up. The branch goes away with the Supabase
-modules once production has read from Appwrite long enough to trust it.
+the other is being stood up.
 
-| script                     | does                                       |
-| -------------------------- | ------------------------------------------ |
-| `npm run appwrite:provision` | create the database, tables, columns, indexes and the admins team |
-| `npm run appwrite:seed`      | load the 14 seed spots and their notes    |
-| `npm run appwrite:verify`    | assert the security model against a live project |
+| script                       | does                                     |
+| ---------------------------- | ---------------------------------------- |
+| `npm run appwrite:provision` | database, tables, columns, indexes, team |
+| `npm run appwrite:seed`      | the 14 seed spots and their notes        |
+| `npm run appwrite:migrate`   | live data out of Supabase and into it    |
+| `npm run appwrite:verify`    | assert the security model against it     |
+| `npm run appwrite:setup`     | provision, seed and verify in order      |
 
-All three need `APPWRITE_ENDPOINT`, `APPWRITE_PROJECT_ID` and
-`APPWRITE_API_KEY` in the environment.
+All of them need `APPWRITE_ENDPOINT`, `APPWRITE_PROJECT_ID` and
+`APPWRITE_API_KEY`.
 
-**The thing to understand before changing anything here.** Supabase
-expressed visibility as a predicate the database evaluated:
+### what changed, and what it cost
+
+Supabase expressed visibility as a predicate the database evaluated:
 
 ```sql
 using (hidden_at is null and removed_at is null)
@@ -171,17 +173,64 @@ using (hidden_at is null and removed_at is null)
 
 Appwrite permissions are access-control lists, not predicates over the
 row. So visibility lives in two places — `hiddenAt`/`removedAt` as data,
-and the row's own `$permissions` as enforcement — and those can drift in a
-way Postgres made structurally impossible. Three things hold them
-together: one code path writes both, it does so inside a transaction, and
-`appwrite:verify` asserts every row's permissions match its state. Treat a
-failure there as a live exposure rather than a failing test.
+and each row's `$permissions` as enforcement — and those can drift in a
+way Postgres made structurally impossible.
 
-Public reads use a **guest client with no API key**, so the rows that come
-back are exactly the rows a browser could fetch. That is what keeps "a bug
-in the query leaks nothing" true after losing RLS.
+Three things hold them together:
 
-## deploying
+1. One code path writes both.
+2. It writes them inside a transaction, so a partial change rolls back.
+3. `appwrite:verify` asserts every row's permissions match its state.
+
+**Treat a failure of (3) as a live exposure, not a failing test.** A row
+whose data says hidden and whose ACL says `any` is publicly readable, and
+that check is the only thing that would ever say so.
+
+### what survived
+
+Public reads use a **guest client with no API key**, so what comes back is
+exactly what a browser could fetch — hidden entries are not filtered out
+by a query we could get wrong. The admin queue reads through the
+**signed-in admin's session**, so hidden rows come back only because they
+carry `read("team:admins")` and Appwrite agrees. Measured with a real
+non-admin session:
+
+```
+admin queue      -> 14
+NON-ADMIN queue  -> 13
+non-admin log    -> refused 401
+```
+
+A membership check that was somehow wrong yields an empty queue rather
+than a full one. That was the best property of the RLS design and it is
+the one worth having kept.
+
+### what got worse, honestly
+
+- The report threshold was a Postgres trigger and fired however the row
+  arrived. It is application code now, so the boundary is the API key —
+  the same boundary every other write already had, but a real reduction.
+- `CHECK` constraints are gone. Attribute limits cover the upper bounds;
+  `char_length(summary) >= 10` has no equivalent, so the validators are
+  the only thing enforcing minimums.
+- Notes cascade by hand. `spot_notes`'s policy could join to `spots` and
+  say "public while the parent is visible". An ACL cannot reference
+  another row, so hiding a spot rewrites its notes' permissions in the
+  same transaction.
+
+### what got better
+
+- Automatic hides are in the moderation log. The Postgres trigger ran as
+  an anonymous reporter and could not write to the audit table, so they
+  were invisible there and only inferable from `hidden_reason`.
+- `/admin` costs one fewer network round trip per request: an Appwrite
+  session secret needs no refreshing, so the proxy checks a cookie rather
+  than calling `getUser()`.
+- Spatial queries are available without a migration. `location` is a
+  `Point` with a spatial index, and `Query.distanceLessThan` is the
+  "spots within N km" that has been waiting since the first schema.
+
+## deploying## deploying
 
 Production is **Vercel**, deployed from `main`. Nothing special is required:
 Next.js is detected automatically and the default build settings are correct.
