@@ -2,6 +2,8 @@ import { HeroContours } from "@/components/hero/hero-contours";
 import { HeroVisual } from "@/components/hero/hero-visual";
 import { Reveal, RevealGroup } from "@/components/motion/reveal";
 import { ActionLink } from "@/components/ui/action-link";
+import { listSpots } from "@/lib/data/spots-repo";
+import type { Spot } from "@/lib/types/spot";
 
 const MANIFESTO = [
   {
@@ -21,14 +23,54 @@ const MANIFESTO = [
   },
 ];
 
-const READOUT = [
-  { label: "spots logged", value: "128" },
-  { label: "countries", value: "24" },
-  { label: "median walk-in", value: "2.4km" },
-  { label: "gift shops", value: "0" },
-];
+/**
+ * The readout, counted rather than claimed.
+ *
+ * These were scaffold placeholders — "128 spots logged", "24 countries" —
+ * and they stayed placeholders after the site started holding real
+ * entries. An index whose entire pitch is that its information is honest
+ * cannot open with four invented numbers, and the failure mode is quiet:
+ * they look plausible at any size, so nothing ever prompts you to check.
+ *
+ * "gift shops: 0" is the joke, and it stays, because it is the one figure
+ * that is true by construction.
+ */
+function readout(spots: Spot[]) {
+  const countries = new Set(spots.map((spot) => spot.country)).size;
 
-export default function HomePage() {
+  const walks = spots
+    .map((spot) => spot.walkInKm)
+    .filter((km) => Number.isFinite(km) && km > 0)
+    .sort((a, b) => a - b);
+  // noUncheckedIndexedAccess is on, so every index is possibly undefined
+  // and the median has to be written as if it might be.
+  const median = (): number | null => {
+    if (walks.length === 0) return null;
+    if (walks.length % 2 === 1) return walks[(walks.length - 1) / 2] ?? null;
+    const lower = walks[walks.length / 2 - 1];
+    const upper = walks[walks.length / 2];
+    if (lower === undefined || upper === undefined) return null;
+    return (lower + upper) / 2;
+  };
+  const middle = median();
+
+  return [
+    { label: "spots logged", value: String(spots.length) },
+    { label: "countries", value: String(countries) },
+    {
+      label: "median walk-in",
+      // An em dash rather than "0km", which would read as a measurement
+      // rather than as an absence.
+      value: middle === null ? "—" : `${middle.toFixed(1)}km`,
+    },
+    { label: "gift shops", value: "0" },
+  ];
+}
+
+export const revalidate = 300;
+
+export default async function HomePage() {
+  const READOUT = readout(await listSpots());
   return (
     <>
       {/* ---------------------------------------------------------- hero */}
