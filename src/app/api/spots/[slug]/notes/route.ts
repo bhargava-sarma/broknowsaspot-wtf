@@ -6,6 +6,7 @@ import { requestKey } from "@/lib/security/request-key";
 import { verifyTurnstile } from "@/lib/security/turnstile";
 import { validateNote } from "@/lib/spots/validate-note";
 import { getAdminSupabase, isWriteEnabled } from "@/lib/supabase/admin";
+import * as writes from "@/lib/data/writes";
 
 /**
  * Add a community note to a spot.
@@ -24,7 +25,9 @@ export async function POST(
 ) {
   const { slug } = await params;
 
-  if (!isWriteEnabled) {
+  if (
+    !(writes.useAppwriteWrites ? writes.isAppwriteWritable : isWriteEnabled)
+  ) {
     return NextResponse.json(
       { ok: false, message: "notes aren't available right now." },
       { status: 503 },
@@ -65,6 +68,53 @@ export async function POST(
   // 3. Identity for rate limiting. Without a key there is no way to meter
   //    this, so the write is refused rather than left unmetered.
   const submitterKey = requestKey(request);
+
+  if (writes.useAppwriteWrites) {
+    if (!submitterKey) {
+      return NextResponse.json(
+        { ok: false, message: "notes aren't available right now." },
+        { status: 503 },
+      );
+    }
+
+    const rate = await writes.checkNoteRate(submitterKey);
+    if (!rate.allowed) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: `that's a lot of notes — try again in about ${rate.retryAfterMinutes} minutes.`,
+        },
+        {
+          status: 429,
+          headers: { "retry-after": String(rate.retryAfterMinutes * 60) },
+        },
+      );
+    }
+
+    try {
+      // Only a visible spot takes a note; createNote checks that and
+      // reports a miss the same way a genuine 404 would.
+      const created = await writes.createNote(slug, result.draft, submitterKey);
+      if (!created.ok) {
+        return NextResponse.json(
+          { ok: false, message: "no such spot." },
+          { status: 404 },
+        );
+      }
+      revalidatePath(`/spot/${slug}`);
+      return NextResponse.json(
+        { ok: true, note: created.value },
+        { status: 201 },
+      );
+    } catch (thrown) {
+      console.error(`[notes] could not add a note to "${slug}"`, thrown);
+      return NextResponse.json(
+        { ok: false, message: "couldn't save that. try again in a moment." },
+        { status: 500 },
+      );
+    }
+  }
+
   const supabase = getAdminSupabase();
   if (!submitterKey || !supabase) {
     return NextResponse.json(

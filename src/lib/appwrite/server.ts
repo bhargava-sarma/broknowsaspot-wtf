@@ -25,7 +25,23 @@ import { Client, TablesDB, Teams } from "node-appwrite";
  */
 
 const endpoint = process.env.APPWRITE_ENDPOINT;
-const projectId = process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID;
+/**
+ * The project id, under either name.
+ *
+ * The scripts take APPWRITE_PROJECT_ID and the app needs the value inside
+ * the proxy, which only sees NEXT_PUBLIC_ variables reliably. Two names
+ * for one value is a footgun — set one, get a working app and broken
+ * scripts, with no error that says so — so both are accepted everywhere
+ * and setting either is enough.
+ *
+ * It is not a secret. It identifies the project the way a Supabase URL
+ * did, and a browser would hold it in any app that talked to Appwrite
+ * directly. This one does not, but the NEXT_PUBLIC_ prefix is still
+ * correct rather than merely tolerated.
+ */
+const projectId =
+  process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID ??
+  process.env.APPWRITE_PROJECT_ID;
 const apiKey = process.env.APPWRITE_API_KEY;
 
 export const isAppwriteConfigured = Boolean(endpoint && projectId);

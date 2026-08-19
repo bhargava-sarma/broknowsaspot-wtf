@@ -50,6 +50,18 @@ export const TABLES = {
 export const ADMIN_TEAM_ID = "admins";
 
 /**
+ * Table-level read for moderators, as a permission string.
+ *
+ * Written literally rather than built with Permission.read(Role.team())
+ * because this module is plain data that both the app and the scripts
+ * read, and importing the SDK here to produce a constant string would
+ * make it something else. `appwrite-verify.mts` asserts the live value
+ * matches, so a drift between this and what the SDK emits is caught
+ * rather than assumed away.
+ */
+export const ADMIN_READ = `read("team:${ADMIN_TEAM_ID}")`;
+
+/**
  * Report count at which a spot auto-hides.
  *
  * On Supabase this lived inside a trigger function and was unreachable
@@ -229,9 +241,12 @@ export const SCHEMA: TableSpec[] = [
   {
     id: TABLES.reports,
     name: "reports",
-    // Nothing public, ever. Not readable with the publishable key even
-    // for a row you wrote yourself.
-    permissions: [],
+    // Nothing public, ever — not readable with the publishable key even
+    // for a row you wrote yourself. Moderators read it as themselves,
+    // which is why the grant is to the team rather than to nobody: the
+    // admin screen reads through the signed-in session, so Appwrite
+    // decides whether this person may see reporter keys, not our code.
+    permissions: [ADMIN_READ],
     rowSecurity: false,
     columns: [
       { name: "spotId", kind: "string", size: 64, required: true },
@@ -258,7 +273,7 @@ export const SCHEMA: TableSpec[] = [
   {
     id: TABLES.submissionLog,
     name: "submission log",
-    permissions: [],
+    permissions: [ADMIN_READ],
     rowSecurity: false,
     columns: [
       { name: "spotId", kind: "string", size: 64, required: false },
@@ -270,7 +285,7 @@ export const SCHEMA: TableSpec[] = [
   {
     id: TABLES.noteLog,
     name: "note log",
-    permissions: [],
+    permissions: [ADMIN_READ],
     rowSecurity: false,
     columns: [
       { name: "noteId", kind: "string", size: 64, required: false },
@@ -282,7 +297,7 @@ export const SCHEMA: TableSpec[] = [
   {
     id: TABLES.moderationLog,
     name: "moderation log",
-    permissions: [],
+    permissions: [ADMIN_READ],
     rowSecurity: false,
     columns: [
       { name: "spotId", kind: "string", size: 64, required: true },

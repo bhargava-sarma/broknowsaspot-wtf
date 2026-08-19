@@ -1,5 +1,7 @@
 import "server-only";
 
+import * as appwriteModerate from "@/lib/appwrite/moderate";
+import { isAppwriteConfigured } from "@/lib/appwrite/server";
 import { getServerSupabase } from "@/lib/supabase/server-client";
 import type { ReportReason } from "@/lib/spots/reports";
 
@@ -69,7 +71,40 @@ function toEntry(row: QueueRow): QueueEntry {
 export type QueueResult =
   { ok: true; entries: QueueEntry[] } | { ok: false; message: string };
 
-export async function readQueue(): Promise<QueueResult> {
+export async function readQueue(secret?: string): Promise<QueueResult> {
+  if (isAppwriteConfigured) {
+    if (!secret) {
+      return { ok: false, message: "no admin session." };
+    }
+    try {
+      // Read as the admin, not on the API key: hidden rows carry
+      // read("team:admins"), so Appwrite decides per row what comes back.
+      // A membership check that was somehow wrong yields an empty queue
+      // rather than a full one.
+      const entries = await appwriteModerate.readQueue(secret);
+      return {
+        ok: true,
+        entries: entries.map((entry) => ({
+          slug: entry.slug,
+          name: entry.name,
+          region: entry.region,
+          country: entry.country,
+          state: entry.state,
+          addedAt: entry.addedAt,
+          hiddenAt: entry.state === "visible" ? null : entry.addedAt,
+          hiddenReason: entry.hiddenReason,
+          reportCount: entry.reportCount,
+          lastReportAt: null,
+          reasons: [],
+          autoHidden: entry.autoHidden,
+        })),
+      };
+    } catch (thrown) {
+      console.error("[admin] appwrite queue failed", thrown);
+      return { ok: false, message: "couldn't load the queue." };
+    }
+  }
+
   const supabase = await getServerSupabase();
   if (!supabase) {
     return {
@@ -137,7 +172,30 @@ export type NoteQueueResult =
  * recency is the only useful order: what a moderator wants is "what
  * arrived since I last looked".
  */
-export async function readNoteQueue(): Promise<NoteQueueResult> {
+export async function readNoteQueue(secret?: string): Promise<NoteQueueResult> {
+  if (isAppwriteConfigured) {
+    if (!secret) return { ok: false, message: "no admin session." };
+    try {
+      const entries = await appwriteModerate.readNoteQueue(secret);
+      return {
+        ok: true,
+        entries: entries.map((note) => ({
+          id: note.id,
+          spotSlug: note.spotSlug,
+          spotName: note.spotName,
+          author: note.author,
+          body: note.body,
+          notedOn: note.notedOn,
+          createdAt: note.notedOn,
+          hidden: note.hidden,
+        })),
+      };
+    } catch (thrown) {
+      console.error("[admin] appwrite note queue failed", thrown);
+      return { ok: false, message: "couldn't load the notes." };
+    }
+  }
+
   const supabase = await getServerSupabase();
   if (!supabase) {
     return { ok: false, message: "no database connection." };
@@ -195,7 +253,28 @@ export type LogResult =
  * recorded" is a claim about moderation history, and printing it because
  * a join broke would be a lie about the audit trail.
  */
-export async function readLog(limit = 20): Promise<LogResult> {
+export async function readLog(limit = 20, secret?: string): Promise<LogResult> {
+  if (isAppwriteConfigured) {
+    if (!secret) return { ok: false, message: "no admin session." };
+    try {
+      const entries = await appwriteModerate.readLog(secret);
+      return {
+        ok: true,
+        entries: entries.slice(0, limit).map((row) => ({
+          id: row.id,
+          action: row.action as LogEntry["action"],
+          reason: row.reason,
+          actor: row.actor,
+          at: row.at,
+          slug: row.isNote ? `${row.slug} (note)` : row.slug,
+        })),
+      };
+    } catch (thrown) {
+      console.error("[admin] appwrite log failed", thrown);
+      return { ok: false, message: "couldn't read the log." };
+    }
+  }
+
   const supabase = await getServerSupabase();
   if (!supabase) return { ok: false, message: "no database connection." };
 

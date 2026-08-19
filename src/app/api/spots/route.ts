@@ -7,6 +7,7 @@ import { requestKey } from "@/lib/security/request-key";
 import { verifyTurnstile } from "@/lib/security/turnstile";
 import { validateDraft } from "@/lib/spots/validate";
 import { getAdminSupabase, isWriteEnabled } from "@/lib/supabase/admin";
+import * as writes from "@/lib/data/writes";
 
 /**
  * GET — the index as JSON, through the same repository the pages use, so
@@ -29,7 +30,9 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  if (!isWriteEnabled) {
+  if (
+    !(writes.useAppwriteWrites ? writes.isAppwriteWritable : isWriteEnabled)
+  ) {
     return NextResponse.json(
       { ok: false, message: "submissions aren't available right now." },
       { status: 503 },
@@ -69,6 +72,63 @@ export async function POST(request: Request) {
   // 3. Identity for rate limiting. Without a key we cannot rate limit at
   //    all, so the write is refused rather than left unmetered.
   const submitterKey = requestKey(request);
+
+  // Appwrite path. Same guards in the same order; only the storage
+  // changes. The Supabase branch below goes away at cutover.
+  if (writes.useAppwriteWrites) {
+    if (!submitterKey) {
+      return NextResponse.json(
+        { ok: false, message: "submissions aren't available right now." },
+        { status: 503 },
+      );
+    }
+
+    const rate = await writes.checkSubmissionRate(submitterKey);
+    if (!rate.allowed) {
+      return NextResponse.json(
+        {
+          ok: false,
+          message: `that's enough for now — try again in about ${rate.retryAfterMinutes} minutes.`,
+        },
+        {
+          status: 429,
+          headers: { "retry-after": String(rate.retryAfterMinutes * 60) },
+        },
+      );
+    }
+
+    try {
+      const created = await writes.createSpot(result.draft, submitterKey);
+      if (!created.ok) {
+        console.error("[spots] submission failed", created.reason);
+        return NextResponse.json(
+          { ok: false, message: "couldn't save that. try again in a moment." },
+          { status: 500 },
+        );
+      }
+
+      // The new spot would otherwise wait out the five-minute ISR window
+      // before appearing, which reads as the submission having failed.
+      revalidatePath("/explore");
+      revalidatePath(`/spot/${created.value.slug}`);
+
+      return NextResponse.json(
+        {
+          ok: true,
+          slug: created.value.slug,
+          url: `/spot/${created.value.slug}`,
+        },
+        { status: 201 },
+      );
+    } catch (thrown) {
+      console.error("[spots] submission threw", thrown);
+      return NextResponse.json(
+        { ok: false, message: "couldn't save that. try again in a moment." },
+        { status: 500 },
+      );
+    }
+  }
+
   const supabase = getAdminSupabase();
   if (!submitterKey || !supabase) {
     return NextResponse.json(

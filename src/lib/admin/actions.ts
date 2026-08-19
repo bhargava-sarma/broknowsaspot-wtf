@@ -4,7 +4,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import type { ActionState } from "@/lib/admin/action-state";
+import * as appwriteAuth from "@/lib/appwrite/auth";
+import * as appwriteModerate from "@/lib/appwrite/moderate";
+import { isAppwriteConfigured } from "@/lib/appwrite/server";
 import { readAdminGate } from "@/lib/admin/session";
+import { cookies } from "next/headers";
 import { getServerSupabase } from "@/lib/supabase/server-client";
 
 /**
@@ -28,6 +32,40 @@ export async function signInAction(
 
   if (!email || !password) {
     return { status: "error", message: "email and password, both." };
+  }
+
+  if (isAppwriteConfigured) {
+    const session = await appwriteAuth.createSession(email, password);
+    if (!session.ok) {
+      // One message for every failure mode. Distinguishing "no such user"
+      // from "wrong password" turns the login form into a way to test
+      // whether an address has an account.
+      return { status: "error", message: "that didn't work." };
+    }
+
+    const store = await cookies();
+    store.set(appwriteAuth.SESSION_COOKIE, session.secret, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      path: "/",
+      // Appwrite sessions last a year by default; the cookie should not
+      // outlive what it points at, and a shorter one just logs people out
+      // for no security gain since the secret is what matters.
+      maxAge: 60 * 60 * 24 * 365,
+    });
+
+    // Signing in is not the same as being an admin. Say so here rather
+    // than letting the dashboard say it, so the account does not get a
+    // session it can do nothing with and no explanation.
+    const gate = await readAdminGate();
+    if (gate.state !== "admin") {
+      await appwriteAuth.destroySession(session.secret);
+      store.delete(appwriteAuth.SESSION_COOKIE);
+      return { status: "error", message: "that account isn't an admin." };
+    }
+
+    redirect("/admin");
   }
 
   const supabase = await getServerSupabase();
@@ -64,6 +102,14 @@ export async function signInAction(
 // ------------------------------------------------------------ sign out --
 
 export async function signOutAction(): Promise<void> {
+  if (isAppwriteConfigured) {
+    const store = await cookies();
+    const secret = store.get(appwriteAuth.SESSION_COOKIE)?.value;
+    if (secret) await appwriteAuth.destroySession(secret);
+    store.delete(appwriteAuth.SESSION_COOKIE);
+    redirect("/admin/login");
+  }
+
   const supabase = await getServerSupabase();
   await supabase?.auth.signOut();
   redirect("/admin/login");
@@ -100,6 +146,22 @@ export async function moderateAction(
   if (!slug) return { status: "error", message: "no spot given." };
   if (!isModerationAction(action)) {
     return { status: "error", message: "unknown action." };
+  }
+
+  if (isAppwriteConfigured) {
+    const applied = await appwriteModerate.moderateSpot(
+      slug,
+      action,
+      reason || null,
+      { id: gate.userId, email: gate.email },
+    );
+    if (!applied.ok) {
+      return { status: "error", message: applied.reason };
+    }
+    revalidatePath("/explore");
+    revalidatePath(`/spot/${slug}`);
+    revalidatePath("/admin");
+    return { status: "ok", message: `${slug} — ${PAST_TENSE[action]}.` };
   }
 
   const supabase = await getServerSupabase();
@@ -172,6 +234,24 @@ export async function moderateNoteAction(
   if (!noteId) return { status: "error", message: "no note given." };
   if (!isNoteAction(action)) {
     return { status: "error", message: "unknown action." };
+  }
+
+  if (isAppwriteConfigured) {
+    const applied = await appwriteModerate.moderateNote(
+      noteId,
+      action,
+      reason || null,
+      { id: gate.userId, email: gate.email },
+    );
+    if (!applied.ok) {
+      return { status: "error", message: applied.reason };
+    }
+    revalidatePath(`/spot/${applied.slug}`);
+    revalidatePath("/admin");
+    return {
+      status: "ok",
+      message: action === "hide" ? "note hidden." : "note restored.",
+    };
   }
 
   const supabase = await getServerSupabase();

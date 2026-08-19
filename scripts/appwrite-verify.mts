@@ -15,8 +15,16 @@
  * data leak, not a failing test.
  */
 
-import { Client, TablesDB, Teams, Query } from "node-appwrite";
 import {
+  Client,
+  TablesDB,
+  Teams,
+  Query,
+  Permission,
+  Role,
+} from "node-appwrite";
+import {
+  ADMIN_READ,
   ADMIN_TEAM_ID,
   DATABASE_ID,
   SCHEMA,
@@ -24,7 +32,9 @@ import {
 } from "@/lib/appwrite/schema";
 
 const endpoint = process.env.APPWRITE_ENDPOINT;
-const projectId = process.env.APPWRITE_PROJECT_ID;
+const projectId =
+  process.env.APPWRITE_PROJECT_ID ??
+  process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID;
 const apiKey = process.env.APPWRITE_API_KEY;
 
 if (!endpoint || !projectId || !apiKey) {
@@ -113,13 +123,24 @@ async function main() {
     add(`${spec.id} exists`, "true", String(Boolean(table)));
     if (!table) continue;
 
-    // Nothing is granted at table level anywhere. Every read a browser
-    // makes has to be justified by a row's own permissions, and every
-    // write goes through a route handler on the API key.
+    // The invariant is not "no table grants anything" — moderators read
+    // reports and the logs as themselves, so those tables grant read to
+    // the admins team. It is that **nothing is granted to the public**:
+    // no `any`, no `users`, no `guests`, on any table, for any verb. A
+    // grant to a role a stranger can hold is the whole failure mode.
+    const grants = (table.$permissions ?? []) as string[];
+    const publicGrants = grants.filter((g) =>
+      /\("(any|users|guests)"\)/.test(g),
+    );
     add(
-      `${spec.id} table-level grants`,
-      "0",
-      (table.$permissions ?? []).length,
+      `${spec.id} public grants`,
+      "none",
+      publicGrants.length ? publicGrants.join(",") : "none",
+    );
+    add(
+      `${spec.id} table grants`,
+      spec.permissions.join(",") || "none",
+      grants.join(",") || "none",
     );
     add(`${spec.id} row security`, spec.rowSecurity, table.rowSecurity);
 
@@ -407,6 +428,15 @@ async function main() {
   );
 
   // ------------------------------------------------------------ teams --
+  // The permission string in schema.ts is written by hand. If the SDK
+  // ever emits a different shape for the same thing, everything still
+  // "works" while granting nothing — so compare them.
+  add(
+    "admin permission string",
+    Permission.read(Role.team(ADMIN_TEAM_ID)),
+    ADMIN_READ,
+  );
+
   let noAdminsYet = false;
   try {
     const team = (await teams.get({ teamId: ADMIN_TEAM_ID })) as {

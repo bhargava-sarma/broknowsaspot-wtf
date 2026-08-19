@@ -18,7 +18,8 @@
     "appwrite:provision": "tsx scripts/appwrite-provision.mts",
     "appwrite:seed": "tsx scripts/appwrite-seed.mts",
     "appwrite:verify": "tsx scripts/appwrite-verify.mts",
-    "appwrite:setup": "npm run appwrite:provision && npm run appwrite:seed && npm run appwrite:verify"
+    "appwrite:setup": "npm run appwrite:provision && npm run appwrite:seed && npm run appwrite:verify",
+    "appwrite:migrate": "tsx scripts/appwrite-migrate.mts"
   },
   "dependencies": {
     "@react-three/drei": "^10.7.8",
