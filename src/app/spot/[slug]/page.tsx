@@ -119,7 +119,7 @@ export default async function SpotPage({
           <RevealGroup className="mt-6">
             <div className="grid gap-[var(--gutter)] sm:grid-cols-2 lg:grid-cols-3">
               {spot.photos.map((photo, index) => (
-                <Reveal key={photo.alt}>
+                <Reveal key={photo.alt} index={index}>
                   <SpotPlate photo={photo} index={index} />
                 </Reveal>
               ))}

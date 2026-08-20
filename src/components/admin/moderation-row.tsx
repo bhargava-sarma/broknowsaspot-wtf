@@ -135,7 +135,7 @@ export function ModerationRow({ entry }: { entry: QueueEntry }) {
                   value={verb}
                   disabled={pending}
                   className={cn(
-                    "tap touch-target border-b pb-1 font-mono text-tiny tracking-[0.04em] lowercase disabled:opacity-50",
+                    "press touch-target border-b pb-1 font-mono text-tiny tracking-[0.04em] lowercase disabled:opacity-50",
                     verb === "restore"
                       ? "border-rule-strong text-ink"
                       : "border-accent text-accent",

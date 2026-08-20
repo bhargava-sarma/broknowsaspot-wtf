@@ -2,6 +2,7 @@ import { HeroContours } from "@/components/hero/hero-contours";
 import { HeroVisual } from "@/components/hero/hero-visual";
 import { Reveal, RevealGroup } from "@/components/motion/reveal";
 import { ActionLink } from "@/components/ui/action-link";
+import { Ticker } from "@/components/ui/ticker";
 import { listSpots } from "@/lib/data/spots-repo";
 import type { Spot } from "@/lib/types/spot";
 
@@ -93,21 +94,21 @@ export default async function HomePage() {
         <div className="shell grid-swiss relative items-end pt-[clamp(3rem,2rem+6vw,8rem)] pb-[clamp(2.5rem,1.6rem+4vw,5rem)]">
           <div className="col-span-12 lg:col-span-8">
             <RevealGroup>
-              <Reveal>
+              <Reveal index={0}>
                 <p className="label flex items-center gap-3">
                   <span className="text-accent">{"///"}</span>
                   index of the unlisted
                 </p>
               </Reveal>
 
-              <Reveal>
+              <Reveal index={1}>
                 <h1 className="mt-[clamp(1.5rem,1rem+2vw,3rem)] text-mega font-light lowercase">
                   bro knows
                   <br />a spot
                 </h1>
               </Reveal>
 
-              <Reveal>
+              <Reveal index={2}>
                 <p className="mt-[clamp(1.5rem,1rem+1.6vw,2.5rem)] max-w-[46ch] text-lead font-light text-muted">
                   a crowdsourced guide to the places that never made the
                   guidebook. abandoned rail cuttings, unmarked springs, ridge
@@ -115,7 +116,7 @@ export default async function HomePage() {
                 </p>
               </Reveal>
 
-              <Reveal>
+              <Reveal index={3}>
                 <div className="mt-[clamp(2rem,1.4rem+2.4vw,3.5rem)] flex flex-wrap items-center gap-x-[clamp(1.5rem,1rem+2vw,3rem)] gap-y-4">
                   <ActionLink href="/explore" tone="accent">
                     open the map
@@ -137,10 +138,11 @@ export default async function HomePage() {
 
       {/* ------------------------------------------------------- readout */}
       <section className="rule-b" aria-label="index statistics">
-        <div className="shell grid grid-cols-2 sm:grid-cols-4">
+        <RevealGroup className="shell grid grid-cols-2 sm:grid-cols-4">
           {READOUT.map((item, i) => (
-            <div
+            <Reveal
               key={item.label}
+              index={i}
               className={[
                 "py-[clamp(1.25rem,1rem+1.2vw,2rem)]",
                 // Hairline column dividers that reset per row on mobile.
@@ -149,13 +151,13 @@ export default async function HomePage() {
                 i % 4 !== 0 ? "sm:border-l sm:pl-[var(--gutter)]" : "",
               ].join(" ")}
             >
-              <p className="font-mono text-h3 font-light text-ink tabular-nums">
-                {item.value}
+              <p className="font-mono text-h3 font-light text-ink">
+                <Ticker value={item.value} />
               </p>
               <p className="label mt-1">{item.label}</p>
-            </div>
+            </Reveal>
           ))}
-        </div>
+        </RevealGroup>
       </section>
 
       {/* ----------------------------------------------------- manifesto */}
@@ -167,8 +169,8 @@ export default async function HomePage() {
 
           <RevealGroup className="col-span-12 mt-8 lg:col-span-9 lg:mt-0">
             <div className="grid gap-[clamp(2rem,1.4rem+2.4vw,3.5rem)] md:grid-cols-3">
-              {MANIFESTO.map((item) => (
-                <Reveal key={item.n}>
+              {MANIFESTO.map((item, i) => (
+                <Reveal key={item.n} index={i}>
                   <article>
                     <p className="font-mono text-micro text-accent tabular-nums">
                       {item.n}
@@ -188,7 +190,7 @@ export default async function HomePage() {
       {/* ----------------------------------------------------------- cta */}
       <section>
         <div className="shell grid-swiss py-[clamp(3rem,2rem+5vw,7rem)]">
-          <Reveal standalone className="col-span-12 lg:col-span-8">
+          <Reveal className="col-span-12 lg:col-span-8">
             <h2 className="text-h2 font-light text-ink lowercase">
               know somewhere that isn&rsquo;t on here?
             </h2>

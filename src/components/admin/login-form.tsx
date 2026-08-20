@@ -62,7 +62,7 @@ export function LoginForm() {
       <button
         type="submit"
         disabled={pending}
-        className="tap touch-target mt-9 inline-flex items-center gap-3 border-b border-rule-strong pb-2 font-mono text-tiny tracking-[0.04em] text-ink lowercase disabled:opacity-50"
+        className="press touch-target mt-9 inline-flex items-center gap-3 border-b border-rule-strong pb-2 font-mono text-tiny tracking-[0.04em] text-ink lowercase disabled:opacity-50"
       >
         {pending ? "checking…" : "sign in"}
         <span aria-hidden="true">→</span>

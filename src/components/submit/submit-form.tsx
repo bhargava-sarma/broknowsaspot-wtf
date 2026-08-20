@@ -162,7 +162,7 @@ export function SubmitForm() {
           <div className="mt-10 flex flex-wrap gap-x-10 gap-y-4">
             <Link
               href={status.url}
-              className="tap touch-target inline-flex items-center gap-3 border-b border-accent pb-2 font-mono text-tiny tracking-[0.04em] text-accent lowercase"
+              className="press touch-target inline-flex items-center gap-3 border-b border-accent pb-2 font-mono text-tiny tracking-[0.04em] text-accent lowercase"
             >
               see the entry
               <span aria-hidden="true">→</span>
@@ -170,14 +170,14 @@ export function SubmitForm() {
             <button
               type="button"
               onClick={() => setStatus({ kind: "idle" })}
-              className="tap touch-target inline-flex items-center gap-3 border-b border-rule-strong pb-2 font-mono text-tiny tracking-[0.04em] text-ink lowercase"
+              className="press touch-target inline-flex items-center gap-3 border-b border-rule-strong pb-2 font-mono text-tiny tracking-[0.04em] text-ink lowercase"
             >
               add another
               <span aria-hidden="true">→</span>
             </button>
             <Link
               href="/explore"
-              className="tap touch-target inline-flex items-center gap-3 border-b border-rule pb-2 font-mono text-tiny tracking-[0.04em] text-muted lowercase"
+              className="press touch-target inline-flex items-center gap-3 border-b border-rule pb-2 font-mono text-tiny tracking-[0.04em] text-muted lowercase"
             >
               back to the map
               <span aria-hidden="true">→</span>
@@ -371,7 +371,7 @@ export function SubmitForm() {
           <button
             type="submit"
             disabled={status.kind === "submitting"}
-            className="tap touch-target inline-flex items-center gap-3 border-b border-rule-strong pb-2 font-mono text-tiny tracking-[0.04em] text-ink lowercase disabled:opacity-50"
+            className="press touch-target inline-flex items-center gap-3 border-b border-rule-strong pb-2 font-mono text-tiny tracking-[0.04em] text-ink lowercase disabled:opacity-50"
           >
             {status.kind === "submitting" ? "sending…" : "submit the spot"}
             <span aria-hidden="true">→</span>

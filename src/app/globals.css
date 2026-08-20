@@ -30,6 +30,30 @@
   --tone-rule-strong: #12120f; /* emphatic hairline                       */
   --tone-accent: #b23f18; /* burnt orange             5.14:1         */
   --tone-accent-ink: #f2f1ed; /* text on accent fill      5.14:1         */
+
+  /* -- glass: the floating plane's material ----------------------- *
+   * Not part of the tone system and deliberately outside the
+   * --tone-* namespace: these are never text colours, so the
+   * contrast guard has nothing to say about them. Anything a word
+   * sits on still resolves to a --tone-* value.
+   *
+   * The tint is lifted a shade off --tone-paper. Glass that matches
+   * the page exactly reads as flat fog; a sliver of separation is
+   * what makes it read as a pane above the page.
+   * -------------------------------------------------------------- */
+  --glass-tint: 249 248 245;
+  --glass-alpha: 0.66;
+  --glass-alpha-solid: 0.93; /* scrolled / over dense content */
+  --glass-blur: 20px;
+  --glass-saturate: 180%;
+
+  /* Light falls from above, so the top edge catches and the bottom
+     edge shades. These two lines are most of what separates "glass"
+     from "a translucent rectangle". */
+  --glass-specular: rgba(255, 255, 255, 0.85);
+  --glass-shade: rgba(18, 18, 15, 0.06);
+  --glass-rim: rgba(18, 18, 15, 0.1);
+  --glass-sheen: rgba(255, 255, 255, 0.42);
 }
 
 [data-theme="dark"] {
@@ -44,6 +68,22 @@
   --tone-rule-strong: #eceae4;
   --tone-accent: #f0723c; /* lifted + desaturated for dark  6.65:1   */
   --tone-accent-ink: #0d0d0c; /*                          6.65:1         */
+
+  /* Dark glass is a different material, not the light one inverted.
+     It leans darker than the page rather than lighter — a bright pane
+     over a near-black ground reads as a lightbox, not as glass — and
+     the specular edge drops to a whisper, because a bright rim on a
+     dark surface is the fastest way to look like a 2013 bevel. */
+  --glass-tint: 18 18 16;
+  --glass-alpha: 0.62;
+  --glass-alpha-solid: 0.92;
+  --glass-blur: 22px;
+  --glass-saturate: 165%;
+
+  --glass-specular: rgba(255, 255, 255, 0.11);
+  --glass-shade: rgba(0, 0, 0, 0.34);
+  --glass-rim: rgba(255, 255, 255, 0.08);
+  --glass-sheen: rgba(255, 255, 255, 0.045);
 }
 
 /* ------------------------------------------------------------------ *
@@ -115,6 +155,19 @@
   --shell-max: 96rem;
   --bar-h: 3.5rem; /* header + mobile bar height, shared */
 
+  /* -- radius ----------------------------------------------------- *
+   * Content is square. Full stop: sections, rules, images, tables and
+   * every edge in the reading plane stay at 0, which is what keeps the
+   * page Swiss rather than soft.
+   *
+   * Radius exists only on the floating plane, where a pane of glass
+   * needs an edge to refract along. The values are tight and
+   * architectural — the corner of a hardware button, not a pill.
+   * -------------------------------------------------------------- */
+  --radius-glass: 14px;
+  --radius-glass-sm: 10px;
+  --radius-glass-lg: 20px;
+
   /* -- damped spring easings (mirrors lib/motion/springs.ts) ------ */
   --ease-damped: linear(
     0,
@@ -133,6 +186,32 @@
     1
   );
   --ease-exit: cubic-bezier(0.32, 0, 0.67, 0);
+
+  /* Overshoots slightly, for things that should feel picked up rather
+     than faded in — press releases, sheets arriving, markers landing. */
+  --ease-spring: linear(
+    0,
+    0.0069 0.87%,
+    0.0538 2.61%,
+    0.1746 5.22%,
+    0.5821 12.17%,
+    0.7861 15.65%,
+    0.9324 18.7%,
+    1.0301 21.75%,
+    1.0827 24.8%,
+    1.0999 27.42%,
+    1.0925 30.9%,
+    1.0397 37.85%,
+    1.0084 43.51%,
+    0.9938 50.46%,
+    0.9975 62.65%,
+    1
+  );
+
+  /* -- durations, so timing is a token rather than a magic number -- */
+  --dur-tap: 140ms;
+  --dur-ui: 240ms;
+  --dur-surface: 420ms;
 }
 
 /* ------------------------------------------------------------------ *
@@ -310,6 +389,214 @@
   }
   .tap:active {
     opacity: 0.55;
+  }
+
+  /* ---------------------------------------------------------------- *
+   * scroll reveals
+   *
+   * Visible by default. The `.js` class — added by the pre-paint script
+   * in ThemeScript — is what opts them into starting hidden, so a page
+   * whose JavaScript never arrives is readable rather than blank.
+   *
+   * `[data-shown]` is set by an IntersectionObserver. After that the
+   * transition runs on the compositor and nothing touches the main
+   * thread again.
+   * ---------------------------------------------------------------- */
+  .js [data-reveal] {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+    transition:
+      opacity var(--dur-surface) var(--ease-damped),
+      transform var(--dur-surface) var(--ease-damped);
+    /* Stagger, as a delay derived from the child's index. */
+    transition-delay: calc(var(--reveal-i, 0) * 55ms);
+  }
+
+  .js [data-reveal][data-shown] {
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+
+  /* A group arms its own children: they wait for the group to enter,
+     then run in sequence. Nesting a Reveal inside a RevealGroup is the
+     normal case, so the child selector has to reach through wrappers. */
+  .js [data-reveal-group]:not([data-shown]) [data-reveal] {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .js [data-reveal],
+    .js [data-reveal-group]:not([data-shown]) [data-reveal] {
+      opacity: 1;
+      transform: none;
+      transition: none;
+    }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * glass — the floating plane
+   *
+   * Used ONLY by chrome that floats above content: the header, the
+   * mobile bar, the filter bar, sheets, map controls. Never by a
+   * section, a card or anything in the reading plane. That restraint
+   * is the whole design: content is flat and Swiss, and the things
+   * hovering over it are made of a different material.
+   *
+   * It is also a performance budget. `backdrop-filter` forces the
+   * compositor to re-blur the region behind it whenever that region
+   * changes, which on a phone during a scroll is every frame — so the
+   * rule is at most a handful of these on screen at once, and their
+   * blur value is never animated (changing it re-rasterises; changing
+   * opacity or transform does not).
+   * ---------------------------------------------------------------- */
+  .glass {
+    position: relative;
+    background-color: rgb(var(--glass-tint) / var(--glass-alpha));
+    /* Standard property only. Lightning CSS adds `-webkit-` from the
+       browser targets; writing the prefixed form by hand makes it treat
+       the two as one declaration and keep only the prefixed one, which
+       silently drops the blur in every browser that wants the standard
+       name. That failure is invisible in review — the tint still lands,
+       so the pane looks approximately right and simply never blurs. */
+    backdrop-filter: blur(var(--glass-blur)) saturate(var(--glass-saturate));
+    /* The light catch on the top edge and the shade on the bottom are
+       doing most of the work — without them this is just a translucent
+       rectangle. Inset shadows, so no outer glow and no elevation. */
+    box-shadow:
+      inset 0 1px 0 var(--glass-specular),
+      inset 0 -1px 0 var(--glass-shade);
+    transition:
+      background-color var(--dur-surface) var(--ease-damped),
+      box-shadow var(--dur-surface) var(--ease-damped);
+  }
+
+  /* The material's thickness: a very slight vertical gradient, top-lit.
+     Sits under content and never intercepts a pointer. */
+  .glass::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    border-radius: inherit;
+    background: linear-gradient(
+      to bottom,
+      var(--glass-sheen) 0%,
+      transparent 38%,
+      transparent 100%
+    );
+  }
+
+  /* Denser variant, for glass sitting over busy content (the map, a
+     photo) where 66% alpha stops being legible. Alpha only — the blur
+     is unchanged, so this can cross-fade without re-rasterising. */
+  .glass-dense {
+    background-color: rgb(var(--glass-tint) / var(--glass-alpha-solid));
+  }
+
+  /* A control that already sits ON a glass pane: the theme toggle in the
+     header, the filters button in the filter bar.
+     
+     Same edge treatment, no `backdrop-filter`. Blurring inside something
+     already blurred costs a second full-region rasterisation to produce
+     a *worse* result — the backdrop it samples is its blurred parent, so
+     the effect compounds into mush. What a key on a panel actually needs
+     is to catch the light differently from the panel, which is the
+     specular edge alone. */
+  .glass-chip {
+    position: relative;
+    background-color: rgb(var(--glass-tint) / 0.55);
+    box-shadow:
+      inset 0 1px 0 var(--glass-specular),
+      inset 0 -1px 0 var(--glass-shade);
+  }
+
+  /* The pane's outer edge. A hairline rather than a border so it stays
+     in the same visual family as every other rule on the page. */
+  .glass-rim {
+    border: 1px solid var(--glass-rim);
+  }
+
+  .glass-r {
+    border-radius: var(--radius-glass);
+  }
+  .glass-r-sm {
+    border-radius: var(--radius-glass-sm);
+  }
+  .glass-r-lg {
+    border-radius: var(--radius-glass-lg);
+  }
+
+  /* Two ways this degrades, and both land on an opaque surface rather
+     than on unreadable text over a busy background.
+
+     1. The browser cannot blur. Safari < 9, Firefox with the pref off,
+        and anything old enough to matter.
+     2. The reader asked for less transparency. On iOS and macOS this
+        is a real accessibility setting, and it is usually set by
+        someone who finds translucent chrome genuinely hard to read. */
+  @supports not (backdrop-filter: blur(1px)) {
+    .glass {
+      background-color: var(--color-paper);
+    }
+    .glass::before {
+      display: none;
+    }
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    .glass {
+      background-color: var(--color-paper);
+      backdrop-filter: none;
+    }
+    .glass::before {
+      display: none;
+    }
+  }
+
+  /* ---------------------------------------------------------------- *
+   * press physics
+   *
+   * `.tap` fades. `.press` moves — it takes a real, if tiny, push
+   * inward on contact and springs back on release. On a touch screen
+   * this is the whole feedback story, since there is no hover to
+   * confirm a finger landed on the right thing.
+   * ---------------------------------------------------------------- */
+  .press {
+    transition:
+      transform var(--dur-tap) var(--ease-damped),
+      opacity var(--dur-tap) var(--ease-damped);
+  }
+  .press:active {
+    transform: scale(0.965);
+    opacity: 0.8;
+  }
+  @media (hover: hover) {
+    .press:hover {
+      opacity: 0.82;
+    }
+  }
+
+  /* Same idea for a whole glass pane: it sinks slightly rather than
+     shrinking, which is what a physical button under a sheet does. */
+  .press-pane {
+    transition:
+      transform var(--dur-ui) var(--ease-spring),
+      background-color var(--dur-ui) var(--ease-damped);
+  }
+  .press-pane:active {
+    transform: translateY(1px) scale(0.992);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .press,
+    .press-pane {
+      transition: opacity var(--dur-tap) linear;
+    }
+    .press:active,
+    .press-pane:active {
+      transform: none;
+    }
   }
 
   /* Monospace label / eyebrow / tag. */

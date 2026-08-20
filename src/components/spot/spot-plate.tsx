@@ -63,7 +63,10 @@ export function SpotPlate({
   if (photo.src) {
     return (
       <figure
-        className={cn("relative aspect-[4/3] overflow-hidden", className)}
+        className={cn(
+          "group relative aspect-[4/3] overflow-hidden bg-paper-raised",
+          className,
+        )}
       >
         <Image
           src={photo.src}
@@ -71,7 +74,7 @@ export function SpotPlate({
           fill
           sizes={sizes}
           priority={priority}
-          className="object-cover"
+          className="object-cover transition-transform duration-700 ease-[var(--ease-damped)] group-hover:scale-[1.03] motion-reduce:transition-none"
         />
       </figure>
     );

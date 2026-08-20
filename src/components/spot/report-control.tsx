@@ -76,7 +76,7 @@ export function ReportControl({ slug }: { slug: string }) {
       <button
         type="button"
         onClick={() => setState({ kind: "open" })}
-        className="tap touch-target font-mono text-micro text-faint lowercase"
+        className="press touch-target font-mono text-micro text-faint lowercase"
       >
         report this entry
       </button>
@@ -101,7 +101,7 @@ export function ReportControl({ slug }: { slug: string }) {
               aria-checked={active}
               onClick={() => setReason(value)}
               className={cn(
-                "tap touch-target relative text-left font-mono text-micro lowercase",
+                "press touch-target relative text-left font-mono text-micro lowercase",
                 active ? "text-ink" : "text-faint",
               )}
             >
@@ -144,14 +144,14 @@ export function ReportControl({ slug }: { slug: string }) {
           type="button"
           onClick={submit}
           disabled={!reason || state.kind === "sending"}
-          className="tap touch-target border-b border-accent pb-1 font-mono text-micro text-accent lowercase disabled:opacity-40"
+          className="press touch-target border-b border-accent pb-1 font-mono text-micro text-accent lowercase disabled:opacity-40"
         >
           {state.kind === "sending" ? "sending…" : "send report"}
         </button>
         <button
           type="button"
           onClick={() => setState({ kind: "closed" })}
-          className="tap touch-target font-mono text-micro text-faint lowercase"
+          className="press touch-target font-mono text-micro text-faint lowercase"
         >
           cancel
         </button>

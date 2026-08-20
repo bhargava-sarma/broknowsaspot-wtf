@@ -10,7 +10,7 @@ export function SignOut({ email }: { email: string }) {
       <span className="font-mono text-micro text-faint lowercase">{email}</span>
       <button
         type="submit"
-        className="tap touch-target border-b border-rule pb-1 font-mono text-micro text-muted lowercase"
+        className="press touch-target border-b border-rule pb-1 font-mono text-micro text-muted lowercase"
       >
         sign out
       </button>
