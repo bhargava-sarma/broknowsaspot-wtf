@@ -11,6 +11,7 @@ Live at **<https://broknowsaspot.app>**.
 | --------- | --------------------------------------------------- |
 | framework | Next.js (App Router) + TypeScript                   |
 | data      | Appwrite Cloud (TablesDB)                           |
+| basemap   | OpenFreeMap vector tiles via MapLibre + Leaflet      |
 | styling   | Tailwind CSS v4 (CSS-first design tokens)           |
 | 3d        | React Three Fiber + drei + three                    |
 | motion    | Framer Motion                                       |
@@ -322,8 +323,8 @@ everything else stays server-side.
 | `NEXT_PUBLIC_SITE_URL`            | public   | `https://broknowsaspot.app`                 |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY`  | public   | Cloudflare Turnstile widget                 |
 | `TURNSTILE_SECRET_KEY`            | secret   | **required for writes in prod**             |
-| `NEXT_PUBLIC_MAP_TILE_URL_LIGHT`  | public   | **required to serve India** — see above     |
-| `NEXT_PUBLIC_MAP_TILE_URL_DARK`   | public   | **required to serve India** — see above     |
+| `NEXT_PUBLIC_MAP_TILE_URL_LIGHT`  | public   | optional — opts out to a raster provider    |
+| `NEXT_PUBLIC_MAP_TILE_URL_DARK`   | public   | optional — opts out to a raster provider    |
 | `NEXT_PUBLIC_MAP_ATTRIBUTION`     | public   | attribution the tile licence requires       |
 
 The project id is accepted as either `NEXT_PUBLIC_APPWRITE_PROJECT_ID` or
@@ -353,96 +354,108 @@ typed into nine files, which is how a rename gets done eight times.
 
 ## the basemap, and India's borders
 
-The maps open on India, and the app is built for Indian users. That makes
-the basemap provider a compliance decision rather than a styling one.
+The maps open on India, and the borders are drawn as the Government of
+India depicts them. That is a property of how the basemap is built here,
+not a setting someone has to remember.
 
-**Boundaries are rendered into the tiles.** A raster basemap arrives as a
-finished PNG with every border already drawn into the pixels — no client
-code repaints them. Drawing a corrected boundary as an overlay does not
-work either: the provider's own lines stay visible underneath, so the
-result reads as two maps disagreeing rather than as one correct map.
+**Why it needed doing.** A raster basemap arrives as a finished image
+with the borders already painted in, so the only lever is which provider
+you pay. The usual OpenStreetMap render depicts *de-facto lines of
+control*: dashed boundaries through Jammu & Kashmir, Aksai Chin outside
+India, Arunachal Pradesh marked disputed. Maps published in India are
+required to show boundaries as depicted by the Survey of India.
 
-The no-key fallback renders OpenStreetMap data, which depicts **de-facto
-lines of control**: dashed boundaries through Jammu & Kashmir, Aksai Chin
-outside India, Arunachal Pradesh marked disputed. Maps published in India
-are required to show boundaries as depicted by the Survey of India, and
-that fallback does not.
+**How it is fixed.** The basemap is vector, not raster. Vector tiles ship
+boundary *data* and leave the drawing to the client, so the question
+stops being procurement and becomes a filter. Tiles come from
+[OpenFreeMap](https://openfreemap.org) — OpenMapTiles schema, HTTPS, no
+API key, no registration, no request cap — and
+[`src/lib/map/india-worldview.ts`](src/lib/map/india-worldview.ts)
+rewrites the style's boundary layers before anything is drawn.
 
-**So the fix is the provider.** Point the basemap at cartography that is
-already Survey of India-aligned and the borders come out right because
-they were rendered right:
+The schema carries exactly what the question needs:
 
-| variable                          | is                                             |
-| --------------------------------- | ---------------------------------------------- |
-| `NEXT_PUBLIC_MAP_TILE_URL_LIGHT`  | light-theme tile URL template                  |
-| `NEXT_PUBLIC_MAP_TILE_URL_DARK`   | dark-theme tile URL template                   |
-| `NEXT_PUBLIC_MAP_ATTRIBUTION`     | the attribution your licence requires          |
-| `NEXT_PUBLIC_MAP_TILE_SIZE`       | `512` for providers that serve 512px tiles     |
+| field           | is                                              |
+| --------------- | ----------------------------------------------- |
+| `claimed_by`    | ISO2 of the country that wants to see this line  |
+| `disputed`      | 1 when the border is contested                   |
+| `disputed_name` | which dispute, e.g. `IndianClaimwesternKashmir`  |
 
-The URL template is configuration rather than something hard-coded,
-because the endpoint shape differs per provider — paste whatever yours
-documents, including its key.
+A default style draws every claimant's line at once — which is precisely
+why the stock render shows a line of control through Kashmir. Keeping
+only the lines India recognises produces the Survey of India depiction
+from the same tiles. It is the same idea as Mapbox's `worldview`, applied
+to an open schema rather than bought with a key.
+
+Three things happen to every layer reading `source-layer: "boundary"`:
+
+1. Any `["!", ["has", "claimed_by"]]` clause is neutralised — styles use
+   it to suppress *all* claim lines, which suppresses India's too and
+   leaves the northern edge of Jammu & Kashmir simply missing.
+2. The worldview predicate is ANDed on, dropping foreign claim lines and
+   the competing claims in India's theatre.
+3. Where a layer exists to draw disputed borders, the dash is removed.
+   Once only India's line survives it is not a disputed border in this
+   depiction — it is the border.
+
+Layer *names* are never matched, only `source-layer`: the two styles in
+use already disagree about names, and a provider can rename them again.
+
+### it fails closed
+
+If the upstream style changes shape and no boundary layer can be found,
+the map **refuses to render** and says why, rather than falling back to
+the provider's own depiction. The spots stay listed and a notice appears
+in place of the basemap. A wrong-borders basemap looks completely normal,
+so a silent fallback is the one outcome worth ruling out.
+
+`npm run check:borders` runs the same rewrite against committed copies of
+both styles and evaluates the resulting filters with MapLibre's own
+expression engine, against synthetic boundary features standing in for
+each line the tiles contain — India's two claims, China's, Pakistan's, an
+unclaimed line of control, the Demchok and Bara Hotii disputes, and a
+dispute outside India that should be left alone. It runs in CI. Refresh
+`scripts/fixtures/` when the provider updates; a style that changed shape
+is exactly what this is for.
+
+### using a commercial provider instead
+
+Setting the tile URL variables switches to a plain XYZ raster basemap and
+opts out of the vector path entirely. That is for a provider whose
+cartography is *already* Survey of India-aligned — Mapbox with
+`worldview=IN`, or Mappls — where the borders are their problem:
+
+| variable                          | is                                         |
+| --------------------------------- | ------------------------------------------ |
+| `NEXT_PUBLIC_MAP_TILE_URL_LIGHT`  | light-theme tile URL template              |
+| `NEXT_PUBLIC_MAP_TILE_URL_DARK`   | dark-theme tile URL template               |
+| `NEXT_PUBLIC_MAP_ATTRIBUTION`     | the attribution your licence requires      |
+| `NEXT_PUBLIC_MAP_TILE_SIZE`       | `512` for providers serving 512px tiles    |
 
 `NEXT_PUBLIC_MAP_TILE_SIZE` matters more than it looks. Leaflet assumes
-256px tiles and will draw 512s at the wrong scale: the map renders one
-zoom level too far in with everything soft, which reads as a styling
-problem rather than a configuration one. Setting `512` also applies the
-`zoomOffset` of -1 that has to accompany it, and hands retina back to the
-provider — a 512px tile is already doubled, so Leaflet's own
-`detectRetina` would scale it twice. Put `@2x` in the URL template
-instead, if the provider offers it.
+256px tiles and draws 512s one zoom level too far in with everything
+soft, which reads as a styling problem rather than a configuration one.
+Setting `512` also applies the `zoomOffset` of -1 that must accompany it,
+and hands retina back to the provider — a 512px tile is already doubled,
+so Leaflet's `detectRetina` would scale it twice. Put `@2x` in the URL
+template instead.
 
-### which providers were checked
+### what else was considered
 
-| candidate                    | borders                     | usable here                                              |
-| ---------------------------- | --------------------------- | -------------------------------------------------------- |
-| **Mapbox, `worldview=IN`**   | Survey of India-aligned     | **yes** — plain XYZ raster, drops into the variables above |
-| **Bharatmaps / NIC**         | Survey of India-aligned     | government-to-government access only                       |
-| **openstreetmap.in**         | n/a                         | a community site, not a tile service                       |
-| **osm-in/tileserver**        | corrected, self-rendered    | self-hosting recipe; demo instance is HTTP on a bare IP    |
-| **CARTO / OSM (fallback)**   | de-facto lines of control   | no — this is the thing being replaced                      |
-
-**Mapbox is the practical answer.** It supports three *worldviews* — US,
-CN and IN — and the IN worldview shows Arunachal Pradesh within India and
-a larger extent of Kashmir than the others. Worldview is baked into a
-published style, and that style is then served as ordinary raster tiles:
-
-```
-https://api.mapbox.com/styles/v1/<user>/<style>/tiles/512/{z}/{x}/{y}@2x?access_token=<token>
-```
-
-That is a plain XYZ template, so it needs no code change — set the two
-URLs, `NEXT_PUBLIC_MAP_TILE_SIZE=512`, and the attribution Mapbox's terms
-require. Build a light and a dark style, set each one's worldview to IN,
-and apply the worldview filter to *every* boundary layer: leaving one
-unfiltered draws both depictions on top of each other.
-
-**Bharatmaps has the right cartography and the wrong front door.** It is
-NIC's platform, and its NICMAPS base layer is built from Survey of India
-1:50,000 data, so the boundaries are correct by construction. But the
-integration path is written for government departments — NIC issues API
-credentials to approved departments, and the published SOP is for
-government integration. Worth an enquiry; not worth planning around.
-
-**openstreetmap.in is not a tile service.** It is the OSM India community
-homepage. It does not publish a basemap you can point at — its own map
-uses a third-party Mapbox style built for the purpose. The sibling
-project `osm-in/tileserver` is a recipe for rendering corrected tiles
-yourself, by loading legal boundary shapes into PostGIS and rendering
-through a forked openstreetmap-carto; its public demo runs over plain
-HTTP on a bare IP, which a `.app` domain cannot use at all — the TLD is
-HSTS-preloaded, so the browser refuses the request before it is made.
-
-Until the variables are set the app logs a warning on every map mount and
-keeps serving the fallback, so it still runs locally — but **it is not fit
-to publish in India in that state.** Nothing about the running app looks
-wrong, which is exactly why the warning exists.
+| candidate              | outcome                                                          |
+| ---------------------- | ---------------------------------------------------------------- |
+| **OpenFreeMap**        | **in use** — keyless vector, so the style decides the borders     |
+| Mapbox `worldview=IN`  | works, needs a key and a billing account                          |
+| Bharatmaps / NIC       | Survey of India data, but credentials are issued to govt bodies   |
+| openstreetmap.in       | a community site, not a tile service                              |
+| osm-in/tileserver      | self-hosting recipe; its demo is HTTP on a bare IP, unusable here |
+| CARTO / OSM raster     | the de-facto depiction this replaced                              |
 
 ## known gaps
 
-- **The basemap is unconfigured**, so it falls back to CARTO — see above.
-  This is the one item on this list that is a blocker rather than a
-  nice-to-have.
+- The vector basemap has not been seen rendering against the live
+  OpenFreeMap service — it was verified against committed copies of the
+  styles. Check the borders on the deploy.
 - No photo uploads; `photos[].src` is still `null` everywhere.
 - Proximity search is unbuilt, though the schema is ready for it: `location`
   is a `Point` with a spatial index, so `Query.distanceLessThan` is a query

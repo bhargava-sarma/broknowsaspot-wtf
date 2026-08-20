@@ -4,22 +4,10 @@ import "leaflet/dist/leaflet.css";
 
 import L from "leaflet";
 import { useEffect } from "react";
-import {
-  MapContainer,
-  Marker,
-  TileLayer,
-  useMap,
-  useMapEvents,
-} from "react-leaflet";
+import { MapContainer, Marker, useMap, useMapEvents } from "react-leaflet";
 
-import {
-  ATTRIBUTION,
-  DETECT_RETINA,
-  INDIA_VIEW,
-  TILE_SIZE,
-  TILE_URL,
-  ZOOM_OFFSET,
-} from "@/lib/map/tiles";
+import { BasemapLayer } from "@/components/map/basemap-layer";
+import { INDIA_VIEW } from "@/lib/map/tiles";
 import { useTheme } from "@/lib/theme/theme-provider";
 
 /**
@@ -103,15 +91,7 @@ export default function LocationPicker({
       scrollWheelZoom
       zoomControl={false}
     >
-      <TileLayer
-        key={theme}
-        url={TILE_URL[theme]}
-        attribution={ATTRIBUTION}
-        tileSize={TILE_SIZE}
-        zoomOffset={ZOOM_OFFSET}
-        maxZoom={19}
-        detectRetina={DETECT_RETINA}
-      />
+      <BasemapLayer theme={theme} />
       <ClickToSet onPick={onPick} />
       <SyncView lat={lat} lng={lng} />
       {placed ? <Marker position={[lat, lng]} icon={pinIcon} /> : null}
