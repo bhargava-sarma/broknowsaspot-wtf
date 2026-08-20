@@ -12,7 +12,14 @@ import {
   useMapEvents,
 } from "react-leaflet";
 
-import { ATTRIBUTION, INDIA_VIEW, TILE_URL } from "@/lib/map/tiles";
+import {
+  ATTRIBUTION,
+  DETECT_RETINA,
+  INDIA_VIEW,
+  TILE_SIZE,
+  TILE_URL,
+  ZOOM_OFFSET,
+} from "@/lib/map/tiles";
 import { useTheme } from "@/lib/theme/theme-provider";
 
 /**
@@ -100,8 +107,10 @@ export default function LocationPicker({
         key={theme}
         url={TILE_URL[theme]}
         attribution={ATTRIBUTION}
+        tileSize={TILE_SIZE}
+        zoomOffset={ZOOM_OFFSET}
         maxZoom={19}
-        detectRetina
+        detectRetina={DETECT_RETINA}
       />
       <ClickToSet onPick={onPick} />
       <SyncView lat={lat} lng={lng} />

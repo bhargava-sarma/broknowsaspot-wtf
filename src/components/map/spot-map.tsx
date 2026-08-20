@@ -8,8 +8,11 @@ import { MapContainer, Marker, TileLayer, useMap } from "react-leaflet";
 
 import {
   ATTRIBUTION,
+  DETECT_RETINA,
   INDIA_BOUNDS,
+  TILE_SIZE,
   TILE_URL,
+  ZOOM_OFFSET,
   warnIfFallbackBasemap,
 } from "@/lib/map/tiles";
 import { useTheme } from "@/lib/theme/theme-provider";
@@ -164,8 +167,10 @@ export default function SpotMap({
         key={theme}
         url={TILE_URL[theme]}
         attribution={ATTRIBUTION}
+        tileSize={TILE_SIZE}
+        zoomOffset={ZOOM_OFFSET}
         maxZoom={19}
-        detectRetina
+        detectRetina={DETECT_RETINA}
       />
 
       <FitToSpots spots={spots} />

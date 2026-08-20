@@ -372,26 +372,71 @@ that fallback does not.
 already Survey of India-aligned and the borders come out right because
 they were rendered right:
 
-| variable                          | is                                     |
-| --------------------------------- | -------------------------------------- |
-| `NEXT_PUBLIC_MAP_TILE_URL_LIGHT`  | light-theme tile URL template          |
-| `NEXT_PUBLIC_MAP_TILE_URL_DARK`   | dark-theme tile URL template           |
-| `NEXT_PUBLIC_MAP_ATTRIBUTION`     | the attribution your licence requires  |
+| variable                          | is                                             |
+| --------------------------------- | ---------------------------------------------- |
+| `NEXT_PUBLIC_MAP_TILE_URL_LIGHT`  | light-theme tile URL template                  |
+| `NEXT_PUBLIC_MAP_TILE_URL_DARK`   | dark-theme tile URL template                   |
+| `NEXT_PUBLIC_MAP_ATTRIBUTION`     | the attribution your licence requires          |
+| `NEXT_PUBLIC_MAP_TILE_SIZE`       | `512` for providers that serve 512px tiles     |
 
 The URL template is configuration rather than something hard-coded,
 because the endpoint shape differs per provider — paste whatever yours
-documents, including its key. Two usual choices for India:
+documents, including its key.
 
-- **Mappls (MapmyIndia)** — commercial, Survey of India-aligned, free
-  developer tier.
-- **Bhuvan (ISRO / NRSC)** — the government's own service. Note it
-  publishes WMS rather than XYZ tiles, so it needs a `TileLayer.WMS`
-  rather than the plain `TileLayer` these components use today.
+`NEXT_PUBLIC_MAP_TILE_SIZE` matters more than it looks. Leaflet assumes
+256px tiles and will draw 512s at the wrong scale: the map renders one
+zoom level too far in with everything soft, which reads as a styling
+problem rather than a configuration one. Setting `512` also applies the
+`zoomOffset` of -1 that has to accompany it, and hands retina back to the
+provider — a 512px tile is already doubled, so Leaflet's own
+`detectRetina` would scale it twice. Put `@2x` in the URL template
+instead, if the provider offers it.
 
-Until those variables are set the app logs a warning on every map mount
-and keeps serving the fallback, so it still runs locally — but **it is
-not fit to publish in India in that state.** Nothing about the running
-app looks wrong, which is exactly why the warning exists.
+### which providers were checked
+
+| candidate                    | borders                     | usable here                                              |
+| ---------------------------- | --------------------------- | -------------------------------------------------------- |
+| **Mapbox, `worldview=IN`**   | Survey of India-aligned     | **yes** — plain XYZ raster, drops into the variables above |
+| **Bharatmaps / NIC**         | Survey of India-aligned     | government-to-government access only                       |
+| **openstreetmap.in**         | n/a                         | a community site, not a tile service                       |
+| **osm-in/tileserver**        | corrected, self-rendered    | self-hosting recipe; demo instance is HTTP on a bare IP    |
+| **CARTO / OSM (fallback)**   | de-facto lines of control   | no — this is the thing being replaced                      |
+
+**Mapbox is the practical answer.** It supports three *worldviews* — US,
+CN and IN — and the IN worldview shows Arunachal Pradesh within India and
+a larger extent of Kashmir than the others. Worldview is baked into a
+published style, and that style is then served as ordinary raster tiles:
+
+```
+https://api.mapbox.com/styles/v1/<user>/<style>/tiles/512/{z}/{x}/{y}@2x?access_token=<token>
+```
+
+That is a plain XYZ template, so it needs no code change — set the two
+URLs, `NEXT_PUBLIC_MAP_TILE_SIZE=512`, and the attribution Mapbox's terms
+require. Build a light and a dark style, set each one's worldview to IN,
+and apply the worldview filter to *every* boundary layer: leaving one
+unfiltered draws both depictions on top of each other.
+
+**Bharatmaps has the right cartography and the wrong front door.** It is
+NIC's platform, and its NICMAPS base layer is built from Survey of India
+1:50,000 data, so the boundaries are correct by construction. But the
+integration path is written for government departments — NIC issues API
+credentials to approved departments, and the published SOP is for
+government integration. Worth an enquiry; not worth planning around.
+
+**openstreetmap.in is not a tile service.** It is the OSM India community
+homepage. It does not publish a basemap you can point at — its own map
+uses a third-party Mapbox style built for the purpose. The sibling
+project `osm-in/tileserver` is a recipe for rendering corrected tiles
+yourself, by loading legal boundary shapes into PostGIS and rendering
+through a forked openstreetmap-carto; its public demo runs over plain
+HTTP on a bare IP, which a `.app` domain cannot use at all — the TLD is
+HSTS-preloaded, so the browser refuses the request before it is made.
+
+Until the variables are set the app logs a warning on every map mount and
+keeps serving the fallback, so it still runs locally — but **it is not fit
+to publish in India in that state.** Nothing about the running app looks
+wrong, which is exactly why the warning exists.
 
 ## known gaps
 

@@ -19,10 +19,9 @@
  * default does not.
  *
  * **The fix is the provider.** Point the URLs below at a basemap whose
- * cartography is already Survey of India-aligned — Mappls (MapmyIndia)
- * and ISRO's Bhuvan are the usual choices — and the borders come out
+ * cartography is already Survey of India-aligned and the borders come out
  * right because they were rendered right. See the README for the
- * variables and where to get a key.
+ * candidates that were actually investigated and what came of each.
  *
  * The endpoint shape differs per provider, so the URL is configuration
  * rather than something hard-coded here: whatever template your provider
@@ -55,6 +54,35 @@ export const TILE_URL = {
 } as const;
 
 export const ATTRIBUTION = customAttribution || FALLBACK.attribution;
+
+/**
+ * Tile size, because not every provider serves 256px tiles.
+ *
+ * Mapbox's Static Tiles API — the route to a `worldview=IN` style, which
+ * is the most practical way to get Survey of India boundaries — returns
+ * 512px tiles by default. Leaflet assumes 256 and will happily draw 512s
+ * at the wrong scale: the map renders one zoom level too far in, with
+ * everything soft, and it looks like a styling problem rather than a
+ * configuration one.
+ *
+ * The `zoomOffset` of -1 is the other half of that fix, and the two are
+ * only ever correct together, so they are derived here rather than being
+ * two independent knobs someone can set inconsistently.
+ */
+const parsedSize = Number(process.env.NEXT_PUBLIC_MAP_TILE_SIZE);
+export const TILE_SIZE =
+  Number.isFinite(parsedSize) && parsedSize > 0 ? parsedSize : 256;
+export const ZOOM_OFFSET = TILE_SIZE === 512 ? -1 : 0;
+
+/**
+ * Retina handling is the provider's job once tiles are 512px.
+ *
+ * `detectRetina` works by requesting the next zoom level up and packing
+ * it into the same space, which on an already-doubled 512px tile scales
+ * it twice. Providers that serve 512s expect `@2x` in the URL template
+ * instead, so the template carries it and Leaflet stays out of the way.
+ */
+export const DETECT_RETINA = TILE_SIZE === 256;
 
 /**
  * Says so, once, when the fallback is live.
