@@ -87,12 +87,25 @@ export function SubmitForm() {
     [],
   );
 
+  // Where the map should fly to, if anywhere. The nonce means pressing
+  // the button again after panning away brings the view back.
+  const [focus, setFocus] = useState<{
+    lat: number;
+    lng: number;
+    at: number;
+  } | null>(null);
+
   // Moves the pin, and nothing else. The coordinate is not transmitted
   // here — it goes out with the rest of the form, when submitted.
   const geo = useGeolocation({
     onFound: (lat, lng) => {
-      set("lat", Number(lat.toFixed(5)));
-      set("lng", Number(lng.toFixed(5)));
+      const rounded = {
+        lat: Number(lat.toFixed(5)),
+        lng: Number(lng.toFixed(5)),
+      };
+      set("lat", rounded.lat);
+      set("lng", rounded.lng);
+      setFocus({ ...rounded, at: Date.now() });
     },
   });
 
@@ -351,6 +364,7 @@ export function SubmitForm() {
               <LocationPicker
                 lat={form.lat}
                 lng={form.lng}
+                focus={focus}
                 onPick={(lat, lng) => {
                   set("lat", lat);
                   set("lng", lng);

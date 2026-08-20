@@ -19,6 +19,22 @@ export const INDIA_BOUNDS: [[number, number], [number, number]] = [
   [37.4, 97.5], // north-east — northern J&K / eastern Arunachal
 ];
 
+/**
+ * Where the map goes when someone shares their location.
+ *
+ * Close enough to recognise where you are, wide enough to keep context.
+ * The two differ on purpose: placing a pin is a precise act and wants
+ * streets, while browsing what is nearby wants a town around it —
+ * flying to rooftop zoom on the explore map would show an empty square
+ * whenever the closest spot is a few kilometres off.
+ */
+export const LOCATED_ZOOM = {
+  /** Explore: a neighbourhood, with room for a spot or two to appear. */
+  browse: 12,
+  /** Submit: streets, because the pin is being placed on one. */
+  pin: 14,
+} as const;
+
 /** Centre and zoom, for the maps that take a view rather than bounds. */
 export const INDIA_VIEW = {
   center: [22.6, 82.8] as [number, number],

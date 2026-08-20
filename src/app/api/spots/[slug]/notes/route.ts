@@ -6,7 +6,7 @@ import { toPhotoIds } from "@/lib/photos/ids";
 import { isAppwriteWriteEnabled } from "@/lib/appwrite/server";
 import { checkNoteRate } from "@/lib/security/rate-limit";
 import { requestKey } from "@/lib/security/request-key";
-import { verifyTurnstile } from "@/lib/security/turnstile";
+import { checkHuman } from "@/lib/security/human-check";
 import { validateNote } from "@/lib/spots/validate-note";
 
 /**
@@ -53,22 +53,24 @@ export async function POST(
     );
   }
 
-  // 2. Bot check.
-  const token = (payload as { turnstileToken?: unknown }).turnstileToken;
-  const turnstile = await verifyTurnstile(request, token);
-  if (!turnstile.ok) {
-    return NextResponse.json(
-      { ok: false, message: turnstile.message },
-      { status: turnstile.status },
-    );
-  }
-
-  // 3. Identity for rate limiting.
+  // 2. Identity for rate limiting, and for binding the human check.
   const submitterKey = requestKey(request);
   if (!submitterKey) {
     return NextResponse.json(
       { ok: false, message: "notes aren't available right now." },
       { status: 503 },
+    );
+  }
+
+  // 3. Bot check — a fresh Turnstile token, or the ticket issued when one
+  //    was last redeemed. A note with photos is several requests, and a
+  //    token only works once.
+  const token = (payload as { turnstileToken?: unknown }).turnstileToken;
+  const human = await checkHuman(request, token, submitterKey);
+  if (!human.ok) {
+    return NextResponse.json(
+      { ok: false, message: human.message },
+      { status: human.status },
     );
   }
 

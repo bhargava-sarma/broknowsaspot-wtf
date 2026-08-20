@@ -7,7 +7,7 @@ import { useEffect, useMemo, useRef } from "react";
 import { MapContainer, Marker, useMap } from "react-leaflet";
 
 import { BasemapLayer } from "@/components/map/basemap-layer";
-import { INDIA_BOUNDS } from "@/lib/map/tiles";
+import { INDIA_BOUNDS, LOCATED_ZOOM } from "@/lib/map/tiles";
 import { useTheme } from "@/lib/theme/theme-provider";
 import type { Spot } from "@/lib/types/spot";
 
@@ -43,15 +43,28 @@ function markerIcon(selected: boolean): L.DivIcon {
  * it back out to whatever the unfiltered index happens to span. Framing
  * the results is the right response to *filtering*, not to arriving.
  */
-function FitToSpots({ spots }: { spots: Spot[] }) {
+function FitToSpots({ spots, held }: { spots: Spot[]; held: boolean }) {
   const map = useMap();
   const firstRun = useRef(true);
+
+  // Keyed on *which* spots, not on the array. Sorting by distance
+  // produces a new array of the same spots, and refitting on that would
+  // undo the fly-to that the sort accompanies — which is exactly what it
+  // did: the map jumped back out to frame the whole index the instant a
+  // position arrived.
+  const identity = spots
+    .map((spot) => spot.slug)
+    .sort()
+    .join(",");
 
   useEffect(() => {
     if (firstRun.current) {
       firstRun.current = false;
       return;
     }
+    // While the reader has shared a position, the frame they asked for is
+    // their own neighbourhood. Filtering does not drag them away from it.
+    if (held) return;
     if (spots.length === 0) return;
 
     if (spots.length === 1) {
@@ -64,9 +77,51 @@ function FitToSpots({ spots }: { spots: Spot[] }) {
       spots.map((spot) => [spot.lat, spot.lng] as [number, number]),
     );
     map.fitBounds(bounds, { padding: [56, 56], maxZoom: 7, animate: true });
-  }, [spots, map]);
+    // `identity` is the real trigger; `spots` is read inside and is a new
+    // array on every sort, which is the whole reason it is not the key.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [identity, held, map]);
 
   return null;
+}
+
+/**
+ * Flies to the reader's own position when they offer it.
+ *
+ * Takes precedence over FitToSpots for the same reason it exists:
+ * pressing "near me" is a request to be taken somewhere, and framing the
+ * whole result set instead would answer a question nobody asked. The
+ * nonce means pressing it again after panning away brings you back.
+ *
+ * `LOCATED_ZOOM.browse` rather than something tighter because the nearest
+ * spot may be kilometres away — at rooftop zoom the map would be an empty
+ * square with a dot in the middle.
+ */
+function FocusHere({
+  focus,
+}: {
+  focus: { lat: number; lng: number; at: number } | null;
+}) {
+  const map = useMap();
+  const last = useRef(0);
+
+  useEffect(() => {
+    if (!focus || focus.at === last.current) return;
+    last.current = focus.at;
+    map.flyTo([focus.lat, focus.lng], LOCATED_ZOOM.browse, { duration: 0.9 });
+  }, [focus, map]);
+
+  return null;
+}
+
+/** A ring, not a pin — this is where the reader is, not a logged spot. */
+function hereIcon(): L.DivIcon {
+  return L.divIcon({
+    className: "bkas-marker",
+    html: `<span class="bkas-here"></span>`,
+    iconSize: [44, 44],
+    iconAnchor: [22, 22],
+  });
 }
 
 /**
@@ -119,6 +174,8 @@ function ResizeOnMount() {
 }
 
 type SpotMapProps = {
+  /** The reader's position, when they have offered it. */
+  here?: { lat: number; lng: number; at: number } | null;
   spots: Spot[];
   selectedSlug: string | null;
   onSelect: (slug: string) => void;
@@ -128,6 +185,7 @@ export default function SpotMap({
   spots,
   selectedSlug,
   onSelect,
+  here = null,
 }: SpotMapProps) {
   const { theme } = useTheme();
 
@@ -151,8 +209,16 @@ export default function SpotMap({
       attributionControl
     >
       <BasemapLayer theme={theme} />
+      <FocusHere focus={here} />
+      {here ? (
+        <Marker
+          position={[here.lat, here.lng]}
+          icon={hereIcon()}
+          interactive={false}
+        />
+      ) : null}
 
-      <FitToSpots spots={spots} />
+      <FitToSpots spots={spots} held={Boolean(here)} />
       <ResizeOnMount />
       <ZoomControls />
 
