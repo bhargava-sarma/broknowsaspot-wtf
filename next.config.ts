@@ -4,8 +4,8 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
 
   images: {
-    // Seed photography is remote until we host our own bucket; Supabase
-    // Storage gets added here when uploads land.
+    // Seed photography is remote until we host our own bucket; the
+    // Appwrite Storage hostname gets added here when uploads land.
     remotePatterns: [{ protocol: "https", hostname: "images.unsplash.com" }],
     formats: ["image/avif", "image/webp"],
   },

@@ -42,7 +42,7 @@ export function SiteFooter() {
           <p className="label">status</p>
           <ul className="mt-3 space-y-1.5 font-mono text-micro text-muted lowercase">
             <li>v0.1</li>
-            <li>postgres · postgis</li>
+            <li>next · appwrite</li>
             <li>
               <span className="text-accent">●</span> open to submissions
             </li>

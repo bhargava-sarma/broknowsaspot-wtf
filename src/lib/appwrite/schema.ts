@@ -2,32 +2,26 @@
  * The Appwrite schema, declared once.
  *
  * Both the provisioning script and the verifier read this file, so they
- * cannot disagree about what the schema is supposed to be. That mattered
- * on Supabase too — `verify.sql` parsed the real catalogue rather than a
- * copy of the migration — and it matters more here, because Appwrite has
- * no `\d spots` to fall back on.
+ * cannot disagree about what the schema is supposed to be. There is no
+ * `\d spots` to fall back on with Appwrite, which makes a single
+ * declaration the only way to have one answer.
  *
- * ------------------------------------------------------------------
- * How authorisation works here, and how it differs from what it replaces
- * ------------------------------------------------------------------
- *
- * Supabase enforced visibility with a policy that read the row:
- *
- *     using (hidden_at is null and removed_at is null)
+ * ----------------------------------------
+ * How authorisation works here
+ * ----------------------------------------
  *
  * Appwrite permissions are access-control lists, not predicates over the
  * row's data. There is no way to say "readable by anyone *while*
- * hidden_at is null". So visibility is carried in two places:
+ * hiddenAt is null", so visibility ends up carried in two places:
  *
  *   - `hiddenAt` / `removedAt` — the data, and the audit trail
  *   - the row's own `$permissions` — the enforcement
  *
- * Those two can drift, which the Postgres version made structurally
- * impossible. Three things keep them together:
+ * Two copies of one fact can drift. Three things keep them together:
  *
  *   1. Only one code path writes either of them, and it writes both.
  *   2. It does so inside a transaction, so a partial write rolls back.
- *   3. `scripts/appwrite-verify.mjs` asserts the invariant directly —
+ *   3. `scripts/appwrite-verify.mts` asserts the invariant directly —
  *      every row's permissions must match its hiddenAt/removedAt state.
  *
  * Check 3 is the one that matters. Treat a failure there as a security
@@ -64,12 +58,11 @@ export const ADMIN_READ = `read("team:${ADMIN_TEAM_ID}")`;
 /**
  * Report count at which a spot auto-hides.
  *
- * On Supabase this lived inside a trigger function and was unreachable
- * from the client by construction. Here it is a constant in server-only
- * code — `src/lib/appwrite/*` is imported exclusively by route handlers
- * and scripts, never by a client component. Publishing "10 reports takes
- * an entry down" is an instruction manual for brigading, so keep it that
- * way: if this ever needs to be read in the browser, the answer is no.
+ * This is a constant in server-only code — `src/lib/appwrite/*` is
+ * imported exclusively by route handlers and scripts, never by a client
+ * component — and it has to stay there. Publishing "10 reports takes an
+ * entry down" is an instruction manual for brigading, so if this ever
+ * needs to be read in the browser, the answer is no.
  */
 export const REPORT_THRESHOLD = 10;
 
@@ -150,9 +143,14 @@ export const SCHEMA: TableSpec[] = [
   {
     id: TABLES.spots,
     name: "spots",
-    // No table-level grant. Visibility is decided per row: a live spot
-    // carries read(any), a hidden or removed one carries only
-    // read(team:admins). Writes never come from a client at all.
+    // No table-level grant, and in particular no write grant to anyone:
+    // submissions, reports and moderation all run through route handlers
+    // on the server API key, and granting `create` to `users` or `any`
+    // would let a browser write straight past Turnstile, the rate
+    // limiter and the validator in one step.
+    //
+    // Read visibility is decided per row instead: a live spot carries
+    // read(any), a hidden or removed one carries only read(team:admins).
     permissions: [],
     rowSecurity: true,
     columns: [
@@ -167,15 +165,14 @@ export const SCHEMA: TableSpec[] = [
       { name: "lng", kind: "float", required: true, min: -180, max: 180 },
 
       // Derived from lat/lng and written by the same code that writes
-      // them. Postgres generated this column and rejected any attempt to
-      // set it directly; Appwrite has no generated columns, so the
-      // verifier checks the two agree instead.
+      // them. Appwrite has no generated columns, so nothing stops the
+      // three from disagreeing except that one path writes all three —
+      // and the verifier checks they still agree.
       //
       // Required, and not merely as a nicety: Appwrite refuses a spatial
-      // index on a nullable column, and without the index every geo query
-      // degrades to a full scan. It also matches what Postgres did — the
-      // generated column sat over two NOT NULL fields, so it was never
-      // null there either.
+      // index on a nullable column, and without the index every geo
+      // query degrades to a full scan. lat/lng are both required too, so
+      // there is no case where this legitimately has nothing to hold.
       { name: "location", kind: "point", required: true },
 
       { name: "category", kind: "enum", values: CATEGORIES, required: true },
@@ -221,6 +218,7 @@ export const SCHEMA: TableSpec[] = [
   {
     id: TABLES.notes,
     name: "spot notes",
+    // Same arrangement as spots — see above.
     permissions: [],
     rowSecurity: true,
     columns: [
@@ -310,10 +308,11 @@ export const SCHEMA: TableSpec[] = [
         required: true,
       },
       { name: "reason", kind: "string", size: 500, required: false },
-      // Null for anything not attributable to a person. The auto-hide
-      // path writes one of these, which the Postgres version could not
-      // do — its trigger ran as an anonymous reporter with no way to
-      // reach the audit table.
+      // Both null for anything no person decided — the auto-hide path
+      // writes a log row with neither set, which is what lets the admin
+      // screen tell "hidden by a moderator" from "hidden by the report
+      // threshold". The email is denormalised alongside the id so the
+      // log still reads correctly after an account is deleted.
       { name: "actorId", kind: "string", size: 64, required: false },
       { name: "actorEmail", kind: "string", size: 320, required: false },
     ],

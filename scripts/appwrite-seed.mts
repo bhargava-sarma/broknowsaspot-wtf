@@ -88,10 +88,10 @@ async function main() {
       country: spot.country,
       lat: spot.lat,
       lng: spot.lng,
-      // Appwrite points are [longitude, latitude] — the same order
-      // PostGIS uses for ST_MakePoint, and the reverse of how people say
-      // it out loud. Getting this backwards puts everything in the wrong
-      // hemisphere silently, so appwrite-verify.mts checks it.
+      // Appwrite points are [longitude, latitude], the reverse of how
+      // people say it out loud. Getting this backwards puts everything
+      // in the wrong hemisphere silently, so appwrite-verify.mts
+      // re-derives the point from lat/lng and compares.
       location: [spot.lng, spot.lat],
       category: spot.category,
       difficulty: spot.difficulty,

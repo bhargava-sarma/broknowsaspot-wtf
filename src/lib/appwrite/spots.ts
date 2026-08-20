@@ -14,9 +14,10 @@ import type { CommunityNote, Spot } from "@/lib/types/spot";
  * removed entries are not filtered out by a `where` clause we could get
  * wrong; Appwrite never hands them over in the first place.
  *
- * That is the piece of the Supabase design worth keeping. RLS meant a bug
- * in the query leaked nothing. Reading as a guest preserves the same
- * property, and it is why `spotPermissions()` has to be right.
+ * The property worth naming: a bug in a query here leaks nothing, because
+ * the query is not what enforces visibility. It also means
+ * `spotPermissions()` has to be right — the permissions written onto each
+ * row are the whole of the enforcement.
  */
 
 type SpotRow = Record<string, unknown> & {

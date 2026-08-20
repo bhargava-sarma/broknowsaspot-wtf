@@ -14,20 +14,20 @@ import { createHmac } from "node:crypto";
  * - It is not a stored IP address. Only the HMAC is persisted, so the
  *   database never holds anything that resolves back to a person.
  *
- * The key is derived from the service role key rather than a dedicated
- * secret. That value is already required for any write to happen, already
- * server-only, and already stable per project — so this needs no extra
- * configuration to be correct, and cannot silently fall back to a
- * predictable default. `REPORTER_KEY_SALT` overrides it if you ever want
- * to rotate keys without rotating database credentials.
+ * `REPORTER_KEY_SALT` is the only source of the salt, and there is
+ * deliberately no fallback: a default would be predictable, and deriving
+ * it from some other secret would tie key stability to that secret's
+ * rotation schedule. When it is missing every write route answers 503
+ * rather than accepting writes it cannot attribute.
+ *
+ * The value must also stay pinned for the life of the deployment. Rotating
+ * it renumbers everyone, so reports filed before the change stop counting
+ * against reports filed after it, and one person can cross the threshold
+ * twice.
  */
 
 function secret(): string | null {
-  return (
-    process.env.REPORTER_KEY_SALT ??
-    process.env.SUPABASE_SERVICE_ROLE_KEY ??
-    null
-  );
+  return process.env.REPORTER_KEY_SALT ?? null;
 }
 
 /**
