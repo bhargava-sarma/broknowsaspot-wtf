@@ -5,7 +5,7 @@ import { logPhoto } from "@/lib/appwrite/write";
 import { isAppwriteWriteEnabled } from "@/lib/appwrite/server";
 import { withinPhotoLimit } from "@/lib/security/rate-limit";
 import { requestKey } from "@/lib/security/request-key";
-import { verifyTurnstile } from "@/lib/security/turnstile";
+import { checkHuman } from "@/lib/security/human-check";
 
 /**
  * Accepts one prepared photo and returns where it landed.
@@ -30,8 +30,15 @@ export const runtime = "nodejs";
 /** Generous enough for a re-encoded 2000px JPEG, mean enough to bound abuse. */
 const MAX_BYTES = 6 * 1024 * 1024;
 
+/**
+ * The two setup failures say the same thing to a visitor — there is
+ * nothing they can do about either — but the server log names which,
+ * because they have completely different fixes.
+ */
 const FAILURE_MESSAGES = {
   unconfigured: "photo uploads aren't available right now.",
+  "no-bucket": "photo uploads aren't set up on this deployment yet.",
+  "no-permission": "photo uploads aren't set up on this deployment yet.",
   "too-large": "that image is too large once processed.",
   "not-a-jpeg": "that file isn't a jpeg.",
 } as const;
@@ -54,19 +61,22 @@ export async function POST(request: Request) {
     );
   }
 
-  const turnstile = await verifyTurnstile(request, form.get("turnstileToken"));
-  if (!turnstile.ok) {
-    return NextResponse.json(
-      { ok: false, message: turnstile.message },
-      { status: turnstile.status },
-    );
-  }
-
   const key = requestKey(request);
   if (!key) {
     return NextResponse.json(
       { ok: false, message: "photo uploads aren't available right now." },
       { status: 503 },
+    );
+  }
+
+  // The first upload of a batch redeems the form's Turnstile token and is
+  // handed a ticket; the rest present that. Without it, adding three
+  // photos would spend the token the submission itself still needs.
+  const human = await checkHuman(request, form.get("turnstileToken"), key);
+  if (!human.ok) {
+    return NextResponse.json(
+      { ok: false, message: human.message },
+      { status: human.status },
     );
   }
 
@@ -103,7 +113,12 @@ export async function POST(request: Request) {
     if (!stored.ok) {
       return NextResponse.json(
         { ok: false, message: FAILURE_MESSAGES[stored.reason] },
-        { status: stored.reason === "unconfigured" ? 503 : 400 },
+        {
+          status:
+            stored.reason === "too-large" || stored.reason === "not-a-jpeg"
+              ? 400
+              : 503,
+        },
       );
     }
     // Logged after the fact: the upload is what the reader is waiting

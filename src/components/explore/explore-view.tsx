@@ -44,7 +44,17 @@ export function ExploreView({ spots }: { spots: Spot[] }) {
    * one thing that would have to leave the device to do it on a server
    * is precisely the thing worth keeping off the wire.
    */
-  const geo = useGeolocation();
+  // The nonce is set when a fix arrives, so the map flies there once —
+  // and again on a repeat press, even though the coordinates are the same.
+  const [focus, setFocus] = useState<{
+    lat: number;
+    lng: number;
+    at: number;
+  } | null>(null);
+
+  const geo = useGeolocation({
+    onFound: (lat, lng) => setFocus({ lat, lng, at: Date.now() }),
+  });
   const here = geo.status.state === "found" ? geo.status : null;
 
   const visible = useMemo(() => {
@@ -87,7 +97,16 @@ export function ExploreView({ spots }: { spots: Spot[] }) {
           onChange={handleFilters}
           resultCount={visible.length}
           totalCount={spots.length}
-          geo={geo}
+          geo={{
+            ...geo,
+            // Forgetting the location drops the marker and the fly-to as
+            // well as the sort, so nothing lingers pointing at where the
+            // reader was.
+            clear: () => {
+              setFocus(null);
+              geo.clear();
+            },
+          }}
         />
       </div>
 
@@ -101,6 +120,7 @@ export function ExploreView({ spots }: { spots: Spot[] }) {
                 spots={visible}
                 selectedSlug={selected}
                 onSelect={handleSelect}
+                here={here ? focus : null}
               />
             ) : (
               <MapPlaceholder />

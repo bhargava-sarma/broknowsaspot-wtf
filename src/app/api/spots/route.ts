@@ -7,7 +7,7 @@ import { isAppwriteWriteEnabled } from "@/lib/appwrite/server";
 import { listSpots } from "@/lib/data/spots-repo";
 import { checkSubmissionRate } from "@/lib/security/rate-limit";
 import { requestKey } from "@/lib/security/request-key";
-import { verifyTurnstile } from "@/lib/security/turnstile";
+import { checkHuman } from "@/lib/security/human-check";
 import { validateDraft } from "@/lib/spots/validate";
 
 /**
@@ -64,23 +64,26 @@ export async function POST(request: Request) {
     );
   }
 
-  // 2. Bot check.
-  const token = (payload as { turnstileToken?: unknown }).turnstileToken;
-  const turnstile = await verifyTurnstile(request, token);
-  if (!turnstile.ok) {
-    return NextResponse.json(
-      { ok: false, message: turnstile.message },
-      { status: turnstile.status },
-    );
-  }
-
-  // 3. Identity for rate limiting. Without a key there is no way to meter
-  //    this, so the write is refused rather than left unmetered.
+  // 2. Identity for rate limiting, and for binding the human check to
+  //    this caller. Without a key there is no way to meter this, so the
+  //    write is refused rather than left unmetered.
   const submitterKey = requestKey(request);
   if (!submitterKey) {
     return NextResponse.json(
       { ok: false, message: "submissions aren't available right now." },
       { status: 503 },
+    );
+  }
+
+  // 3. Bot check — a fresh Turnstile token, or the ticket issued when one
+  //    was last redeemed. Photos upload as separate requests, and a token
+  //    is single-use, so the submission cannot rely on holding one.
+  const token = (payload as { turnstileToken?: unknown }).turnstileToken;
+  const human = await checkHuman(request, token, submitterKey);
+  if (!human.ok) {
+    return NextResponse.json(
+      { ok: false, message: human.message },
+      { status: human.status },
     );
   }
 

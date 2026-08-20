@@ -44,7 +44,8 @@ export function photoUrl(fileId: string): string {
   return `${endpoint}/storage/buckets/${PHOTO_BUCKET_ID}/files/${fileId}/view?project=${projectId}`;
 }
 
-export type UploadFailure = "unconfigured" | "too-large" | "not-a-jpeg";
+export type UploadFailure =
+  "unconfigured" | "too-large" | "not-a-jpeg" | "no-bucket" | "no-permission";
 
 export async function storePhoto(
   bytes: Uint8Array,
@@ -64,14 +65,41 @@ export async function storePhoto(
   }
 
   const storage = new Storage(client);
-  const created = (await storage.createFile({
-    bucketId: PHOTO_BUCKET_ID,
-    fileId: ID.unique(),
-    file: InputFile.fromBuffer(Buffer.from(bytes), filename),
-    // The bucket already grants public read and `fileSecurity` is off, so
-    // this is belt-and-braces rather than the enforcement.
-    permissions: [Permission.read(Role.any())],
-  })) as { $id: string };
+  let created: { $id: string };
+  try {
+    created = (await storage.createFile({
+      bucketId: PHOTO_BUCKET_ID,
+      fileId: ID.unique(),
+      file: InputFile.fromBuffer(Buffer.from(bytes), filename),
+      // The bucket already grants public read and `fileSecurity` is off,
+      // so this is belt-and-braces rather than the enforcement.
+      permissions: [Permission.read(Role.any())],
+    })) as { $id: string };
+  } catch (error) {
+    // The two ways this fails in a fresh deployment look identical from
+    // the browser and have completely different fixes, so they are named
+    // here rather than collapsed into "try again".
+    const type = (error as { type?: string }).type ?? "";
+    const code = (error as { code?: number }).code ?? 0;
+
+    if (type === "storage_bucket_not_found" || code === 404) {
+      console.error(
+        `[photos] bucket "${PHOTO_BUCKET_ID}" does not exist. ` +
+          "Run `npm run appwrite:provision` against this project.",
+      );
+      return { ok: false, reason: "no-bucket" };
+    }
+    if (code === 401 || /scope|unauthorized/i.test(type)) {
+      console.error(
+        "[photos] the API key cannot write files. Add the storage scopes " +
+          "(buckets.read, buckets.write, files.read, files.write) to the " +
+          "key in the Appwrite console — see the README.",
+        { type, code },
+      );
+      return { ok: false, reason: "no-permission" };
+    }
+    throw error;
+  }
 
   return { ok: true, photo: { id: created.$id, url: photoUrl(created.$id) } };
 }

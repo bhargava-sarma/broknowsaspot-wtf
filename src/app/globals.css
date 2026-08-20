@@ -686,6 +686,40 @@
     }
   }
 
+  /* The reader's own position. A ring rather than a square, so it never
+     reads as one of the logged spots — those are the squares. */
+  .bkas-here {
+    display: block;
+    position: relative;
+    width: 44px;
+    height: 44px;
+  }
+
+  .bkas-here::before,
+  .bkas-here::after {
+    content: "";
+    position: absolute;
+    inset: 50% auto auto 50%;
+    border-radius: 50%;
+  }
+
+  /* The soft halo — roughly "somewhere around here", which is what a
+     coarse fix actually gives us. */
+  .bkas-here::before {
+    width: 30px;
+    height: 30px;
+    margin: -15px 0 0 -15px;
+    background-color: color-mix(in srgb, var(--color-accent) 18%, transparent);
+  }
+
+  .bkas-here::after {
+    width: 10px;
+    height: 10px;
+    margin: -5px 0 0 -5px;
+    background-color: var(--color-accent);
+    border: 2px solid var(--color-paper);
+  }
+
   .bkas-marker-dot.is-selected::after {
     width: 13px;
     height: 13px;

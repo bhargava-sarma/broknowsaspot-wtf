@@ -150,6 +150,13 @@ populated database is safe.
 | `teams.read` / `teams.write`             | the admins team                                                  |
 | `users.read` / `users.write`             | **`appwrite:admin` only** — the one script that touches accounts |
 | `sessions.write`                         | **the running app** — `/admin/login` creates sessions server-side |
+| `buckets.read` / `buckets.write`         | the photo bucket                                                 |
+| `files.read` / `files.write`             | **the running app** — uploading and removing photos              |
+
+Photo uploads need `files.write` on the key the *app* runs with, not just
+the one the scripts use. Without it every upload fails with "photo
+uploads aren't set up on this deployment yet", and the server log names
+which of the two setup steps is missing — the bucket, or the scope.
 
 The key deployed to Vercel needs `sessions.write` even though no script uses
 it. Appwrite has no cookie-based SSR helper, so `/admin/login` creates the
