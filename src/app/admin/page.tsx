@@ -15,9 +15,11 @@ import { formatTimestamp } from "@/lib/utils/date";
 /**
  * The moderation queue.
  *
- * Middleware has already bounced signed-out visitors, but this re-checks
- * anyway — middleware is routing, not authorisation, and the queue query
- * itself is refused by Postgres if this account is not an admin.
+ * The proxy has already bounced visitors with no session cookie, but this
+ * re-checks anyway — that check is routing, not authorisation. It reads a
+ * cookie's presence and cannot tell a real session from a forged one. The
+ * queue itself is read with the caller's own session, so Appwrite refuses
+ * it outright unless this account is in the admins team.
  */
 
 const PAST_TENSE: Record<string, string> = {
@@ -44,7 +46,7 @@ export default async function AdminPage() {
         <PageHeader eyebrow="restricted" title="admin" />
         <Notice
           title="not configured here"
-          body="this environment has no supabase credentials, so there is no database to moderate."
+          body="this environment has no appwrite credentials, so there is no database to moderate."
         />
       </>
     );

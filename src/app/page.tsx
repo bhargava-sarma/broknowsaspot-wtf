@@ -67,10 +67,21 @@ function readout(spots: Spot[]) {
   ];
 }
 
+const UNAVAILABLE = [
+  { label: "spots logged", value: "—" },
+  { label: "countries", value: "—" },
+  { label: "median walk-in", value: "—" },
+  { label: "gift shops", value: "0" },
+];
+
 export const revalidate = 300;
 
 export default async function HomePage() {
-  const READOUT = readout(await listSpots());
+  // null means the index could not be reached, which is neither real
+  // figures nor zero. Showing dashes says so without a scary banner on
+  // a page that is mostly manifesto.
+  const spots = await listSpots();
+  const READOUT = spots === null ? UNAVAILABLE : readout(spots);
   return (
     <>
       {/* ---------------------------------------------------------- hero */}

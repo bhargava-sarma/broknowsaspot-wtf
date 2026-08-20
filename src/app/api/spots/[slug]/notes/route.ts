@@ -1,22 +1,23 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 
+import { createNote } from "@/lib/appwrite/write";
+import { isAppwriteWriteEnabled } from "@/lib/appwrite/server";
 import { checkNoteRate } from "@/lib/security/rate-limit";
 import { requestKey } from "@/lib/security/request-key";
 import { verifyTurnstile } from "@/lib/security/turnstile";
 import { validateNote } from "@/lib/spots/validate-note";
-import { getAdminSupabase, isWriteEnabled } from "@/lib/supabase/admin";
-import * as writes from "@/lib/data/writes";
 
 /**
  * Add a community note to a spot.
  *
- * Same guard order as the spot submission, and cheapest-first for the
- * same reason: reject a malformed payload before spending a Cloudflare
- * round trip on it, and reject a bot before spending a database one.
+ * Same guard order as a submission, and cheapest-first for the same
+ * reason. Notes have their own rate-limit budget: leaving one is a much
+ * smaller act than adding a spot, and someone reporting back on four
+ * places they walked this weekend is normal rather than abuse.
  *
- * Publishes immediately, like everything else here. A note that waits in
- * a queue is a note about conditions that have already changed again.
+ * Only a visible spot takes a note. An entry pulled down by reports
+ * should not keep accumulating discussion while it is under review.
  */
 
 export async function POST(
@@ -25,9 +26,7 @@ export async function POST(
 ) {
   const { slug } = await params;
 
-  if (
-    !(writes.useAppwriteWrites ? writes.isAppwriteWritable : isWriteEnabled)
-  ) {
+  if (!isAppwriteWriteEnabled) {
     return NextResponse.json(
       { ok: false, message: "notes aren't available right now." },
       { status: 503 },
@@ -44,9 +43,7 @@ export async function POST(
     );
   }
 
-  // 1. Shape. Same validator the form runs; this copy is the enforcement
-  //    point, and it also catches the future dates the schema cannot —
-  //    a CHECK constraint may not call current_date.
+  // 1. Shape. The same validator the form runs.
   const result = validateNote(payload);
   if (!result.ok) {
     return NextResponse.json(
@@ -65,67 +62,17 @@ export async function POST(
     );
   }
 
-  // 3. Identity for rate limiting. Without a key there is no way to meter
-  //    this, so the write is refused rather than left unmetered.
+  // 3. Identity for rate limiting.
   const submitterKey = requestKey(request);
-
-  if (writes.useAppwriteWrites) {
-    if (!submitterKey) {
-      return NextResponse.json(
-        { ok: false, message: "notes aren't available right now." },
-        { status: 503 },
-      );
-    }
-
-    const rate = await writes.checkNoteRate(submitterKey);
-    if (!rate.allowed) {
-      return NextResponse.json(
-        {
-          ok: false,
-          message: `that's a lot of notes — try again in about ${rate.retryAfterMinutes} minutes.`,
-        },
-        {
-          status: 429,
-          headers: { "retry-after": String(rate.retryAfterMinutes * 60) },
-        },
-      );
-    }
-
-    try {
-      // Only a visible spot takes a note; createNote checks that and
-      // reports a miss the same way a genuine 404 would.
-      const created = await writes.createNote(slug, result.draft, submitterKey);
-      if (!created.ok) {
-        return NextResponse.json(
-          { ok: false, message: "no such spot." },
-          { status: 404 },
-        );
-      }
-      revalidatePath(`/spot/${slug}`);
-      return NextResponse.json(
-        { ok: true, note: created.value },
-        { status: 201 },
-      );
-    } catch (thrown) {
-      console.error(`[notes] could not add a note to "${slug}"`, thrown);
-      return NextResponse.json(
-        { ok: false, message: "couldn't save that. try again in a moment." },
-        { status: 500 },
-      );
-    }
-  }
-
-  const supabase = getAdminSupabase();
-  if (!submitterKey || !supabase) {
+  if (!submitterKey) {
     return NextResponse.json(
       { ok: false, message: "notes aren't available right now." },
       { status: 503 },
     );
   }
 
-  // 4. Rate limit, counted in note_log — its own budget, separate from
-  //    spot submissions.
-  const rate = await checkNoteRate(supabase, submitterKey);
+  // 4. Rate limit, counted in note_log — its own budget.
+  const rate = await checkNoteRate(submitterKey);
   if (!rate.allowed) {
     return NextResponse.json(
       {
@@ -140,60 +87,19 @@ export async function POST(
   }
 
   try {
-    // Only a visible spot can take a note. Hidden and removed entries are
-    // excluded deliberately: an entry pulled down by reports should not
-    // keep accumulating discussion while it is under review.
-    const { data: spot, error: lookupError } = await supabase
-      .from("spots")
-      .select("id, slug")
-      .eq("slug", slug)
-      .is("hidden_at", null)
-      .is("removed_at", null)
-      .maybeSingle();
-
-    if (lookupError) throw lookupError;
-    if (!spot) {
+    // createNote checks the spot is visible and reports a miss the same
+    // way a genuine 404 would.
+    const created = await createNote(slug, result.draft, submitterKey);
+    if (!created.ok) {
       return NextResponse.json(
         { ok: false, message: "no such spot." },
         { status: 404 },
       );
     }
 
-    const { data, error } = await supabase
-      .from("spot_notes")
-      .insert({
-        spot_id: spot.id,
-        author: result.draft.author,
-        body: result.draft.body,
-        noted_on: result.draft.notedOn,
-      })
-      .select("id, author, body, noted_on")
-      .single();
-
-    if (error) throw error;
-
-    // The rate limiter's source of truth, and the trail that links one
-    // key to everything it wrote. Kept off spot_notes on purpose: RLS
-    // filters rows, not columns, so a key stored there would be readable
-    // by anyone who asked for the column.
-    await supabase
-      .from("note_log")
-      .insert({ submitter_key: submitterKey, note_id: data.id });
-
-    // Otherwise the note waits out the five-minute ISR window, which
-    // reads as the submission having silently failed.
     revalidatePath(`/spot/${slug}`);
-
     return NextResponse.json(
-      {
-        ok: true,
-        note: {
-          id: data.id,
-          author: data.author,
-          body: data.body,
-          date: data.noted_on,
-        },
-      },
+      { ok: true, note: created.value },
       { status: 201 },
     );
   } catch (thrown) {

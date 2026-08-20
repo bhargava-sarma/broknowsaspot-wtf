@@ -10,14 +10,14 @@ import { Inter, JetBrains_Mono } from "next/font/google";
  * real face causes no layout shift.
  */
 
-export const fontMono = JetBrains_Mono({
+const fontMono = JetBrains_Mono({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-jetbrains-mono",
   // Chrome, labels, headings — the technical/industrial voice.
 });
 
-export const fontSans = Inter({
+const fontSans = Inter({
   subsets: ["latin"],
   display: "swap",
   variable: "--font-inter",

@@ -15,7 +15,10 @@ export const metadata: Metadata = {
 export const revalidate = 300;
 
 export default async function ExplorePage() {
-  const spots = await listSpots();
+  // null means the index could not be reached, which is not the same as
+  // it being empty. An empty array renders the "nothing here yet" state;
+  // this renders nothing at all rather than claiming the index is empty.
+  const spots = (await listSpots()) ?? [];
 
   return (
     <>

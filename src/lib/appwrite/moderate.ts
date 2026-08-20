@@ -3,18 +3,19 @@ import "server-only";
 import { ID, Query, TablesDB } from "node-appwrite";
 
 import { adminSessionClient } from "@/lib/appwrite/auth";
-import { spotPermissions } from "@/lib/appwrite/permissions";
+import { notePermissions, spotPermissions } from "@/lib/appwrite/permissions";
 import { DATABASE_ID, TABLES } from "@/lib/appwrite/schema";
 import { adminTables } from "@/lib/appwrite/server";
 
 /**
  * The moderation queue and the actions on it.
  *
- * Reads go through the *signed-in admin's* session, not the API key. That
- * is deliberate and it is the closest thing here to what RLS gave us: a
- * hidden row carries read("team:admins"), so Appwrite decides per row
- * whether this person sees it. If the membership check in readAdminGate
- * were somehow wrong, the queue would come back empty rather than full.
+ * Reads go through the *signed-in admin's* session, not the API key, so
+ * that the database is the thing deciding: a hidden row carries
+ * read("team:admins"), and Appwrite works out per row whether this person
+ * sees it. If the membership check in readAdminGate were somehow wrong,
+ * the queue would come back empty rather than full — the failure lands on
+ * the safe side without our code having to be right twice.
  *
  * Writes go through the API key, because no row grants update to anyone —
  * and every one of them runs inside a transaction that moves the data and
@@ -185,9 +186,9 @@ export type ModerationAction = "hide" | "restore" | "remove";
  *
  * One transaction covers the timestamps, the row's permissions, every
  * note's permissions and the audit row. Splitting any of it apart leaves
- * an entry whose data and enforcement disagree — the failure this whole
- * design has to defend against, and the one Postgres made impossible for
- * free.
+ * an entry whose data and enforcement disagree, which is the single
+ * failure this design has to defend against: a spot marked hidden that
+ * the public can still read.
  *
  * `restore` clears both timestamps. A moderator thinks in terms of "put
  * it back", not "which of the two is set", and leaving one would silently
@@ -254,7 +255,7 @@ export async function moderateSpot(
       databaseId: DATABASE_ID,
       tableId: TABLES.notes,
       rowId: note.$id,
-      permissions: spotPermissions(visible && !note.hiddenAt),
+      permissions: notePermissions(!note.hiddenAt, visible),
     })),
     {
       action: "create",
@@ -319,7 +320,7 @@ export async function moderateNote(
       data: { hiddenAt: noteVisible ? null : new Date().toISOString() },
       // Restoring a note on a hidden spot must not make it public. The
       // parent decides the ceiling.
-      permissions: spotPermissions(noteVisible && parentVisible),
+      permissions: notePermissions(noteVisible, parentVisible),
     },
     {
       action: "create",

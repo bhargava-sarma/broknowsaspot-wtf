@@ -6,7 +6,7 @@ import { IDLE } from "@/lib/admin/action-state";
 import { moderateAction } from "@/lib/admin/actions";
 import type { QueueEntry } from "@/lib/admin/queue";
 import { REPORT_REASON_LABELS } from "@/lib/spots/reports";
-import { formatDate, formatTimestamp } from "@/lib/utils/date";
+import { formatDate } from "@/lib/utils/date";
 import { cn } from "@/lib/utils/cn";
 
 /**
@@ -103,11 +103,6 @@ export function ModerationRow({ entry }: { entry: QueueEntry }) {
                   </li>
                 ))}
               </ul>
-              {entry.lastReportAt ? (
-                <p className="mt-3 font-mono text-micro text-faint lowercase">
-                  last {formatTimestamp(entry.lastReportAt)}
-                </p>
-              ) : null}
             </>
           ) : null}
         </div>

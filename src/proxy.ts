@@ -1,29 +1,23 @@
-import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+
+import { SESSION_COOKIE } from "@/lib/appwrite/auth";
 
 /**
  * Runs on /admin only.
  *
- * Named `proxy` rather than `middleware`: Next.js 16 renamed the file
- * convention, and the old name now builds with a deprecation warning.
- * Nothing else about it changed — same request-time hook, same matcher.
+ * Routing, not authorisation. It bounces signed-out visitors to the login
+ * screen so they meet a form rather than a refusal — the page re-checks,
+ * and Appwrite decides per row what an admin session may actually read.
+ * Treat a change here as a UX change.
  *
- * Two jobs, in this order of importance:
+ * There is nothing to refresh, and so no network call at all: an Appwrite
+ * session secret is long-lived and *is* the credential, not a pointer to
+ * one that needs renewing. This reads whether the cookie exists and
+ * nothing more — it cannot tell a real secret from an invented one, which
+ * is exactly why it is not the thing protecting the data.
  *
- * 1. **Refresh the session.** Supabase access tokens are short-lived. A
- *    Server Component cannot write cookies, so if the refresh does not
- *    happen here it does not happen at all, and an admin gets logged out
- *    mid-session for no visible reason.
- *
- * 2. **Bounce signed-out visitors to the login screen.** This is a
- *    convenience, not the security boundary — this runs before the
- *    request reaches anything, which also means a routing mistake can
- *    skip it. The page re-checks, and Postgres checks again underneath.
- *    Treat this redirect as UX.
- *
- * Deliberately not matching the whole site: this makes a network call to
- * the auth server, and paying that on every public page view to find out
- * that nobody is logged in would be a waste.
+ * Deliberately not matching the whole site: paying anything on every
+ * public page view to learn that nobody is logged in would be waste.
  */
 
 export const config = {
@@ -31,102 +25,35 @@ export const config = {
   matcher: ["/admin/:path*"],
 };
 
-// Responses that carry Set-Cookie for a session must never be cached by a
-// CDN — one admin's tokens served to the next visitor is the worst-case
-// outcome of getting this wrong.
+// A response carrying a session must never be cached by a CDN — one
+// admin's cookie served to the next visitor is the worst outcome here.
 const NO_STORE = "private, no-cache, no-store, must-revalidate, max-age=0";
 
-export default async function proxy(request: NextRequest) {
-  let response = NextResponse.next({ request });
+function redirect(request: NextRequest, pathname: string): NextResponse {
+  const target = request.nextUrl.clone();
+  target.pathname = pathname;
+  // The query string is dropped rather than carried as a `next` param. A
+  // redirect target taken from the URL is an open redirect waiting to
+  // happen, and /admin is the only destination worth returning to.
+  target.search = "";
+  const response = NextResponse.redirect(target);
+  response.headers.set("cache-control", NO_STORE);
+  return response;
+}
+
+export default function proxy(request: NextRequest) {
+  const response = NextResponse.next({ request });
   response.headers.set("cache-control", NO_STORE);
 
-  const { pathname } = request.nextUrl;
-  const onLogin = pathname === "/admin/login";
+  const onLogin = request.nextUrl.pathname === "/admin/login";
+  const signedIn = Boolean(request.cookies.get(SESSION_COOKIE)?.value);
 
-  // Appwrite path. There is nothing to refresh — the session secret in
-  // the cookie *is* the credential, long-lived, and validated by the page
-  // against the auth server. So this becomes a cookie-presence check with
-  // no network call at all, which is strictly cheaper than what it
-  // replaces. It is routing, not authorisation: the page re-checks, and
-  // Appwrite decides per row what an admin session may read.
-  if (
-    process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID ??
-    process.env.APPWRITE_PROJECT_ID
-  ) {
-    const hasSession = Boolean(request.cookies.get("bkas_session")?.value);
+  if (!signedIn && !onLogin) return redirect(request, "/admin/login");
 
-    if (!hasSession && !onLogin) {
-      const target = request.nextUrl.clone();
-      target.pathname = "/admin/login";
-      target.search = "";
-      const redirected = NextResponse.redirect(target);
-      redirected.headers.set("cache-control", NO_STORE);
-      return redirected;
-    }
-    if (hasSession && onLogin) {
-      const target = request.nextUrl.clone();
-      target.pathname = "/admin";
-      target.search = "";
-      const redirected = NextResponse.redirect(target);
-      redirected.headers.set("cache-control", NO_STORE);
-      return redirected;
-    }
-    return response;
-  }
-
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  // Without credentials there is no session to refresh and nothing to
-  // guard. The page renders a "not configured" state instead.
-  if (!url || !anonKey) return response;
-
-  const supabase = createServerClient(url, anonKey, {
-    cookies: {
-      getAll: () => request.cookies.getAll(),
-      setAll: (cookiesToSet, headers) => {
-        for (const { name, value } of cookiesToSet) {
-          request.cookies.set(name, value);
-        }
-        response = NextResponse.next({ request });
-        for (const { name, value, options } of cookiesToSet) {
-          response.cookies.set(name, value, options);
-        }
-        for (const [key, value] of Object.entries(headers)) {
-          response.headers.set(key, value);
-        }
-        response.headers.set("cache-control", NO_STORE);
-      },
-    },
-  });
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user && !onLogin) {
-    const target = request.nextUrl.clone();
-    target.pathname = "/admin/login";
-    // The query string is dropped rather than carried as a `next` param.
-    // A redirect target taken from the URL is an open-redirect waiting to
-    // happen, and /admin is the only destination worth returning to.
-    target.search = "";
-    const redirected = NextResponse.redirect(target);
-    redirected.headers.set("cache-control", NO_STORE);
-    return redirected;
-  }
-
-  // A signed-in *non-admin* is deliberately not redirected here: /admin
-  // explains the situation and offers a sign-out. Sending them onwards
-  // only to be sent back would loop.
-  if (user && onLogin) {
-    const target = request.nextUrl.clone();
-    target.pathname = "/admin";
-    target.search = "";
-    const redirected = NextResponse.redirect(target);
-    redirected.headers.set("cache-control", NO_STORE);
-    return redirected;
-  }
+  // A signed-in *non-admin* is deliberately not redirected away from
+  // /admin: that page explains the situation and offers a sign-out.
+  // Sending them onwards only to be sent back would loop.
+  if (signedIn && onLogin) return redirect(request, "/admin");
 
   return response;
 }

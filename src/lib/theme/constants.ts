@@ -15,7 +15,7 @@ export const THEME_TRANSITION_CLASS = "theme-transition";
 
 export const DARK_QUERY = "(prefers-color-scheme: dark)";
 
-export function isTheme(value: unknown): value is Theme {
+function isTheme(value: unknown): value is Theme {
   return value === "light" || value === "dark";
 }
 

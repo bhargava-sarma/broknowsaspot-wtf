@@ -2,7 +2,7 @@ import "server-only";
 
 import { ID, Query } from "node-appwrite";
 
-import { spotPermissions } from "@/lib/appwrite/permissions";
+import { notePermissions, spotPermissions } from "@/lib/appwrite/permissions";
 import { DATABASE_ID, REPORT_THRESHOLD, TABLES } from "@/lib/appwrite/schema";
 import { adminTables } from "@/lib/appwrite/server";
 import { toSlug } from "@/lib/spots/slug";
@@ -12,8 +12,8 @@ import type { SpotDraft } from "@/lib/types/spot";
  * Every write the public can cause.
  *
  * All of it runs on the API key, because no row grants create, update or
- * delete to anyone — a browser cannot write to this database at all. That
- * is the same arrangement the service-role key had on Supabase, and it is
+ * delete to anyone — a browser cannot write to this database at all.
+ * Every write therefore has to come through a route handler, which is
  * what keeps Turnstile, the rate limiter and the validator on the only
  * path in.
  */
@@ -27,12 +27,12 @@ function conflict(error: unknown): boolean {
 /**
  * A slug nobody else holds.
  *
- * Postgres did this in `unique_slug()`, where the uniqueness check and
- * the insert were one statement and could not race. Appwrite has no
- * stored procedures, so the equivalent is to *let the insert fail*: the
- * unique index on `slug` is the arbiter, and a 409 means someone took it
- * between our check and our write. Querying first and trusting the answer
- * would be the racy version of this, not the safe one.
+ * The approach is to *let the insert fail*: the unique index on `slug` is
+ * the arbiter, and a 409 means someone took the name between our check
+ * and our write. Querying first for a free slug and then trusting the
+ * answer is the racy version of this, not the safe one — there is no way
+ * to hold the gap open, so the only reliable check is the one the
+ * database performs as part of the write itself.
  */
 async function insertWithUniqueSlug(
   base: string,
@@ -78,8 +78,8 @@ export async function createSpot(
       country: draft.country,
       lat: draft.lat,
       lng: draft.lng,
-      // [longitude, latitude] — the order PostGIS used and the reverse of
-      // how people say it. Backwards puts the spot in the wrong
+      // [longitude, latitude] — Appwrite's order, and the reverse of how
+      // people say it. Swapped, this puts the spot in the wrong
       // hemisphere and nothing complains.
       location: [draft.lng, draft.lat],
       category: draft.category,
@@ -158,7 +158,7 @@ export async function createNote(
       notedOn: new Date(`${note.notedOn}T12:00:00Z`).toISOString(),
     },
     // The parent is visible — checked above — so the note is too.
-    permissions: spotPermissions(true),
+    permissions: notePermissions(true, true),
   });
   const row = created as { $id: string };
 
@@ -184,12 +184,12 @@ export async function createNote(
  * Record a report and hide the spot if enough distinct people have now
  * reported it.
  *
- * This was a Postgres trigger, which had a property this cannot have: it
- * fired no matter how the row arrived, so the threshold could not be
- * bypassed by writing to the table another way. Here the logic lives in
- * the one route that can write reports at all — every other path is
- * refused by Appwrite — so the trust boundary is the API key rather than
- * the table. Same boundary the rest of the write path already has.
+ * The threshold is enforced in application code, not by the database, so
+ * it holds only because there is exactly one way to write a report: this
+ * module, on the API key, reached through one route handler. Every other
+ * path is refused by Appwrite outright. Worth stating plainly because a
+ * database-side trigger would have been stronger — it would fire however
+ * the row arrived — and this does not have that property.
  *
  * The count-then-hide is not atomic with the insert, and deliberately so:
  * a read cannot be staged into a transaction. Two simultaneous tenth
@@ -310,10 +310,9 @@ async function hideSpotRow(spotId: string, reporters: number): Promise<void> {
           spotId,
           action: "hide",
           reason: `auto-hidden at ${reporters} reports`,
-          // No actor: nobody decided this. Postgres could not write this
-          // row at all — its trigger ran as an anonymous reporter with no
-          // way to reach the audit table — so the automatic hides were
-          // invisible in the log. They are not any more.
+          // No actor, because no person decided this. The admin screen
+          // reads the absence and says so, rather than attributing an
+          // automatic hide to whoever happens to be looking.
           actorId: null,
           actorEmail: null,
         },

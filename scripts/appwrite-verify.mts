@@ -1,12 +1,11 @@
 /**
  * Assert the security model against a live Appwrite project.
  *
- * This is `supabase/verify.sql`'s replacement, and it carries more weight
- * than that file did. On Postgres the rules were declarative — a policy
- * either existed or it did not, and the catalogue could be read. Here the
- * rules are partly ACLs written at row-creation time, so the only way to
- * know they are right is to look at every row and to try things as a
- * guest.
+ * The rules being checked are partly ACLs written onto each row as it is
+ * created, rather than a policy declared once that the database applies
+ * everywhere. Nothing can be read off a catalogue to confirm them, so
+ * the only way to know they hold is to look at every row and to try
+ * things as an actual guest.
  *
  *   APPWRITE_ENDPOINT=... APPWRITE_PROJECT_ID=... APPWRITE_API_KEY=... \
  *   npm run appwrite:verify
@@ -249,8 +248,8 @@ async function main() {
     const publiclyReadable = perms.some((p) => p === 'read("any")');
     if (visible !== publiclyReadable) drifted.push(String(row.slug));
 
-    // location is derived from lat/lng. Postgres generated it and
-    // rejected direct writes; here the writer sets both, so check them.
+    // location is derived from lat/lng, but nothing in Appwrite derives
+    // it — the writer sets all three, so confirm they still agree.
     const point = row.location as [number, number] | null | undefined;
     if (point) {
       const [lng, lat] = point;

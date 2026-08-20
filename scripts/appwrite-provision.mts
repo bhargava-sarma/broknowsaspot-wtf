@@ -1,10 +1,11 @@
 /**
  * Stand up the Appwrite schema. Idempotent — safe to re-run.
  *
- * This is the equivalent of supabase/migrations, and it exists as a
- * script rather than a pile of dashboard clicks for the same reason the
- * SQL did: a schema you cannot recreate from the repository is a schema
- * that drifts, and there is no `pg_dump` to fall back on here.
+ * This exists as a script rather than a pile of dashboard clicks because
+ * a schema you cannot recreate from the repository is a schema that
+ * drifts, and Appwrite offers nothing to dump the live one back out. The
+ * declaration in `src/lib/appwrite/schema.ts` is the only description of
+ * this database that exists.
  *
  *   APPWRITE_ENDPOINT=https://fra.cloud.appwrite.io/v1 \
  *   APPWRITE_PROJECT_ID=... \
