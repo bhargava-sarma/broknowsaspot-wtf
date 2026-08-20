@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 
+import { LocateButton } from "@/components/ui/locate-button";
 import { Sheet } from "@/components/ui/sheet";
+import type { useGeolocation } from "@/lib/hooks/use-geolocation";
 import {
   activeFilterCount,
   EMPTY_FILTERS,
@@ -97,6 +99,7 @@ type FilterRailProps = {
   onChange: (next: SpotFilters) => void;
   resultCount: number;
   totalCount: number;
+  geo: ReturnType<typeof useGeolocation>;
 };
 
 export function FilterRail({
@@ -104,6 +107,7 @@ export function FilterRail({
   onChange,
   resultCount,
   totalCount,
+  geo,
 }: FilterRailProps) {
   const [sheetOpen, setSheetOpen] = useState(false);
   const active = activeFilterCount(filters);
@@ -162,6 +166,16 @@ export function FilterRail({
     </Group>
   );
 
+  const nearMe = (
+    <LocateButton
+      status={geo.status}
+      onRequest={geo.request}
+      onClear={geo.clear}
+      label="sort by what's near me"
+      caption="ranks the list by distance from you. worked out in your browser — your position is never sent to this site or anywhere else."
+    />
+  );
+
   const count = (
     <p className="font-mono text-micro text-faint lowercase tabular-nums">
       <span className="text-ink">{resultCount}</span> / {totalCount} spots
@@ -213,6 +227,7 @@ export function FilterRail({
         }
       >
         <div className="grid gap-6">
+          {nearMe}
           {categoryGroup(true)}
           {difficultyGroup(true)}
           {accessGroup(true)}
@@ -237,6 +252,12 @@ export function FilterRail({
                 clear ({active})
               </button>
             ) : null}
+          </div>
+
+          {/* Its own row: the facets narrow the list, this reorders it,
+              and they are different enough to keep visually separate. */}
+          <div className="min-w-0 border-t border-rule pt-4 lg:col-span-12">
+            {nearMe}
           </div>
         </div>
       </div>

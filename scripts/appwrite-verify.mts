@@ -16,6 +16,7 @@
 
 import {
   Client,
+  Storage,
   TablesDB,
   Teams,
   Query,
@@ -26,6 +27,9 @@ import {
   ADMIN_READ,
   ADMIN_TEAM_ID,
   DATABASE_ID,
+  PHOTO_BUCKET_ID,
+  PHOTO_EXTENSIONS,
+  PHOTO_MAX_BYTES,
   SCHEMA,
   TABLES,
 } from "@/lib/appwrite/schema";
@@ -48,6 +52,9 @@ const admin = new TablesDB(
   new Client().setEndpoint(endpoint).setProject(projectId).setKey(apiKey),
 );
 const teams = new Teams(
+  new Client().setEndpoint(endpoint).setProject(projectId).setKey(apiKey),
+);
+const storage = new Storage(
   new Client().setEndpoint(endpoint).setProject(projectId).setKey(apiKey),
 );
 
@@ -450,6 +457,54 @@ async function main() {
   } catch {
     add("admin team exists", "true", "false");
     add("admin team has a member", "true", "unknown");
+  }
+
+  // ---------------------------------------------------------- storage --
+  //
+  // The bucket is public-read on purpose: a published photo is public.
+  // What must never be true is public *write* — a bucket anyone can put
+  // files into is a free, anonymous file host attached to this project,
+  // and it would not look any different from the outside until it was
+  // being used as one.
+  try {
+    const bucket = (await storage.getBucket({
+      bucketId: PHOTO_BUCKET_ID,
+    })) as {
+      $permissions?: string[];
+      maximumFileSize?: number;
+      allowedFileExtensions?: string[];
+    };
+    const grants = bucket.$permissions ?? [];
+
+    add("photo bucket exists", "true", "true");
+    add(
+      "photo bucket public read",
+      'read("any")',
+      grants.some((g) => g === 'read("any")') ? 'read("any")' : "missing",
+    );
+
+    const writeGrants = grants.filter((g) =>
+      /^(create|update|delete)\(/.test(g),
+    );
+    add(
+      "photo bucket write grants",
+      "none",
+      writeGrants.length === 0 ? "none" : writeGrants.join(", "),
+    );
+
+    add(
+      "photo bucket size cap",
+      String(PHOTO_MAX_BYTES),
+      String(bucket.maximumFileSize ?? 0),
+    );
+    const extensions = (bucket.allowedFileExtensions ?? []).join(",");
+    add(
+      "photo bucket accepts jpeg only",
+      [...PHOTO_EXTENSIONS].join(","),
+      extensions || "anything",
+    );
+  } catch {
+    add("photo bucket exists", "true", "false");
   }
 
   // ----------------------------------------------------------- report --

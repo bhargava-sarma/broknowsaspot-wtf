@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 
 import { NoteForm } from "@/components/spot/note-form";
@@ -52,6 +53,25 @@ export function SpotNotes({
               <p className="mt-3 max-w-[60ch] text-small text-muted">
                 {note.body}
               </p>
+
+              {note.photos && note.photos.length > 0 ? (
+                <ul className="mt-4 flex flex-wrap gap-[var(--gutter)]">
+                  {note.photos.map((src) => (
+                    <li
+                      key={src}
+                      className="relative aspect-[4/3] w-40 overflow-hidden bg-paper-raised sm:w-56"
+                    >
+                      <Image
+                        src={src}
+                        alt={`photo attached by ${note.author}`}
+                        fill
+                        sizes="(min-width: 640px) 14rem, 10rem"
+                        className="object-cover"
+                      />
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
             </li>
           ))}
         </ul>

@@ -18,10 +18,21 @@
  * than sleeping and hoping.
  */
 
-import { Client, TablesDB, Teams } from "node-appwrite";
+import {
+  Client,
+  Compression,
+  Permission,
+  Role,
+  Storage,
+  TablesDB,
+  Teams,
+} from "node-appwrite";
 import {
   ADMIN_TEAM_ID,
   DATABASE_ID,
+  PHOTO_BUCKET_ID,
+  PHOTO_EXTENSIONS,
+  PHOTO_MAX_BYTES,
   SCHEMA,
   type TableSpec,
 } from "@/lib/appwrite/schema";
@@ -52,6 +63,7 @@ const client = new Client()
 
 const db = new TablesDB(client);
 const teams = new Teams(client);
+const storage = new Storage(client);
 
 /** Appwrite answers 409 for "already exists", which is success here. */
 function isConflict(error: unknown): boolean {
@@ -406,6 +418,29 @@ async function main(): Promise<void> {
   for (const table of SCHEMA) {
     await provisionTable(table);
   }
+
+  console.log("\nstorage");
+  // Public read because a published photo is public. No write grant to
+  // anyone: uploads run through a route handler on the API key, which is
+  // what keeps Turnstile, the rate limiter and the type check on the
+  // only path in.
+  await step(`bucket "${PHOTO_BUCKET_ID}"`, () =>
+    storage.createBucket({
+      bucketId: PHOTO_BUCKET_ID,
+      name: "spot photos",
+      permissions: [Permission.read(Role.any())],
+      fileSecurity: false,
+      enabled: true,
+      maximumFileSize: PHOTO_MAX_BYTES,
+      allowedFileExtensions: [...PHOTO_EXTENSIONS],
+      compression: Compression.None,
+      // Encryption and antivirus are Appwrite-side extras that change
+      // nothing about what a visitor can fetch; the meaningful control
+      // here is that nothing but the API key can write.
+      encryption: false,
+      antivirus: false,
+    }),
+  );
 
   console.log("\nteams");
   // Replaces `public.admins`. Membership is the moderation gate, and it
