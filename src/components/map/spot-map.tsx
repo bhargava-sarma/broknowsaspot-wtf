@@ -72,12 +72,15 @@ function ZoomControls() {
   const map = useMap();
   return (
     <div className="leaflet-top leaflet-right">
-      <div className="leaflet-control pointer-events-auto m-0! flex flex-col border-l border-rule bg-paper">
+      {/* Floating over the map, so: glass. Dense, because the tiles
+          underneath are busy and a 66% pane over a coastline stops
+          reading as a control. */}
+      <div className="leaflet-control glass glass-dense glass-rim glass-r-sm pointer-events-auto m-3! flex flex-col overflow-hidden">
         <button
           type="button"
           onClick={() => map.zoomIn()}
           aria-label="zoom in"
-          className="tap touch-target flex h-11 w-11 items-center justify-center border-b border-rule font-mono text-tiny text-ink"
+          className="press touch-target flex h-11 w-11 items-center justify-center border-b border-rule/60 font-mono text-tiny text-ink"
         >
           +
         </button>
@@ -85,7 +88,7 @@ function ZoomControls() {
           type="button"
           onClick={() => map.zoomOut()}
           aria-label="zoom out"
-          className="tap touch-target flex h-11 w-11 items-center justify-center font-mono text-tiny text-ink"
+          className="press touch-target flex h-11 w-11 items-center justify-center font-mono text-tiny text-ink"
         >
           −
         </button>

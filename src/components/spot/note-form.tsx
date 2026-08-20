@@ -206,7 +206,7 @@ export function NoteForm({
       <button
         type="submit"
         disabled={state.kind === "sending"}
-        className="tap touch-target mt-7 inline-flex items-center gap-3 border-b border-rule-strong pb-2 font-mono text-tiny tracking-[0.04em] text-ink lowercase disabled:opacity-50"
+        className="press touch-target mt-7 inline-flex items-center gap-3 border-b border-rule-strong pb-2 font-mono text-tiny tracking-[0.04em] text-ink lowercase disabled:opacity-50"
       >
         {state.kind === "sending" ? "posting…" : "post the note"}
         <span aria-hidden="true">→</span>

@@ -44,18 +44,56 @@ a database of your own.
 
 ## design language
 
-Teenage Engineering flavoured industrial minimalism:
+Teenage Engineering flavoured industrial minimalism, with one pane of
+Apple-ish glass in front of it.
 
 - everything lowercase in UI copy
 - monospace for chrome/labels, humanist sans for long-form reading
-- dead-flat surfaces — no shadows, no gradients, no elevation
 - sections separated by a single hairline rule, never by cards
-- borderless controls; hover is an opacity shift, never a colour swap
+- borderless controls; no fills, no glows, no shadows anywhere
 - near-black / near-white / one muted warm-orange accent used sparingly
 - rigid Swiss grid, fluid `clamp()` type scale instead of breakpoint jumps
 
-Both themes are authored independently — dark is not an inverted light theme.
-Every token pair is contrast-checked; see [`docs/design-tokens.md`](docs/design-tokens.md).
+### two planes
+
+The two references pull in opposite directions — Teenage Engineering is
+matte and dead-flat, Liquid Glass is depth and refraction — so the split is
+by **role**, not by taste:
+
+|            | content plane                          | floating plane                           |
+| ---------- | -------------------------------------- | ---------------------------------------- |
+| what       | sections, prose, fields, plates        | header, mobile bar, sheets, map controls |
+| material   | flat, nothing behind it                | translucent, blurred, top-lit            |
+| corners    | square, always                         | a tight radius                           |
+| separation | one hairline                           | a specular edge                          |
+
+Content stays Swiss and flat. Translucency, blur and a corner radius exist
+only on things that genuinely hover above the page — which is also how
+Apple uses the material: a controls layer, not a content layer.
+
+Both themes are authored independently — dark is not an inverted light
+theme, and dark glass leans *darker* than the page rather than lighter.
+Every text pair is contrast-checked. The full system, including the two
+`backdrop-filter` traps that cost real debugging, is in
+[`docs/design-tokens.md`](docs/design-tokens.md).
+
+### motion
+
+Most of it is CSS, not JavaScript. Scroll reveals are a class an
+IntersectionObserver flips, with the stagger as an index-derived delay, so
+nothing samples a spring on the main thread mid-scroll. Framer Motion is
+kept for what needs it: the sheet's enter/exit, and the nav marker that
+travels between destinations.
+
+Two rules hold it together:
+
+- **Reveals fail visible.** Content is visible by default and a pre-paint
+  script opts it into being hidden, so the hidden state cannot outlive the
+  JavaScript meant to undo it. With the bundle blocked, the page is plain
+  readable text.
+- **At most six blurred surfaces at once.** `backdrop-filter` makes the
+  compositor re-blur its backdrop on every frame that backdrop changes.
+  Explore, the densest page, runs four.
 
 ## routes
 

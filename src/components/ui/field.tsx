@@ -7,19 +7,45 @@ import { cn } from "@/lib/utils/cn";
 /**
  * Form controls in the flat language: no boxes, no fills, no radius. A
  * field is a monospace label over a hairline, and the hairline is the only
- * thing that changes — it inks up on focus and turns accent on error.
+ * thing that changes.
  *
- * Errors are wired with aria-describedby and aria-invalid rather than being
- * colour-only, since the accent is the sole visual signal.
+ * Fields stay on the content plane rather than becoming glass. Glass is
+ * for things floating *above* the page; a field is a place the reader is
+ * writing into, and putting a translucent pane between them and their own
+ * text is the wrong instinct however good it looks.
+ *
+ * What the hairline does instead: a second rule sits on top of the
+ * resting one, scaled to nothing from its left origin, and sweeps across
+ * on focus. It reads like a level filling on a piece of hardware, and it
+ * is one composited transform rather than a colour interpolation.
+ *
+ * Errors are wired with aria-describedby and aria-invalid rather than
+ * being colour-only, since the accent is the sole visual signal.
  */
 
 const controlBase =
-  "w-full border-b bg-transparent pt-2 pb-2 text-body text-ink outline-none transition-colors duration-200 placeholder:text-faint";
+  "peer w-full border-b bg-transparent pt-2 pb-2 text-body text-ink outline-none transition-colors duration-200 placeholder:text-faint";
 
 function ruleClass(error?: string) {
   return error
     ? "border-accent"
-    : "border-rule focus:border-ink hover:border-muted";
+    : "border-rule focus:border-transparent hover:border-muted";
+}
+
+/**
+ * The sweeping rule. Sits under the control and keys off `peer-focus`, so
+ * there is no focus state to track in React and no re-render on focus.
+ */
+function FocusRule({ error }: { error?: string }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "pointer-events-none absolute inset-x-0 bottom-0 block h-px origin-left scale-x-0 transition-transform duration-500 ease-[var(--ease-damped)] peer-focus:scale-x-100 motion-reduce:transition-none",
+        error ? "bg-accent" : "bg-ink",
+      )}
+    />
+  );
 }
 
 type BaseProps = {
@@ -64,38 +90,41 @@ export function TextField({
         {label}
       </label>
 
-      {multiline ? (
-        <textarea
-          id={id}
-          value={value}
-          rows={rows}
-          maxLength={maxLength}
-          onChange={(event) => onChange(event.target.value)}
-          onBlur={onBlur}
-          placeholder={placeholder}
-          aria-invalid={Boolean(error)}
-          aria-describedby={describedBy}
-          className={cn(
-            controlBase,
-            ruleClass(error),
-            "resize-y leading-relaxed",
-          )}
-        />
-      ) : (
-        <input
-          id={id}
-          type="text"
-          inputMode={inputMode}
-          value={value}
-          maxLength={maxLength}
-          onChange={(event) => onChange(event.target.value)}
-          onBlur={onBlur}
-          placeholder={placeholder}
-          aria-invalid={Boolean(error)}
-          aria-describedby={describedBy}
-          className={cn(controlBase, ruleClass(error), "touch-target")}
-        />
-      )}
+      <div className="relative">
+        {multiline ? (
+          <textarea
+            id={id}
+            value={value}
+            rows={rows}
+            maxLength={maxLength}
+            onChange={(event) => onChange(event.target.value)}
+            onBlur={onBlur}
+            placeholder={placeholder}
+            aria-invalid={Boolean(error)}
+            aria-describedby={describedBy}
+            className={cn(
+              controlBase,
+              ruleClass(error),
+              "resize-y leading-relaxed",
+            )}
+          />
+        ) : (
+          <input
+            id={id}
+            type="text"
+            inputMode={inputMode}
+            value={value}
+            maxLength={maxLength}
+            onChange={(event) => onChange(event.target.value)}
+            onBlur={onBlur}
+            placeholder={placeholder}
+            aria-invalid={Boolean(error)}
+            aria-describedby={describedBy}
+            className={cn(controlBase, ruleClass(error), "touch-target")}
+          />
+        )}
+        <FocusRule error={error} />
+      </div>
 
       {error ? (
         <p
@@ -161,7 +190,7 @@ export function ChoiceField<T extends string>({
               aria-checked={active}
               onClick={() => onChange(option)}
               className={cn(
-                "tap touch-target relative py-1 font-mono text-micro lowercase",
+                "press touch-target relative py-1 font-mono text-micro lowercase",
                 active ? "text-ink" : "text-faint",
               )}
             >

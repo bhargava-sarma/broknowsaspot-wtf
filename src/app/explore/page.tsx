@@ -23,6 +23,7 @@ export default async function ExplorePage() {
   return (
     <>
       <PageHeader
+        compact
         eyebrow="01 / explore"
         title="the map"
         lede="every logged spot, filterable by what it is, how hard it is, and whether you are strictly allowed to be there."

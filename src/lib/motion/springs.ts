@@ -10,7 +10,8 @@ import type { Transition } from "framer-motion";
  *
  * damping ratio = damping / (2 * sqrt(stiffness * mass))
  *   1.0  -> critically damped, zero overshoot
- *   <1.0 -> overshoot, which reads as bounce; nothing here uses it
+ *   <1.0 -> a touch of overshoot, for things that should feel picked
+ *           up rather than faded in
  */
 
 /** Chrome: toggles, nav, buttons. Fast, dead-still on arrival. (ζ ≈ 0.97) */
@@ -27,6 +28,27 @@ export const springContent: Transition = {
   stiffness: 150,
   damping: 23,
   mass: 1,
+};
+
+/** Large surfaces: sheets, overlays, the filter panel. (ζ ≈ 0.98) */
+export const springSurface: Transition = {
+  type: "spring",
+  stiffness: 220,
+  damping: 29,
+  mass: 1,
+};
+
+/**
+ * The one preset allowed real overshoot — map markers landing, a press
+ * releasing, a glass pane arriving. Kept for small, fast, physical
+ * things; anything large enough to read as a page element uses
+ * springSurface instead, where a bounce would look like a bug. (ζ ≈ 0.72)
+ */
+export const springPop: Transition = {
+  type: "spring",
+  stiffness: 420,
+  damping: 22,
+  mass: 0.7,
 };
 
 /** Opacity-only crossfades, where a spring would be imperceptible anyway. */

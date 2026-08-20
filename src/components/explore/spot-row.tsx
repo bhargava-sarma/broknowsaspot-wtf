@@ -22,22 +22,28 @@ type SpotRowProps = {
  * The whole row is a button that selects the spot on the map, with a
  * separate explicit link through to the detail page — nesting a link
  * inside a button would be invalid and would make keyboard use ambiguous.
+ *
+ * Selection is marked by an accent rule down the left edge that *grows*
+ * from the centre rather than appearing. Selecting from the map scrolls
+ * the matching row into view, and a mark that animates is findable in
+ * peripheral vision in a way that a mark which simply exists is not.
  */
 export function SpotRow({ spot, selected, onSelect }: SpotRowProps) {
   return (
     <li
       id={`spot-${spot.slug}`}
       className={cn(
-        "relative border-b border-rule",
-        selected && "bg-paper-raised",
+        "relative border-b border-rule transition-colors duration-300 ease-[var(--ease-damped)]",
+        selected ? "bg-paper-raised" : "hover:bg-paper-raised/45",
       )}
     >
-      {selected ? (
-        <span
-          aria-hidden="true"
-          className="absolute inset-y-0 left-0 block w-px bg-accent"
-        />
-      ) : null}
+      <span
+        aria-hidden="true"
+        className={cn(
+          "absolute inset-y-0 left-0 block w-px origin-center bg-accent transition-transform duration-400 ease-[var(--ease-damped)] motion-reduce:transition-none",
+          selected ? "scale-y-100" : "scale-y-0",
+        )}
+      />
 
       <div className="px-[var(--gutter)] py-4">
         <button

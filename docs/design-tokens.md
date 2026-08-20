@@ -82,6 +82,94 @@ breakpoint jumps in type size at all.
 Line-height and letter-spacing ride along with each step via Tailwind v4's
 `--text-*--line-height` / `--text-*--letter-spacing` companions.
 
+## the two planes
+
+The design runs two materials, and which one a thing gets is decided by
+one question: **does it float above the page, or is it part of it?**
+
+|                | content plane                            | floating plane                       |
+| -------------- | ---------------------------------------- | ------------------------------------ |
+| what           | sections, prose, lists, fields, plates   | header, mobile bar, sheets, map controls |
+| material       | flat `paper`, nothing behind it          | glass — translucent, blurred, top-lit |
+| corners        | square, always                           | `--radius-glass` family              |
+| separation     | one hairline                             | a specular edge and a rim            |
+| shadow         | none                                     | none — the edge does the work        |
+
+The content plane is unchanged and stays Swiss: flat surfaces, hairline
+rules, no elevation, no radius. The floating plane is the only place
+translucency, blur or a corner radius is allowed, and it is where the
+Liquid Glass influence lives.
+
+That split is the whole reconciliation. The two references pull opposite
+ways — Teenage Engineering is matte and dead-flat, Liquid Glass is
+depth and refraction — so mixing them per-element would produce neither.
+Split by *role* instead and both are coherent: a flat instrument panel,
+with a pane of glass in front of the parts that hover.
+
+### glass tokens
+
+| token                 | light                  | dark                   | is                                    |
+| --------------------- | ---------------------- | ---------------------- | ------------------------------------- |
+| `--glass-tint`        | `249 248 245`          | `18 18 16`             | the pane's own colour, as an RGB triplet |
+| `--glass-alpha`       | `0.66`                 | `0.62`                 | resting opacity                        |
+| `--glass-alpha-solid` | `0.93`                 | `0.92`                 | over busy content, or once scrolled    |
+| `--glass-blur`        | `20px`                 | `22px`                 | backdrop blur radius                   |
+| `--glass-saturate`    | `180%`                 | `165%`                 | colour behind is lifted, not just blurred |
+| `--glass-specular`    | `rgba(255,255,255,.85)`| `rgba(255,255,255,.11)`| the top edge's light catch             |
+| `--glass-shade`       | `rgba(18,18,15,.06)`   | `rgba(0,0,0,.34)`      | the bottom edge's shade                |
+| `--glass-rim`         | `rgba(18,18,15,.10)`   | `rgba(255,255,255,.08)`| the outer hairline                     |
+
+Dark glass leans **darker** than the page rather than lighter, and its
+specular edge drops to a whisper. A bright pane over a near-black ground
+reads as a lightbox, and a bright rim on a dark surface reads as a 2013
+bevel.
+
+These sit outside the `--tone-*` namespace on purpose: they are never text
+colours, so the contrast guard has nothing to say about them. Anything a
+word sits on still resolves to a `--tone-*` value.
+
+### classes
+
+- `.glass` — the material. Tint, backdrop blur, specular top edge, shaded
+  bottom edge, and a `::before` carrying a faint top-lit gradient for the
+  pane's thickness.
+- `.glass-dense` — alpha only, for glass over a map or a photo. Because it
+  changes nothing but opacity it can cross-fade without re-rasterising.
+- `.glass-chip` — the same edge treatment with **no** backdrop filter, for
+  a control sitting on a pane that is already glass (the theme toggle, the
+  filters button). Blurring inside a blur costs a second full-region
+  rasterisation to produce a worse result: the backdrop it samples is its
+  already-blurred parent, so the effect compounds into mush.
+- `.glass-rim`, `.glass-r` / `-sm` / `-lg` — edge and radius.
+
+### two traps worth knowing
+
+**`backdrop-filter` makes a containing block for `position: fixed`.**
+Exactly as `transform` does. Anything fixed rendered *inside* a glass
+element resolves against that element instead of the viewport — a modal
+opened from the glass filter bar lands pinned under the masthead at the
+bar's width. `Sheet` portals to `<body>` for this reason.
+
+**Do not hand-write `-webkit-backdrop-filter`.** Lightning CSS adds the
+prefix from the browser targets; writing it yourself makes it treat the
+two declarations as one property and keep only the prefixed form, which
+silently drops the blur in every browser wanting the standard name. That
+failure is near-invisible in review, because the tint still lands and the
+pane looks approximately right — it just never blurs.
+
+### budget
+
+`backdrop-filter` forces the compositor to re-blur the region behind it
+whenever that region changes, which during a scroll on a phone is every
+frame. The rule is **at most six live blurred surfaces at once** (explore,
+the densest page, runs four), and the blur radius is never animated —
+changing it re-rasterises, while changing opacity or transform does not.
+
+Both fallbacks land on an opaque surface rather than on unreadable text
+over a busy background: `@supports not (backdrop-filter: blur(1px))` for
+browsers that cannot blur, and `@media (prefers-reduced-transparency:
+reduce)` for readers who asked not to be shown translucency.
+
 ## layout
 
 - `--gutter` — `clamp(1rem, 0.62rem + 1.6vw, 2rem)`, the only horizontal
@@ -95,26 +183,59 @@ Line-height and letter-spacing ride along with each step via Tailwind v4's
 
 ## motion
 
-Presets live in `src/lib/motion/springs.ts`; all four are springs tuned at
-or just under critical damping (ζ ≈ 0.95–0.98), so nothing overshoots
-except `springPop` (ζ ≈ 0.72), reserved for small affordances like map
-markers.
+Presets live in `src/lib/motion/springs.ts`, tuned at or just under
+critical damping (ζ ≈ 0.95–0.98) so nothing overshoots except `springPop`
+(ζ ≈ 0.72), which is reserved for small physical affordances — a marker
+landing, a press releasing.
 
-`--ease-damped` in CSS is a `linear()` approximation of the same curve, for
-the handful of transitions that are cheaper to run in CSS than in JS.
+`--ease-damped` is a `linear()` approximation of the same spring for CSS,
+and `--ease-spring` is the overshooting one. Durations are tokens too:
+`--dur-tap` (140ms), `--dur-ui` (240ms), `--dur-surface` (420ms).
 
-Reduced motion is handled in three layers:
+**Most motion here is CSS, not JavaScript**, and deliberately. Scroll
+reveals are a class an IntersectionObserver flips, with the stagger as a
+delay derived from each child's index — so nothing samples a spring on the
+main thread while the reader is scrolling, which is what a phone actually
+cares about. Framer Motion is kept for the cases that genuinely need it:
+discrete enter/exit (`Sheet`) and shared-element markers that travel
+between nav destinations (`layoutId`).
 
-1. `useReducedMotion()` collapses every Framer variant to a static visible
-   state — reveals stop translating and stop staggering.
-2. A CSS `@media (prefers-reduced-motion: reduce)` block neutralises
-   CSS-driven animation as a safety net.
-3. The 3D hero swaps entirely for the static contour SVG.
+### reveals fail visible
+
+The reveal's hidden state lives under an `html.js` class that the
+pre-paint script adds. The direction matters: content is visible by
+default and JavaScript *opts it into* being hidden, so the hidden state
+cannot outlive the script meant to undo it.
+
+The previous implementation had it the other way round — Framer's
+`initial` serialised into the SSR markup as `style="opacity:0"`, and
+inline styles beat stylesheets, so a page whose bundle failed to load
+rendered permanently blank. Anything added here must keep that property:
+**if the JavaScript never arrives, the page is still readable.**
+
+### reduced motion
+
+1. CSS `@media (prefers-reduced-motion: reduce)` flattens reveals to
+   visible with no transform and no transition, and neutralises the press
+   physics.
+2. `useReducedMotion()` collapses the Framer cases — the sheet crossfades
+   instead of sliding, and the travelling nav marker stops travelling.
+3. The counting readout does not run; it renders its final value.
+4. The 3D hero swaps entirely for the static contour SVG.
 
 ## interaction rules
 
-- Controls are borderless. The only hover feedback is `opacity: 0.7`
-  (`.tap`) — never a colour swap, never a glow, never a shadow.
+- Controls are borderless. Hover is `opacity` (`.tap`) — never a colour
+  swap, never a glow, never a shadow.
+- `.press` is the control idiom: a small inward scale on contact,
+  springing back on release. On a touch screen this is the whole feedback
+  story, since there is no hover to confirm a finger landed correctly.
+  `.press-pane` is its variant for a whole glass panel, which sinks rather
+  than shrinking.
+- A state change that can be *drawn* is drawn: the CTA underline, the
+  field's focus rule and the filter's active mark all sweep in from their
+  left origin rather than switching colour. One composited transform, and
+  it reads as a response rather than as a repaint.
 - Hover styling is behind `@media (hover: hover)` so touch devices don't
   get stuck in a hover state after a tap.
 - `:focus-visible` draws a 2px accent outline. With no borders or fills

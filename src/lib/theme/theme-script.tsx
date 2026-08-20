@@ -5,16 +5,24 @@ import {
 } from "@/lib/theme/constants";
 
 /**
- * Resolves and applies the theme *before first paint*.
+ * Runs *before first paint*, and does two jobs.
  *
- * This has to be a blocking inline script in <head>: any approach that waits
- * for React (effects, client components, even `beforeInteractive` scripts)
- * paints one frame of the wrong theme first, which is the flash we are
- * eliminating. It is small enough that the parse cost is irrelevant.
+ * **Theme.** Resolves light/dark and stamps it on <html>. This has to be a
+ * blocking inline script: any approach that waits for React (effects,
+ * client components, even `beforeInteractive` scripts) paints one frame of
+ * the wrong theme first, which is the flash we are eliminating.
  *
- * Stringified rather than imported so it inlines with no module boundary.
+ * **Arming the reveals.** It also adds a `js` class, which is what lets the
+ * scroll reveals start hidden. The direction matters: reveals are visible
+ * by default and this script *opts them into* being hidden, so the hidden
+ * state can never outlive the JavaScript that is supposed to undo it. If
+ * the bundle fails to load, or the reader has scripting off, the page is
+ * plain text rather than a blank rectangle.
+ *
+ * Both are cheap enough that the parse cost is irrelevant, and stringified
+ * rather than imported so they inline with no module boundary.
  */
-const script = `(function(){try{var p=localStorage.getItem("${THEME_STORAGE_KEY}");var t=(p==="light"||p==="dark")?p:(window.matchMedia("${DARK_QUERY}").matches?"dark":"light");document.documentElement.setAttribute("${THEME_ATTRIBUTE}",t)}catch(e){document.documentElement.setAttribute("${THEME_ATTRIBUTE}","light")}})();`;
+const script = `(function(){var d=document.documentElement;try{var p=localStorage.getItem("${THEME_STORAGE_KEY}");var t=(p==="light"||p==="dark")?p:(window.matchMedia("${DARK_QUERY}").matches?"dark":"light");d.setAttribute("${THEME_ATTRIBUTE}",t)}catch(e){d.setAttribute("${THEME_ATTRIBUTE}","light")}d.classList.add("js")})();`;
 
 export function ThemeScript() {
   return (

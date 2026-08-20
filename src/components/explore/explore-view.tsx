@@ -53,7 +53,10 @@ export function ExploreView({ spots }: { spots: Spot[] }) {
 
   return (
     <>
-      <div className="rule-b">
+      {/* Sticky under the header, on the same glass. The list and the
+          map both scroll under it, so the controls that govern them stay
+          reachable without a trip back to the top. */}
+      <div className="glass glass-dense sticky top-[var(--bar-h)] z-30 border-b border-rule">
         <FilterRail
           filters={filters}
           onChange={handleFilters}
