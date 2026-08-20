@@ -32,6 +32,12 @@ jobs:
       - name: token contrast
         run: npm run check:contrast
 
+      # Catches an upstream basemap style whose boundary layers changed
+      # shape. A style this cannot filter would otherwise render the
+      # provider's own depiction of India's borders.
+      - name: india borders
+        run: npm run check:borders
+
       - name: formatting
         run: npm run format:check
 

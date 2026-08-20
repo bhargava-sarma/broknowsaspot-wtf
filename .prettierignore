@@ -4,3 +4,8 @@ build
 node_modules
 package-lock.json
 *.md
+
+# Upstream basemap styles, committed verbatim so `check:borders` runs
+# offline. Reformatting them would make every provider update a noisy
+# diff and hide what actually changed.
+scripts/fixtures/

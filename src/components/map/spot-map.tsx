@@ -4,14 +4,10 @@ import "leaflet/dist/leaflet.css";
 
 import L from "leaflet";
 import { useEffect, useMemo, useRef } from "react";
-import { MapContainer, Marker, TileLayer, useMap } from "react-leaflet";
+import { MapContainer, Marker, useMap } from "react-leaflet";
 
-import {
-  ATTRIBUTION,
-  INDIA_BOUNDS,
-  TILE_URL,
-  warnIfFallbackBasemap,
-} from "@/lib/map/tiles";
+import { BasemapLayer } from "@/components/map/basemap-layer";
+import { INDIA_BOUNDS } from "@/lib/map/tiles";
 import { useTheme } from "@/lib/theme/theme-provider";
 import type { Spot } from "@/lib/types/spot";
 
@@ -19,11 +15,10 @@ import type { Spot } from "@/lib/types/spot";
  * Leaflet canvas. Always reached through a dynamic import with `ssr: false`
  * — Leaflet touches `window` at module scope and cannot be server-rendered.
  *
- * Tiles and the opening view both come from `lib/map/tiles.ts`, which the
- * submission picker shares — a pin looks the same wherever it is drawn,
- * and the basemap is swapped in one place. Read that file before changing
- * providers: the borders are rendered into the tiles, so which provider
- * is configured decides whether the map is legal to publish in India.
+ * The opening view comes from `lib/map/tiles.ts` and the basemap from
+ * `<BasemapLayer>`, both shared with the submission picker — a pin looks
+ * the same wherever it is drawn, and the borders are decided in one
+ * place. Read `lib/map/india-worldview.ts` before touching the basemap.
  */
 
 /**
@@ -136,10 +131,6 @@ export default function SpotMap({
 }: SpotMapProps) {
   const { theme } = useTheme();
 
-  useEffect(() => {
-    warnIfFallbackBasemap();
-  }, []);
-
   // One icon per state, reused across every marker, instead of building a
   // fresh DivIcon per spot on each render.
   const icons = useMemo(
@@ -159,14 +150,7 @@ export default function SpotMap({
       zoomControl={false}
       attributionControl
     >
-      <TileLayer
-        // Keyed so a theme flip swaps the raster set instead of tinting it.
-        key={theme}
-        url={TILE_URL[theme]}
-        attribution={ATTRIBUTION}
-        maxZoom={19}
-        detectRetina
-      />
+      <BasemapLayer theme={theme} />
 
       <FitToSpots spots={spots} />
       <ResizeOnMount />
