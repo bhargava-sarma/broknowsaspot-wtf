@@ -11,7 +11,7 @@ Live at **<https://broknowsaspot.app>**.
 | --------- | --------------------------------------------------- |
 | framework | Next.js (App Router) + TypeScript                   |
 | data      | Appwrite Cloud (TablesDB)                           |
-| basemap   | OpenFreeMap vector tiles via MapLibre + Leaflet      |
+| basemap   | Leaflet + raster tiles (vector path opt-in, see below) |
 | styling   | Tailwind CSS v4 (CSS-first design tokens)           |
 | 3d        | React Three Fiber + drei + three                    |
 | motion    | Framer Motion                                       |
@@ -354,76 +354,26 @@ typed into nine files, which is how a rename gets done eight times.
 
 ## the basemap, and India's borders
 
-The maps open on India, and the borders are drawn as the Government of
-India depicts them. That is a property of how the basemap is built here,
-not a setting someone has to remember.
+The maps open on India. **The borders are not yet India's** — this is the
+one known-wrong thing in the app, and it is a blocker for serving Indian
+users rather than a nice-to-have.
 
-**Why it needed doing.** A raster basemap arrives as a finished image
-with the borders already painted in, so the only lever is which provider
-you pay. The usual OpenStreetMap render depicts *de-facto lines of
-control*: dashed boundaries through Jammu & Kashmir, Aksai Chin outside
-India, Arunachal Pradesh marked disputed. Maps published in India are
-required to show boundaries as depicted by the Survey of India.
+### where it stands
 
-**How it is fixed.** The basemap is vector, not raster. Vector tiles ship
-boundary *data* and leave the drawing to the client, so the question
-stops being procurement and becomes a filter. Tiles come from
-[OpenFreeMap](https://openfreemap.org) — OpenMapTiles schema, HTTPS, no
-API key, no registration, no request cap — and
-[`src/lib/map/india-worldview.ts`](src/lib/map/india-worldview.ts)
-rewrites the style's boundary layers before anything is drawn.
+The basemap is CARTO's raster tiles, rendering OpenStreetMap. That
+depicts *de-facto lines of control*: dashed boundaries through Jammu &
+Kashmir, Aksai Chin outside India, Arunachal Pradesh marked disputed.
+Maps published in India are required to show boundaries as depicted by
+the Survey of India.
 
-The schema carries exactly what the question needs:
+A raster tile arrives as a finished image with the borders already
+painted in, so nothing in this repo can correct them. Two ways out, and
+one of them is half-built:
 
-| field           | is                                              |
-| --------------- | ----------------------------------------------- |
-| `claimed_by`    | ISO2 of the country that wants to see this line  |
-| `disputed`      | 1 when the border is contested                   |
-| `disputed_name` | which dispute, e.g. `IndianClaimwesternKashmir`  |
-
-A default style draws every claimant's line at once — which is precisely
-why the stock render shows a line of control through Kashmir. Keeping
-only the lines India recognises produces the Survey of India depiction
-from the same tiles. It is the same idea as Mapbox's `worldview`, applied
-to an open schema rather than bought with a key.
-
-Three things happen to every layer reading `source-layer: "boundary"`:
-
-1. Any `["!", ["has", "claimed_by"]]` clause is neutralised — styles use
-   it to suppress *all* claim lines, which suppresses India's too and
-   leaves the northern edge of Jammu & Kashmir simply missing.
-2. The worldview predicate is ANDed on, dropping foreign claim lines and
-   the competing claims in India's theatre.
-3. Where a layer exists to draw disputed borders, the dash is removed.
-   Once only India's line survives it is not a disputed border in this
-   depiction — it is the border.
-
-Layer *names* are never matched, only `source-layer`: the two styles in
-use already disagree about names, and a provider can rename them again.
-
-### it fails closed
-
-If the upstream style changes shape and no boundary layer can be found,
-the map **refuses to render** and says why, rather than falling back to
-the provider's own depiction. The spots stay listed and a notice appears
-in place of the basemap. A wrong-borders basemap looks completely normal,
-so a silent fallback is the one outcome worth ruling out.
-
-`npm run check:borders` runs the same rewrite against committed copies of
-both styles and evaluates the resulting filters with MapLibre's own
-expression engine, against synthetic boundary features standing in for
-each line the tiles contain — India's two claims, China's, Pakistan's, an
-unclaimed line of control, the Demchok and Bara Hotii disputes, and a
-dispute outside India that should be left alone. It runs in CI. Refresh
-`scripts/fixtures/` when the provider updates; a style that changed shape
-is exactly what this is for.
-
-### using a commercial provider instead
-
-Setting the tile URL variables switches to a plain XYZ raster basemap and
-opts out of the vector path entirely. That is for a provider whose
-cartography is *already* Survey of India-aligned — Mapbox with
-`worldview=IN`, or Mappls — where the borders are their problem:
+**Buy a compliant basemap.** Point the variables below at a provider
+whose cartography is already Survey of India-aligned — Mapbox with a
+`worldview=IN` style, or Mappls — and the borders are correct because
+they were rendered correct.
 
 | variable                          | is                                         |
 | --------------------------------- | ------------------------------------------ |
@@ -432,7 +382,7 @@ cartography is *already* Survey of India-aligned — Mapbox with
 | `NEXT_PUBLIC_MAP_ATTRIBUTION`     | the attribution your licence requires      |
 | `NEXT_PUBLIC_MAP_TILE_SIZE`       | `512` for providers serving 512px tiles    |
 
-`NEXT_PUBLIC_MAP_TILE_SIZE` matters more than it looks. Leaflet assumes
+`NEXT_PUBLIC_MAP_TILE_SIZE` matters more than it looks: Leaflet assumes
 256px tiles and draws 512s one zoom level too far in with everything
 soft, which reads as a styling problem rather than a configuration one.
 Setting `512` also applies the `zoomOffset` of -1 that must accompany it,
@@ -440,22 +390,64 @@ and hands retina back to the provider — a 512px tile is already doubled,
 so Leaflet's `detectRetina` would scale it twice. Put `@2x` in the URL
 template instead.
 
+**Or finish the vector path**, which needs no provider account at all.
+
+### the vector path (opt-in, currently broken)
+
+Vector tiles ship boundary *data* rather than a picture of boundaries, so
+the style decides which lines are drawn.
+[OpenFreeMap](https://openfreemap.org) serves OpenMapTiles vector tiles
+over HTTPS with no API key, no registration and no request cap, and that
+schema carries what the question needs:
+
+| field           | is                                              |
+| --------------- | ----------------------------------------------- |
+| `claimed_by`    | ISO2 of the country that wants to see this line  |
+| `disputed`      | 1 when the border is contested                   |
+| `disputed_name` | which dispute, e.g. `IndianClaimwesternKashmir`  |
+
+A default style draws every claimant's line at once, which is precisely
+why the stock render puts a line of control through Kashmir. Keeping only
+the lines India recognises produces the Survey of India depiction from
+the same tiles — the same idea as Mapbox's `worldview`, applied to an
+open schema rather than bought with a key.
+
+[`src/lib/map/india-worldview.ts`](src/lib/map/india-worldview.ts)
+implements it and is **tested and correct**: `npm run check:borders`
+evaluates the rewritten filters with MapLibre's own expression engine
+against synthetic boundary features, and it runs in CI.
+
+**What does not work is the rendering.** With
+`NEXT_PUBLIC_MAP_VECTOR=1`, MapLibre fetches the style, the TileJSON and
+the sprite, and then requests no tiles at all — an empty map with the
+markers still on it. That is unresolved, and it is why the flag exists
+rather than the vector path being the default.
+
+It fails over to raster rather than to nothing. Every way it can fail —
+no WebGL, style unreachable, style unfilterable, MapLibre throwing, or
+MapLibre attaching and never painting — ends on the raster basemap. That
+last one needs a timeout to detect, because it throws nothing: the
+version that shipped had no such timeout, and an empty map was the
+result.
+
 ### what else was considered
 
 | candidate              | outcome                                                          |
 | ---------------------- | ---------------------------------------------------------------- |
-| **OpenFreeMap**        | **in use** — keyless vector, so the style decides the borders     |
-| Mapbox `worldview=IN`  | works, needs a key and a billing account                          |
+| Mapbox `worldview=IN`  | works; needs a key and a billing account                          |
+| OpenFreeMap + filter   | keyless and correct in principle; does not render yet             |
 | Bharatmaps / NIC       | Survey of India data, but credentials are issued to govt bodies   |
 | openstreetmap.in       | a community site, not a tile service                              |
 | osm-in/tileserver      | self-hosting recipe; its demo is HTTP on a bare IP, unusable here |
-| CARTO / OSM raster     | the de-facto depiction this replaced                              |
+| CARTO / OSM raster     | **in use** — working, and not correct for India                   |
 
 ## known gaps
 
-- The vector basemap has not been seen rendering against the live
-  OpenFreeMap service — it was verified against committed copies of the
-  styles. Check the borders on the deploy.
+- **The map's borders are not the Survey of India depiction** — see
+  above. This is the one item here that blocks serving Indian users.
+- There is no end-to-end check that the map actually paints. The vector
+  regression would have been caught by asserting a tile grid exists in
+  the DOM; nothing in CI does that today.
 - No photo uploads; `photos[].src` is still `null` everywhere.
 - Proximity search is unbuilt, though the schema is ready for it: `location`
   is a `Point` with a spatial index, so `Query.distanceLessThan` is a query
