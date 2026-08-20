@@ -322,6 +322,9 @@ everything else stays server-side.
 | `NEXT_PUBLIC_SITE_URL`            | public   | `https://broknowsaspot.app`                 |
 | `NEXT_PUBLIC_TURNSTILE_SITE_KEY`  | public   | Cloudflare Turnstile widget                 |
 | `TURNSTILE_SECRET_KEY`            | secret   | **required for writes in prod**             |
+| `NEXT_PUBLIC_MAP_TILE_URL_LIGHT`  | public   | **required to serve India** — see above     |
+| `NEXT_PUBLIC_MAP_TILE_URL_DARK`   | public   | **required to serve India** — see above     |
+| `NEXT_PUBLIC_MAP_ATTRIBUTION`     | public   | attribution the tile licence requires       |
 
 The project id is accepted as either `NEXT_PUBLIC_APPWRITE_PROJECT_ID` or
 `APPWRITE_PROJECT_ID` everywhere, because the scripts want the bare name and
@@ -348,12 +351,53 @@ window is expected rather than a misconfiguration.
 The name lives in `src/lib/site.ts` and nowhere else. It used to be a string
 typed into nine files, which is how a rename gets done eight times.
 
+## the basemap, and India's borders
+
+The maps open on India, and the app is built for Indian users. That makes
+the basemap provider a compliance decision rather than a styling one.
+
+**Boundaries are rendered into the tiles.** A raster basemap arrives as a
+finished PNG with every border already drawn into the pixels — no client
+code repaints them. Drawing a corrected boundary as an overlay does not
+work either: the provider's own lines stay visible underneath, so the
+result reads as two maps disagreeing rather than as one correct map.
+
+The no-key fallback renders OpenStreetMap data, which depicts **de-facto
+lines of control**: dashed boundaries through Jammu & Kashmir, Aksai Chin
+outside India, Arunachal Pradesh marked disputed. Maps published in India
+are required to show boundaries as depicted by the Survey of India, and
+that fallback does not.
+
+**So the fix is the provider.** Point the basemap at cartography that is
+already Survey of India-aligned and the borders come out right because
+they were rendered right:
+
+| variable                          | is                                     |
+| --------------------------------- | -------------------------------------- |
+| `NEXT_PUBLIC_MAP_TILE_URL_LIGHT`  | light-theme tile URL template          |
+| `NEXT_PUBLIC_MAP_TILE_URL_DARK`   | dark-theme tile URL template           |
+| `NEXT_PUBLIC_MAP_ATTRIBUTION`     | the attribution your licence requires  |
+
+The URL template is configuration rather than something hard-coded,
+because the endpoint shape differs per provider — paste whatever yours
+documents, including its key. Two usual choices for India:
+
+- **Mappls (MapmyIndia)** — commercial, Survey of India-aligned, free
+  developer tier.
+- **Bhuvan (ISRO / NRSC)** — the government's own service. Note it
+  publishes WMS rather than XYZ tiles, so it needs a `TileLayer.WMS`
+  rather than the plain `TileLayer` these components use today.
+
+Until those variables are set the app logs a warning on every map mount
+and keeps serving the fallback, so it still runs locally — but **it is
+not fit to publish in India in that state.** Nothing about the running
+app looks wrong, which is exactly why the warning exists.
+
 ## known gaps
 
-- **Tiles are on CARTO's free basemaps**, which are not a production plan.
-  Verified rendering in both themes on the live deploy; get a proper tile
-  account (CARTO, MapTiler, Mapbox) before any real traffic. Swapping provider
-  is a one-line change to `TILE_URL` in the map components.
+- **The basemap is unconfigured**, so it falls back to CARTO — see above.
+  This is the one item on this list that is a blocker rather than a
+  nice-to-have.
 - No photo uploads; `photos[].src` is still `null` everywhere.
 - Proximity search is unbuilt, though the schema is ready for it: `location`
   is a `Point` with a spatial index, so `Query.distanceLessThan` is a query

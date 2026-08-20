@@ -3,9 +3,15 @@
 import "leaflet/dist/leaflet.css";
 
 import L from "leaflet";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { MapContainer, Marker, TileLayer, useMap } from "react-leaflet";
 
+import {
+  ATTRIBUTION,
+  INDIA_BOUNDS,
+  TILE_URL,
+  warnIfFallbackBasemap,
+} from "@/lib/map/tiles";
 import { useTheme } from "@/lib/theme/theme-provider";
 import type { Spot } from "@/lib/types/spot";
 
@@ -13,19 +19,12 @@ import type { Spot } from "@/lib/types/spot";
  * Leaflet canvas. Always reached through a dynamic import with `ssr: false`
  * — Leaflet touches `window` at module scope and cannot be server-rendered.
  *
- * Tiles come from CARTO's light_all / dark_all basemaps: no API key, and
- * the flat monochrome cartography is the only widely-available style that
- * doesn't fight the design language. Swap `TILE_URL` for another provider
- * (or a self-hosted style) without touching anything else here.
+ * Tiles and the opening view both come from `lib/map/tiles.ts`, which the
+ * submission picker shares — a pin looks the same wherever it is drawn,
+ * and the basemap is swapped in one place. Read that file before changing
+ * providers: the borders are rendered into the tiles, so which provider
+ * is configured decides whether the map is legal to publish in India.
  */
-
-const TILE_URL = {
-  light: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-  dark: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-} as const;
-
-const ATTRIBUTION =
-  '&copy; <a href="https://www.openstreetmap.org/copyright">openstreetmap</a> &middot; &copy; <a href="https://carto.com/attributions">carto</a>';
 
 /**
  * Markers are 44x44 so the tap target clears the minimum on touch, while
@@ -41,11 +40,23 @@ function markerIcon(selected: boolean): L.DivIcon {
   });
 }
 
-/** Keeps the viewport framed on whatever survived the filters. */
+/**
+ * Keeps the viewport framed on whatever survived the filters.
+ *
+ * Deliberately skips the very first run. The map opens on India because
+ * that is who it is for, and an auto-fit on mount would immediately pull
+ * it back out to whatever the unfiltered index happens to span. Framing
+ * the results is the right response to *filtering*, not to arriving.
+ */
 function FitToSpots({ spots }: { spots: Spot[] }) {
   const map = useMap();
+  const firstRun = useRef(true);
 
   useEffect(() => {
+    if (firstRun.current) {
+      firstRun.current = false;
+      return;
+    }
     if (spots.length === 0) return;
 
     if (spots.length === 1) {
@@ -125,6 +136,10 @@ export default function SpotMap({
 }: SpotMapProps) {
   const { theme } = useTheme();
 
+  useEffect(() => {
+    warnIfFallbackBasemap();
+  }, []);
+
   // One icon per state, reused across every marker, instead of building a
   // fresh DivIcon per spot on each render.
   const icons = useMemo(
@@ -135,8 +150,7 @@ export default function SpotMap({
   return (
     <MapContainer
       className="h-full w-full bg-paper-raised"
-      center={[30, 5]}
-      zoom={2}
+      bounds={INDIA_BOUNDS}
       minZoom={2}
       worldCopyJump
       // Touch parity is Leaflet's default: dragging, pinch zoom and tap are
