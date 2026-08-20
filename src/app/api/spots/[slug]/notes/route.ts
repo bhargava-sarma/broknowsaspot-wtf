@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 
 import { createNote } from "@/lib/appwrite/write";
+import { toPhotoIds } from "@/lib/photos/ids";
 import { isAppwriteWriteEnabled } from "@/lib/appwrite/server";
 import { checkNoteRate } from "@/lib/security/rate-limit";
 import { requestKey } from "@/lib/security/request-key";
@@ -89,7 +90,12 @@ export async function POST(
   try {
     // createNote checks the spot is visible and reports a miss the same
     // way a genuine 404 would.
-    const created = await createNote(slug, result.draft, submitterKey);
+    const created = await createNote(
+      slug,
+      result.draft,
+      submitterKey,
+      toPhotoIds((payload as { photoIds?: unknown }).photoIds, 2),
+    );
     if (!created.ok) {
       return NextResponse.json(
         { ok: false, message: "no such spot." },

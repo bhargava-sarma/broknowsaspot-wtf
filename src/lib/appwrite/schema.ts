@@ -37,8 +37,35 @@ export const TABLES = {
   reports: "reports",
   submissionLog: "submission_log",
   noteLog: "note_log",
+  photoLog: "photo_log",
   moderationLog: "moderation_log",
 } as const;
+
+/**
+ * Where uploaded photos live.
+ *
+ * A bucket rather than a column: files are not rows, and Appwrite's
+ * Storage handles the transfer, range requests and caching that a base64
+ * blob in a text column would make us reimplement badly.
+ *
+ * Read is public because a published photo is public. **Write is granted
+ * to nobody**, exactly as with every table here — uploads go through a
+ * route handler on the API key, which is what keeps Turnstile, the rate
+ * limiter and the type/size checks on the only path in.
+ */
+export const PHOTO_BUCKET_ID = "spot_photos";
+
+/**
+ * Ceiling for a stored file.
+ *
+ * The client re-encodes to a 2000px JPEG before uploading, which lands
+ * well under this; the limit is here to stop anything that skipped that
+ * path, not to constrain honest uploads.
+ */
+export const PHOTO_MAX_BYTES = 6 * 1024 * 1024;
+
+/** What Storage will accept, as file extensions. */
+export const PHOTO_EXTENSIONS = ["jpg", "jpeg"] as const;
 
 /** The team whose members may moderate. Replaces `public.admins`. */
 export const ADMIN_TEAM_ID = "admins";
@@ -228,6 +255,10 @@ export const SCHEMA: TableSpec[] = [
       // When the visit happened, which is the part that decides whether
       // the information is still worth anything. Distinct from $createdAt.
       { name: "notedOn", kind: "datetime", required: true },
+      // Storage file ids, JSON-encoded, same arrangement as spots.photos.
+      // A note's photos have no life of their own — they are published
+      // and hidden with it — so they are a field rather than a table.
+      { name: "photos", kind: "string", size: 1000, required: false },
       { name: "hiddenAt", kind: "datetime", required: false },
     ],
     indexes: [
@@ -287,6 +318,23 @@ export const SCHEMA: TableSpec[] = [
     rowSecurity: false,
     columns: [
       { name: "noteId", kind: "string", size: 64, required: false },
+      { name: "submitterKey", kind: "string", size: 64, required: true },
+    ],
+    indexes: [{ key: "key_idx", type: "key", columns: ["submitterKey"] }],
+  },
+
+  {
+    id: TABLES.photoLog,
+    name: "photo log",
+    // Its own budget, for the same reason spots and notes have separate
+    // ones: a photo is uploaded before the thing it belongs to exists,
+    // so it cannot be counted against either. It also gives moderation a
+    // record of which stored file arrived from which request key, which
+    // is the only way to find the rest of an abusive upload run.
+    permissions: [ADMIN_READ],
+    rowSecurity: false,
+    columns: [
+      { name: "fileId", kind: "string", size: 64, required: true },
       { name: "submitterKey", kind: "string", size: 64, required: true },
     ],
     indexes: [{ key: "key_idx", type: "key", columns: ["submitterKey"] }],

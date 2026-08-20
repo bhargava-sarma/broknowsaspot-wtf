@@ -65,6 +65,7 @@ async function insertWithUniqueSlug(
 export async function createSpot(
   draft: SpotDraft,
   submitterKey: string,
+  photos: { src: string; alt: string }[] = [],
 ): Promise<Result<{ slug: string }>> {
   const tables = adminTables();
   if (!tables) return { ok: false, reason: "no database connection" };
@@ -90,7 +91,7 @@ export async function createSpot(
       watchOut: draft.watchOut,
       bestWindow: "",
       walkInKm: 0,
-      photos: "[]",
+      photos: JSON.stringify(photos),
       reportCount: 0,
     }),
     // Live on arrival: submissions publish immediately, per the product
@@ -137,6 +138,7 @@ export async function createNote(
   slug: string,
   note: { author: string; body: string; notedOn: string },
   submitterKey: string,
+  photoIds: string[] = [],
 ): Promise<Result<{ id: string; author: string; body: string; date: string }>> {
   const tables = adminTables();
   if (!tables) return { ok: false, reason: "no database connection" };
@@ -156,6 +158,7 @@ export async function createNote(
       author: note.author,
       body: note.body,
       notedOn: new Date(`${note.notedOn}T12:00:00Z`).toISOString(),
+      photos: JSON.stringify(photoIds),
     },
     // The parent is visible — checked above — so the note is too.
     permissions: notePermissions(true, true),
@@ -336,8 +339,23 @@ async function hideSpotRow(spotId: string, reporters: number): Promise<void> {
 }
 
 /** Rows written by one key inside a window — the rate limiter's counter. */
+/** Records an uploaded file against the key that sent it. */
+export async function logPhoto(
+  fileId: string,
+  submitterKey: string,
+): Promise<void> {
+  const tables = adminTables();
+  if (!tables) return;
+  await tables.createRow({
+    databaseId: DATABASE_ID,
+    tableId: TABLES.photoLog,
+    rowId: ID.unique(),
+    data: { fileId, submitterKey },
+  });
+}
+
 export async function countRecentWrites(
-  table: "submission_log" | "note_log",
+  table: "submission_log" | "note_log" | "photo_log",
   submitterKey: string,
   windowMinutes: number,
 ): Promise<number | null> {

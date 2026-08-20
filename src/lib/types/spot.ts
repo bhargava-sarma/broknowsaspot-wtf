@@ -59,6 +59,14 @@ export type CommunityNote = {
   /** ISO date — conditions rot, so every note is stamped. */
   date: string;
   body: string;
+  /**
+   * Photo URLs, resolved from stored ids.
+   *
+   * Optional because most notes are text — a note is a condition report,
+   * and "the gate is chained" needs no picture. The read path always
+   * sets it; the seed entries predate uploads and simply have none.
+   */
+  photos?: string[];
 };
 
 export type SpotPhoto = {

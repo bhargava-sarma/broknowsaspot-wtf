@@ -22,11 +22,19 @@ export const SUBMISSION_WINDOW_MINUTES = 60;
 export const NOTE_LIMIT = 10;
 export const NOTE_WINDOW_MINUTES = 60;
 
+/**
+ * Comfortably above the most photos an honest hour produces — five spots
+ * with three plates each, plus a note or two — and far below what makes
+ * the bucket a free file host.
+ */
+export const PHOTO_LIMIT = 24;
+export const PHOTO_WINDOW_MINUTES = 60;
+
 export type RateLimitResult =
   { allowed: true } | { allowed: false; retryAfterMinutes: number };
 
 async function within(
-  table: "submission_log" | "note_log",
+  table: "submission_log" | "note_log" | "photo_log",
   key: string,
   windowMinutes: number,
   limit: number,
@@ -55,4 +63,18 @@ export function checkSubmissionRate(key: string): Promise<RateLimitResult> {
 
 export function checkNoteRate(key: string): Promise<RateLimitResult> {
   return within("note_log", key, NOTE_WINDOW_MINUTES, NOTE_LIMIT);
+}
+
+export async function withinPhotoLimit(
+  key: string,
+): Promise<{ ok: true } | { ok: false; retryInMinutes: number }> {
+  const result = await within(
+    "photo_log",
+    key,
+    PHOTO_WINDOW_MINUTES,
+    PHOTO_LIMIT,
+  );
+  return result.allowed
+    ? { ok: true }
+    : { ok: false, retryInMinutes: result.retryAfterMinutes };
 }

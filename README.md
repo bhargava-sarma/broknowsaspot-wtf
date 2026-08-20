@@ -220,6 +220,86 @@ validators are the only thing enforcing them.
 terrain plate per caption. Populating the field with real URLs is a data
 change — `SpotPlate` already renders `next/image` when a `src` is present.
 
+## location and photos, and what stays on your device
+
+Three things ask for something personal. Each is off until pressed, and
+each keeps as little as it can.
+
+### location
+
+Never requested on load — there is no effect anywhere that calls
+`getCurrentPosition`, so a permission prompt only ever appears because
+somebody pressed something. Nothing is written to `localStorage`, a
+cookie, or the server; the position lives in React state and dies with
+the page.
+
+The two uses are deliberately different, and the button says which is
+which before it is pressed:
+
+| where | what happens to the coordinate |
+| --- | --- |
+| **submit** | moves the pin. Sent only when the form is submitted — and then it is *published*, which the caption says plainly. Rounded to 5 decimals (about a metre). |
+| **explore** | **never leaves the browser.** |
+
+"Near me" is worth expanding on, because the easy version would have
+leaked. Appwrite could answer it — `location` is a Point with a spatial
+index — but asking the server which spots are near you means telling the
+server where you are. Every spot's coordinates are already in the page,
+so the ranking is computed on the device instead, in
+[`src/lib/spots/distance.ts`](src/lib/spots/distance.ts). That is the
+entire reason that file exists rather than a query.
+
+A dismissed permission prompt is handled too. `PositionOptions.timeout`
+only starts once permission is *granted*, so a prompt someone closes
+without answering leaves the request outstanding forever — confirmed in a
+real browser, fourteen seconds with neither callback firing. A wall-clock
+timer recovers the control.
+
+### photos
+
+**Metadata is stripped in the browser, before anything is uploaded.**
+
+A photo off a phone carries EXIF: GPS to a few metres, the exact
+timestamp, camera make and serial, and on some devices a thumbnail of the
+*original* frame that survives cropping. On an index of places people
+would rather keep quiet, uploading a raw camera file is a much larger
+disclosure than uploading a picture — it can pin down someone's home from
+a photo taken there earlier, or reveal a spot's true position when the
+contributor placed the pin loosely on purpose.
+
+So [`src/lib/photos/prepare.ts`](src/lib/photos/prepare.ts) decodes the
+file, draws it to a canvas and re-encodes it. A canvas cannot carry
+metadata forward, so the output is pixels and nothing else. Because it
+happens before any network call, the file with the GPS in it never leaves
+the device at all — there is no window in which a server, a log or a
+proxy could have seen it. Downscaling to 2000px is part of the same
+measure: fewer pixels means less incidental detail surviving into
+something published.
+
+Verified end to end rather than asserted. A JPEG carrying real GPS EXIF
+and a camera make goes in; the bytes that reach storage are checked for
+those markers:
+
+```
+input   19003b   Exif: true   make: true
+stored  16443b   Exif: false  make: false  APP1: false
+```
+
+The rest of the handling is the same shape as every other write here:
+
+- Uploads go through a route handler on the API key. **The bucket grants
+  create to nobody**, so a browser cannot put a file in this project —
+  which is what keeps Turnstile, the rate limit and the type check on the
+  only path in. `appwrite:verify` asserts the bucket has no write grants.
+- The server re-checks the size and sniffs for a JPEG magic number,
+  because "the client already did it" is not a control.
+- Photos upload as they are added rather than at submit, so a slow upload
+  is not the thing standing between a contributor and a successful
+  submission. The trade is that an abandoned form leaves orphaned files;
+  they are cheap and sweepable, and a lost spot is not.
+- Stored as ids, resolved to URLs on read, so moving project or region is
+  a config change rather than a migration.
+
 ## submissions, notes and moderation
 
 Submissions publish immediately — nothing waits in a queue. Community notes

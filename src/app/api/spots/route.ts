@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 
 import { createSpot } from "@/lib/appwrite/write";
+import { toStoredPhotos } from "@/lib/photos/ids";
 import { isAppwriteWriteEnabled } from "@/lib/appwrite/server";
 import { listSpots } from "@/lib/data/spots-repo";
 import { checkSubmissionRate } from "@/lib/security/rate-limit";
@@ -99,7 +100,11 @@ export async function POST(request: Request) {
   }
 
   try {
-    const created = await createSpot(result.draft, submitterKey);
+    const created = await createSpot(
+      result.draft,
+      submitterKey,
+      toStoredPhotos((payload as { photoIds?: unknown }).photoIds, 3),
+    );
     if (!created.ok) {
       console.error("[spots] submission failed", created.reason);
       return NextResponse.json(

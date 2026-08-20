@@ -7,7 +7,9 @@ import { FilterRail } from "@/components/explore/filter-rail";
 import { SpotRow } from "@/components/explore/spot-row";
 import { MapPlaceholder } from "@/components/map/map-placeholder";
 import { ActionLink } from "@/components/ui/action-link";
+import { useGeolocation } from "@/lib/hooks/use-geolocation";
 import { useMounted } from "@/lib/hooks/use-mounted";
+import { distanceKm } from "@/lib/spots/distance";
 import {
   EMPTY_FILTERS,
   filterSpots,
@@ -33,7 +35,30 @@ export function ExploreView({ spots }: { spots: Spot[] }) {
   // useMounted for why the static export needs this.
   const mounted = useMounted();
 
-  const visible = useMemo(() => filterSpots(spots, filters), [spots, filters]);
+  /**
+   * "Near me", done entirely on the device.
+   *
+   * The position is never sent anywhere — not to this app's server, not
+   * to Appwrite, not in a query string. Every spot's coordinates are
+   * already in the page, so the browser can rank them itself, and the
+   * one thing that would have to leave the device to do it on a server
+   * is precisely the thing worth keeping off the wire.
+   */
+  const geo = useGeolocation();
+  const here = geo.status.state === "found" ? geo.status : null;
+
+  const visible = useMemo(() => {
+    const matched = filterSpots(spots, filters);
+    if (!here) return matched;
+
+    return matched
+      .map((spot) => ({
+        spot,
+        km: distanceKm(here.lat, here.lng, spot.lat, spot.lng),
+      }))
+      .sort((a, b) => a.km - b.km)
+      .map(({ spot }) => spot);
+  }, [spots, filters, here]);
 
   // Selecting from the map should bring the matching row into view; doing
   // it here rather than in an effect keeps it tied to the interaction
@@ -62,6 +87,7 @@ export function ExploreView({ spots }: { spots: Spot[] }) {
           onChange={handleFilters}
           resultCount={visible.length}
           totalCount={spots.length}
+          geo={geo}
         />
       </div>
 
@@ -114,6 +140,11 @@ export function ExploreView({ spots }: { spots: Spot[] }) {
                   spot={spot}
                   selected={spot.slug === selected}
                   onSelect={handleSelect}
+                  distanceKm={
+                    here
+                      ? distanceKm(here.lat, here.lng, spot.lat, spot.lng)
+                      : null
+                  }
                 />
               ))}
             </ul>
