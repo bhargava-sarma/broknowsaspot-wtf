@@ -1,0 +1,372 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <script>
+    /* The webfonts are attached from script rather than as a <link> in this
+       block. A stylesheet link here is awaited before the artboard compiles,
+       and a request that never resolves — offline, or a network that blocks
+       the font CDN — leaves the frame stuck on "Loading artboard…" with no
+       error path out. Appending it after the fact makes the fonts an
+       enhancement: they swap in when they arrive, and the fallback stack
+       renders the design either way. */
+    (function () {
+      var id = "aurora-webfonts";
+      if (document.getElementById(id)) return;
+      var link = document.createElement("link");
+      link.id = id;
+      link.rel = "stylesheet";
+      link.href = "https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700&display=swap";
+      document.head.appendChild(link);
+    })();
+  </script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #0a0912;
+      color: #f2eff5;
+      font-family: Manrope, "Helvetica Neue", system-ui, sans-serif;
+      font-weight: 400;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+    a { color: #ffb489; text-decoration: none; }
+    a:hover { color: #ffd0b4; }
+
+    /* ---- the ground: aurora light, always moving ---- */
+    .aurora { position: absolute; border-radius: 50%; filter: blur(90px); pointer-events: none; }
+    @keyframes drift-a {
+      0%   { transform: translate3d(0,0,0) scale(1); }
+      50%  { transform: translate3d(9%, -7%, 0) scale(1.18); }
+      100% { transform: translate3d(0,0,0) scale(1); }
+    }
+    @keyframes drift-b {
+      0%   { transform: translate3d(0,0,0) scale(1.1); }
+      50%  { transform: translate3d(-11%, 8%, 0) scale(0.92); }
+      100% { transform: translate3d(0,0,0) scale(1.1); }
+    }
+    @keyframes drift-c {
+      0%   { transform: translate3d(0,0,0) rotate(0deg) scale(1); }
+      50%  { transform: translate3d(6%, 10%, 0) rotate(8deg) scale(1.22); }
+      100% { transform: translate3d(0,0,0) rotate(0deg) scale(1); }
+    }
+
+    /* ---- entrance: rise out of the blur ---- */
+    @keyframes rise {
+      from { opacity: 0; transform: translate3d(0, 30px, 0); filter: blur(10px); }
+      to   { opacity: 1; transform: none; filter: blur(0); }
+    }
+    .rise { animation: rise 1.15s cubic-bezier(0.16, 0.84, 0.28, 1) both; }
+
+    @keyframes floaty {
+      0%, 100% { transform: translate3d(0, 0, 0) rotate(-0.4deg); }
+      50%      { transform: translate3d(0, -16px, 0) rotate(0.4deg); }
+    }
+    @keyframes breathe { 0%,100% { opacity: 0.55; } 50% { opacity: 1; } }
+    @keyframes sweep { from { transform: translateX(-120%) skewX(-18deg); } to { transform: translateX(320%) skewX(-18deg); } }
+
+    /* ---- the material ---- */
+    .glass {
+      position: relative;
+      background: linear-gradient(158deg, rgba(255,255,255,0.11), rgba(255,255,255,0.035) 46%, rgba(255,255,255,0.06));
+      backdrop-filter: blur(28px) saturate(190%);
+      border: 1px solid rgba(255,255,255,0.13);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.34),
+        inset 0 -1px 0 rgba(0,0,0,0.22),
+        0 28px 70px -26px rgba(0,0,0,0.85);
+      overflow: hidden;
+    }
+    /* the lens: a soft highlight riding the top-left rim */
+    .glass::before {
+      content: "";
+      position: absolute; inset: 0; pointer-events: none;
+      background: radial-gradient(120% 70% at 8% -10%, rgba(255,255,255,0.20), transparent 58%);
+    }
+    .sheen::after {
+      content: "";
+      position: absolute; top: 0; bottom: 0; width: 34%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.16), transparent);
+      transform: translateX(-120%) skewX(-18deg);
+      pointer-events: none;
+    }
+    .sheen:hover::after { animation: sweep 1.05s cubic-bezier(0.3, 0, 0.2, 1); }
+
+    .lift { transition: transform 620ms cubic-bezier(0.16,0.84,0.28,1), box-shadow 620ms cubic-bezier(0.16,0.84,0.28,1); }
+    .lift:hover { transform: translateY(-7px); box-shadow: inset 0 1px 0 rgba(255,255,255,0.42), 0 40px 90px -28px rgba(0,0,0,0.95); }
+
+    .eyebrow {
+      font-size: 12px; font-weight: 600; letter-spacing: 0.24em; text-transform: uppercase;
+      color: #b6aecb;
+    }
+    .serif { font-family: "Instrument Serif", Georgia, serif; font-weight: 400; }
+  </style>
+</helmet>
+
+<div style="--ember: {{accent}}; --aur: {{aurora}}; position: relative; min-height: 3200px; overflow: hidden;">
+
+  <!-- ============================== ground -->
+  <div style="position: absolute; inset: 0; overflow: hidden; pointer-events: none;">
+    <div class="aurora" style="width: 900px; height: 760px; left: -180px; top: -220px; background: radial-gradient(circle, rgba(96,214,255,0.55), transparent 68%); opacity: var(--aur); animation: drift-a 52s ease-in-out infinite;"></div>
+    <div class="aurora" style="width: 1050px; height: 820px; right: -260px; top: -140px; background: radial-gradient(circle, rgba(168,110,255,0.52), transparent 68%); opacity: var(--aur); animation: drift-b 67s ease-in-out infinite;"></div>
+    <div class="aurora" style="width: 760px; height: 620px; left: 44%; top: 380px; background: radial-gradient(circle, var(--ember), transparent 66%); opacity: calc(var(--aur) * 0.62); animation: drift-c 79s ease-in-out infinite;"></div>
+    <div class="aurora" style="width: 1000px; height: 700px; left: -120px; top: 1520px; background: radial-gradient(circle, rgba(120,190,255,0.40), transparent 70%); opacity: calc(var(--aur) * 0.8); animation: drift-b 61s ease-in-out infinite;"></div>
+    <div class="aurora" style="width: 880px; height: 700px; right: -180px; top: 2180px; background: radial-gradient(circle, rgba(190,120,255,0.42), transparent 70%); opacity: calc(var(--aur) * 0.8); animation: drift-a 73s ease-in-out infinite;"></div>
+    <!-- starfield -->
+    <svg width="100%" height="3200" style="position: absolute; inset: 0; opacity: 0.5;" aria-hidden="true">
+      <g fill="#ffffff">
+        <circle cx="180" cy="150" r="1" opacity="0.7"/><circle cx="420" cy="80" r="0.8" opacity="0.5"/>
+        <circle cx="760" cy="230" r="1.2" opacity="0.6"/><circle cx="1120" cy="120" r="0.9" opacity="0.55"/>
+        <circle cx="1320" cy="320" r="1" opacity="0.5"/><circle cx="300" cy="470" r="0.8" opacity="0.45"/>
+        <circle cx="980" cy="520" r="1.1" opacity="0.5"/><circle cx="1400" cy="640" r="0.9" opacity="0.4"/>
+        <circle cx="120" cy="720" r="1" opacity="0.45"/><circle cx="640" cy="700" r="0.7" opacity="0.4"/>
+      </g>
+    </svg>
+    <!-- horizon glow -->
+    <div style="position: absolute; left: 0; right: 0; top: 720px; height: 320px; background: linear-gradient(180deg, transparent, rgba(10,9,18,0.9));"></div>
+  </div>
+
+  <!-- ============================== nav -->
+  <div class="rise" style="position: relative; z-index: 20; padding: 26px 48px 0;">
+    <div class="glass" style="border-radius: 22px; display: flex; align-items: center; justify-content: space-between; padding: 12px 14px 12px 22px;">
+      <div style="display: flex; align-items: center; gap: 11px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ember)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/>
+        </svg>
+        <span style="font-size: 16px; font-weight: 600; letter-spacing: -0.01em;">broknowsaspot</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <a href="#" style="padding: 9px 16px; border-radius: 13px; font-size: 14px; font-weight: 500; color: #f2eff5; background: rgba(255,255,255,0.10);">Index</a>
+        <a href="#" style="padding: 9px 16px; border-radius: 13px; font-size: 14px; font-weight: 500; color: #b6aecb;">Explore</a>
+        <a href="#" style="padding: 9px 16px; border-radius: 13px; font-size: 14px; font-weight: 500; color: #b6aecb;">Submit</a>
+        <div style="width: 1px; height: 22px; background: rgba(255,255,255,0.14); margin: 0 6px;"></div>
+        <a href="#" class="sheen" style="position: relative; overflow: hidden; padding: 10px 20px; border-radius: 13px; font-size: 14px; font-weight: 600; color: #1a0d06; background: linear-gradient(180deg, #ffc39b, var(--ember)); box-shadow: 0 8px 24px -8px var(--ember), inset 0 1px 0 rgba(255,255,255,0.6);">Add a spot</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================== hero -->
+  <div style="position: relative; z-index: 10; padding: 96px 48px 0; display: grid; grid-template-columns: 1fr 470px; gap: 64px; align-items: center;">
+    <div>
+      <div class="rise eyebrow" style="animation-delay: 0.10s; display: flex; align-items: center; gap: 12px;">
+        <span style="width: 7px; height: 7px; border-radius: 50%; background: var(--ember); box-shadow: 0 0 14px var(--ember); animation: breathe 3.4s ease-in-out infinite;"></span>
+        Index of the unlisted
+      </div>
+
+      <h1 class="rise serif" style="animation-delay: 0.18s; margin: 26px 0 0; font-size: 124px; line-height: 0.93; letter-spacing: -0.035em;">
+        Bro knows<br>
+        <span style="font-style: italic; background: linear-gradient(102deg, #ffd9c2, var(--ember) 52%, #c9a2ff); -webkit-background-clip: text; background-clip: text; color: transparent;">a spot</span>
+      </h1>
+
+      <p class="rise" style="animation-delay: 0.28s; margin: 34px 0 0; max-width: 40ch; font-size: 20px; line-height: 1.62; font-weight: 300; color: #c3bcd4; text-wrap: pretty;">
+        A crowdsourced guide to the places that never made the guidebook. Abandoned rail cuttings, unmarked springs, ridge lines with no trail and a view that ruins other views.
+      </p>
+
+      <div class="rise" style="animation-delay: 0.38s; margin-top: 44px; display: flex; align-items: center; gap: 16px;">
+        <a href="#" class="sheen lift" style="position: relative; overflow: hidden; display: inline-flex; align-items: center; gap: 12px; padding: 17px 30px; border-radius: 19px; font-size: 16px; font-weight: 600; color: #1a0d06; background: linear-gradient(180deg, #ffc9a4, var(--ember)); box-shadow: 0 20px 46px -14px var(--ember), inset 0 1px 0 rgba(255,255,255,0.65);">
+          Open the map
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg>
+        </a>
+        <a href="#" class="glass sheen lift" style="display: inline-flex; align-items: center; gap: 11px; padding: 17px 28px; border-radius: 19px; font-size: 16px; font-weight: 500; color: #f2eff5;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+          Add a spot
+        </a>
+      </div>
+    </div>
+
+    <!-- floating spot card -->
+    <div class="rise" style="animation-delay: 0.46s;">
+      <div class="glass sheen" style="border-radius: 34px; padding: 20px; animation: floaty 11s ease-in-out infinite;">
+        <div style="position: relative; border-radius: 22px; overflow: hidden; height: 250px; background: linear-gradient(170deg, #1b1730, #0d0b18);">
+          <svg viewBox="0 0 460 250" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%;">
+            <defs>
+              <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stop-color="#3a2a5e"/><stop offset="100%" stop-color="#120f22"/>
+              </linearGradient>
+            </defs>
+            <rect width="460" height="250" fill="url(#sky)"/>
+            <circle cx="360" cy="62" r="26" fill="#ffe7d4" opacity="0.9"/>
+            <circle cx="350" cy="56" r="26" fill="#1b1730" opacity="0.85"/>
+            <path d="M0 186 L74 132 L128 168 L196 104 L268 158 L330 120 L400 166 L460 138 L460 250 L0 250 Z" fill="#0b0916" opacity="0.95"/>
+            <path d="M0 210 L96 172 L168 202 L250 156 L332 196 L410 170 L460 192 L460 250 L0 250 Z" fill="#07060f"/>
+            <g stroke="#8e7fd0" stroke-width="0.7" fill="none" opacity="0.35">
+              <path d="M0 200 Q120 176 240 196 T460 184"/><path d="M0 214 Q120 192 240 210 T460 200"/>
+            </g>
+          </svg>
+          <div style="position: absolute; left: 14px; top: 14px; display: inline-flex; align-items: center; gap: 7px; padding: 7px 13px; border-radius: 11px; background: rgba(10,9,18,0.55); backdrop-filter: blur(14px); border: 1px solid rgba(255,255,255,0.14); font-size: 12px; font-weight: 600; letter-spacing: 0.05em;">
+            <span style="width: 6px; height: 6px; border-radius: 50%; background: #6ee7a8;"></span> Open access
+          </div>
+        </div>
+
+        <div style="padding: 22px 8px 8px;">
+          <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 14px;">
+            <div class="serif" style="font-size: 32px; letter-spacing: -0.015em;">Gjipe cove</div>
+            <div style="font-size: 14px; font-weight: 600; color: #b6aecb; font-variant-numeric: tabular-nums;">2.1 km</div>
+          </div>
+          <div style="margin-top: 5px; font-size: 14px; color: #9d95b5;">Vlorë, Albania</div>
+          <p style="margin: 15px 0 0; font-size: 15px; line-height: 1.6; color: #c3bcd4;">A canyon walks you down to a beach with no road to it.</p>
+
+          <div style="margin-top: 20px; display: flex; align-items: center; gap: 18px;">
+            <div style="display: flex; align-items: center; gap: 9px;">
+              <div style="display: flex; gap: 4px;">
+                <span style="width: 22px; height: 5px; border-radius: 3px; background: var(--ember);"></span>
+                <span style="width: 22px; height: 5px; border-radius: 3px; background: var(--ember);"></span>
+                <span style="width: 22px; height: 5px; border-radius: 3px; background: rgba(255,255,255,0.16);"></span>
+                <span style="width: 22px; height: 5px; border-radius: 3px; background: rgba(255,255,255,0.16);"></span>
+              </div>
+              <span style="font-size: 13px; font-weight: 500; color: #b6aecb;">Moderate</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================== readout -->
+  <div class="rise" style="animation-delay: 0.56s; position: relative; z-index: 10; padding: 110px 48px 0;">
+    <div class="glass" style="border-radius: 28px; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr));">
+      <sc-for list="{{stats}}" as="s" hint-placeholder-count="4">
+        <div style="padding: 34px 34px; border-left: 1px solid rgba(255,255,255,0.09);">
+          <div class="serif" style="font-size: 48px; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums;">{{s.value}}</div>
+          <div class="eyebrow" style="margin-top: 12px;">{{s.label}}</div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- ============================== manifesto -->
+  <div style="position: relative; z-index: 10; padding: 120px 48px 0;">
+    <div class="rise eyebrow" style="animation-delay: 0.1s;">The rules</div>
+    <div style="margin-top: 34px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px;">
+      <sc-for list="{{rules}}" as="r" hint-placeholder-count="3">
+        <div class="glass sheen lift rise" style="border-radius: 28px; padding: 34px;">
+          <div class="serif" style="font-size: 40px; color: var(--ember); line-height: 1;">{{r.n}}</div>
+          <h3 class="serif" style="margin: 20px 0 0; font-size: 27px; font-weight: 400; letter-spacing: -0.012em;">{{r.title}}</h3>
+          <p style="margin: 13px 0 0; font-size: 15px; line-height: 1.68; color: #b6aecb; text-wrap: pretty;">{{r.body}}</p>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- ============================== featured -->
+  <div style="position: relative; z-index: 10; padding: 120px 48px 0;">
+    <div style="display: flex; align-items: flex-end; justify-content: space-between;">
+      <div>
+        <div class="eyebrow">Recently logged</div>
+        <h2 class="serif" style="margin: 16px 0 0; font-size: 56px; line-height: 1.02; letter-spacing: -0.028em;">Somewhere you<br>haven't been</h2>
+      </div>
+      <a href="#" style="display: inline-flex; align-items: center; gap: 10px; font-size: 15px; font-weight: 600;">
+        All 14 spots
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg>
+      </a>
+    </div>
+
+    <div style="margin-top: 40px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px;">
+      <sc-for list="{{spots}}" as="p" hint-placeholder-count="3">
+        <div class="glass sheen lift" style="border-radius: 30px; padding: 16px;">
+          <div style="position: relative; border-radius: 20px; overflow: hidden; height: 190px;">
+            <svg viewBox="0 0 420 190" preserveAspectRatio="none" style="width: 100%; height: 100%; display: block;">
+              <rect width="420" height="190" fill="{{p.sky}}"/>
+              <path d="{{p.ridge}}" fill="#0a0814" opacity="0.92"/>
+              <path d="{{p.ridge2}}" fill="#06050d"/>
+            </svg>
+            <div style="position: absolute; right: 12px; top: 12px; padding: 6px 11px; border-radius: 10px; background: rgba(10,9,18,0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.13); font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #d8d2e6;">{{p.cat}}</div>
+          </div>
+          <div style="padding: 20px 10px 10px;">
+            <div class="serif" style="font-size: 26px; letter-spacing: -0.012em;">{{p.name}}</div>
+            <div style="margin-top: 5px; font-size: 13px; color: #9d95b5;">{{p.where}}</div>
+            <p style="margin: 13px 0 0; font-size: 14px; line-height: 1.6; color: #b6aecb;">{{p.line}}</p>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- ============================== cta -->
+  <div style="position: relative; z-index: 10; padding: 130px 48px 0;">
+    <div class="glass" style="border-radius: 40px; padding: 76px 64px; text-align: center;">
+      <div class="eyebrow">Contribute</div>
+      <h2 class="serif" style="margin: 22px auto 0; max-width: 18ch; font-size: 68px; line-height: 1.02; letter-spacing: -0.03em;">
+        Know somewhere that <span style="font-style: italic; color: var(--ember);">isn't</span> on here?
+      </h2>
+      <p style="margin: 26px auto 0; max-width: 52ch; font-size: 18px; line-height: 1.65; font-weight: 300; color: #b6aecb;">
+        The index is only as good as what people are willing to give up. No account needed — just coordinates, an honest difficulty rating, and what to watch out for.
+      </p>
+      <a href="#" class="sheen lift" style="position: relative; overflow: hidden; display: inline-flex; align-items: center; gap: 12px; margin-top: 38px; padding: 19px 38px; border-radius: 21px; font-size: 17px; font-weight: 600; color: #1a0d06; background: linear-gradient(180deg, #ffc9a4, var(--ember)); box-shadow: 0 24px 54px -16px var(--ember), inset 0 1px 0 rgba(255,255,255,0.65);">
+        Submit a spot
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg>
+      </a>
+    </div>
+  </div>
+
+  <!-- ============================== footer -->
+  <div style="position: relative; z-index: 10; padding: 90px 48px 60px;">
+    <div style="display: flex; align-items: flex-end; justify-content: space-between; padding-top: 34px; border-top: 1px solid rgba(255,255,255,0.09);">
+      <div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ember)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>
+          <span style="font-size: 15px; font-weight: 600;">broknowsaspot.app</span>
+        </div>
+        <p style="margin: 12px 0 0; max-width: 38ch; font-size: 14px; line-height: 1.6; color: #8d85a5;">Go carefully, leave it as you found it.</p>
+      </div>
+      <div style="display: flex; gap: 44px;">
+        <div>
+          <div class="eyebrow" style="font-size: 11px;">Pages</div>
+          <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; color: #b6aecb;">
+            <a href="#" style="color: #b6aecb;">Index</a><a href="#" style="color: #b6aecb;">Explore</a><a href="#" style="color: #b6aecb;">Submit</a>
+          </div>
+        </div>
+        <div>
+          <div class="eyebrow" style="font-size: 11px;">Status</div>
+          <div style="margin-top: 12px; display: flex; flex-direction: column; gap: 8px; font-size: 14px; color: #b6aecb;">
+            <span>v0.2</span><span style="display: inline-flex; align-items: center; gap: 7px;"><span style="width: 6px; height: 6px; border-radius: 50%; background: #6ee7a8;"></span>Open to submissions</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{
+  "accent": {"editor": "color", "default": "#ff7a45", "options": ["#ff7a45", "#ff4d6d", "#4dd0ff", "#b06bff"], "section": "Theme"},
+  "aurora": {"editor": "range", "default": 0.6, "min": 0, "max": 1, "step": 0.05, "section": "Theme"},
+  "$preview": {"width": 1440, "height": 3200}
+}'>
+class Component extends DCLogic {
+  renderVals() {
+    return {
+      accent: this.props.accent ?? "#ff7a45",
+      aurora: this.props.aurora ?? 0.6,
+      stats: [
+        { value: "14", label: "Spots logged" },
+        { value: "13", label: "Countries" },
+        { value: "1.2km", label: "Median walk-in" },
+        { value: "0", label: "Gift shops" },
+      ],
+      rules: [
+        { n: "01", title: "The guidebook is a filter", body: "Everything that makes it into one is there because it scales — parking, opening hours, a gift shop. The places worth the detour fail every one of those tests." },
+        { n: "02", title: "Difficulty is the point", body: "Every entry is tagged for what getting there actually costs you: the walk in, the scramble, the tide window, the fence nobody mentions." },
+        { n: "03", title: "Log it honestly", body: "Conditions change. Access closes. Notes come from people who actually went, dated, so you know how stale the intel is before you drive four hours." },
+      ],
+      spots: [
+        { name: "Mena Creek overflow", where: "Queensland, Australia", cat: "Ruin", line: "A Spanish castle folly rotting into the rainforest.",
+          sky: "#241b3d", ridge: "M0 118 L88 74 L152 110 L232 62 L316 104 L380 76 L420 98 L420 190 L0 190 Z", ridge2: "M0 146 L104 112 L190 140 L286 104 L368 134 L420 118 L420 190 L0 190 Z" },
+        { name: "Wieliczka lower chamber", where: "Lesser Poland", cat: "Underground", line: "Salt cathedral, three hundred metres down.",
+          sky: "#1d2440", ridge: "M0 128 L70 92 L140 122 L214 78 L300 118 L372 88 L420 110 L420 190 L0 190 Z", ridge2: "M0 152 L92 124 L178 150 L268 118 L356 144 L420 128 L420 190 L0 190 Z" },
+        { name: "Vlorë ridge line", where: "Albania", cat: "Viewpoint", line: "No trail, and a view that ruins other views.",
+          sky: "#33203a", ridge: "M0 110 L96 66 L164 104 L246 56 L330 100 L392 70 L420 90 L420 190 L0 190 Z", ridge2: "M0 140 L110 104 L196 134 L292 96 L372 128 L420 112 L420 190 L0 190 Z" },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>
