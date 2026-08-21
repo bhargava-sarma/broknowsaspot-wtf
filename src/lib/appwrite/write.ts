@@ -284,9 +284,14 @@ async function hideSpotRow(spotId: string, reporters: number): Promise<void> {
 
   try {
     const hidden = spotPermissions(false);
-    const operations: object[] = [
-      {
-        action: "update",
+    // Staged with `updateRow` / `createRow` carrying the transaction id
+    // rather than with `createOperations`. The latter has no permissions
+    // field — its operations are typed as a bare `object[]`, so the ones
+    // written here were accepted by TypeScript and refused by Appwrite,
+    // which meant the report threshold could not actually take anything
+    // down. See the note on runTransaction in moderate.ts.
+    await Promise.all([
+      tables.updateRow({
         databaseId: DATABASE_ID,
         tableId: TABLES.spots,
         rowId: spotId,
@@ -296,16 +301,18 @@ async function hideSpotRow(spotId: string, reporters: number): Promise<void> {
           reportCount: reporters,
         },
         permissions: hidden,
-      },
-      ...(noteRows as Array<{ $id: string }>).map((note) => ({
-        action: "update",
-        databaseId: DATABASE_ID,
-        tableId: TABLES.notes,
-        rowId: note.$id,
-        permissions: hidden,
-      })),
-      {
-        action: "create",
+        transactionId: transaction.$id,
+      }),
+      ...(noteRows as Array<{ $id: string }>).map((note) =>
+        tables.updateRow({
+          databaseId: DATABASE_ID,
+          tableId: TABLES.notes,
+          rowId: note.$id,
+          permissions: hidden,
+          transactionId: transaction.$id,
+        }),
+      ),
+      tables.createRow({
         databaseId: DATABASE_ID,
         tableId: TABLES.moderationLog,
         rowId: ID.unique(),
@@ -319,13 +326,9 @@ async function hideSpotRow(spotId: string, reporters: number): Promise<void> {
           actorId: null,
           actorEmail: null,
         },
-      },
-    ];
-
-    await tables.createOperations({
-      transactionId: transaction.$id,
-      operations,
-    });
+        transactionId: transaction.$id,
+      }),
+    ]);
     await tables.updateTransaction({
       transactionId: transaction.$id,
       commit: true,

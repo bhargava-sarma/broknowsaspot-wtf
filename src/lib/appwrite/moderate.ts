@@ -1,6 +1,6 @@
 import "server-only";
 
-import { ID, Query, TablesDB } from "node-appwrite";
+import { ID, type Models, Query, TablesDB } from "node-appwrite";
 
 import { adminSessionClient } from "@/lib/appwrite/auth";
 import { notePermissions, spotPermissions } from "@/lib/appwrite/permissions";
@@ -238,27 +238,28 @@ export async function moderateSpot(
     queries: [Query.equal("spotId", spot.$id), Query.limit(500)],
   });
 
-  return runTransaction(tables, [
-    {
-      action: "update",
+  return runTransaction(tables, (transactionId) => [
+    tables.updateRow<Models.DefaultRow>({
       databaseId: DATABASE_ID,
       tableId: TABLES.spots,
       rowId: spot.$id,
       data,
       permissions: spotPermissions(visible),
-    },
+      transactionId,
+    }),
     // Cascade. An ACL cannot say "public while the parent is visible", so
     // a restored spot's own hidden notes must stay hidden while the rest
     // come back with it.
-    ...(noteRows as unknown as Row[]).map((note) => ({
-      action: "update",
-      databaseId: DATABASE_ID,
-      tableId: TABLES.notes,
-      rowId: note.$id,
-      permissions: notePermissions(!note.hiddenAt, visible),
-    })),
-    {
-      action: "create",
+    ...(noteRows as unknown as Row[]).map((note) =>
+      tables.updateRow<Models.DefaultRow>({
+        databaseId: DATABASE_ID,
+        tableId: TABLES.notes,
+        rowId: String(note.$id),
+        permissions: notePermissions(!note.hiddenAt, visible),
+        transactionId,
+      }),
+    ),
+    tables.createRow<Models.DefaultRow>({
       databaseId: DATABASE_ID,
       tableId: TABLES.moderationLog,
       rowId: ID.unique(),
@@ -269,7 +270,8 @@ export async function moderateSpot(
         actorId: actor.id,
         actorEmail: actor.email,
       },
-    },
+      transactionId,
+    }),
   ]);
 }
 
@@ -311,9 +313,8 @@ export async function moderateNote(
   const parentVisible = !parent.hiddenAt && !parent.removedAt;
   const noteVisible = action === "restore";
 
-  const result = await runTransaction(tables, [
-    {
-      action: "update",
+  const result = await runTransaction(tables, (transactionId) => [
+    tables.updateRow<Models.DefaultRow>({
       databaseId: DATABASE_ID,
       tableId: TABLES.notes,
       rowId: noteId,
@@ -321,9 +322,9 @@ export async function moderateNote(
       // Restoring a note on a hidden spot must not make it public. The
       // parent decides the ceiling.
       permissions: notePermissions(noteVisible, parentVisible),
-    },
-    {
-      action: "create",
+      transactionId,
+    }),
+    tables.createRow<Models.DefaultRow>({
       databaseId: DATABASE_ID,
       tableId: TABLES.moderationLog,
       rowId: ID.unique(),
@@ -335,25 +336,44 @@ export async function moderateNote(
         actorId: actor.id,
         actorEmail: actor.email,
       },
-    },
+      transactionId,
+    }),
   ]);
 
   if (!result.ok) return result;
   return { ok: true, slug: String(parent.slug) };
 }
 
+/**
+ * Runs staged writes atomically.
+ *
+ * The writes are made with `updateRow` / `createRow` carrying a
+ * `transactionId`, rather than with `createOperations` and hand-built
+ * operation objects. That distinction is the whole reason moderation was
+ * failing with "could not apply that":
+ *
+ * **`createOperations` cannot set permissions.** Its operations are typed
+ * in the SDK as a bare `object[]`, so TypeScript accepted a `permissions`
+ * field that the API does not define — and the note-cascade operations,
+ * which changed *only* permissions, ended up with no `data` at all and
+ * were rejected outright. Nothing in the type system could have caught
+ * it, and the local Appwrite stub happily accepted both, so it only ever
+ * failed against the real service.
+ *
+ * `updateRow` and `createRow` both take `permissions` *and* a
+ * `transactionId`, so this keeps the atomicity the security model depends
+ * on — the timestamp and the ACL still land together or not at all — and
+ * gets it from a typed call.
+ */
 async function runTransaction(
   tables: ReturnType<typeof adminTables>,
-  operations: object[],
+  stage: (transactionId: string) => Promise<unknown>[],
 ): Promise<{ ok: true } | { ok: false; reason: string }> {
   if (!tables) return { ok: false, reason: "no database connection" };
 
   const transaction = (await tables.createTransaction({})) as { $id: string };
   try {
-    await tables.createOperations({
-      transactionId: transaction.$id,
-      operations,
-    });
+    await Promise.all(stage(transaction.$id));
     await tables.updateTransaction({
       transactionId: transaction.$id,
       commit: true,
@@ -363,7 +383,14 @@ async function runTransaction(
     await tables
       .updateTransaction({ transactionId: transaction.$id, rollback: true })
       .catch(() => {});
+    // The admin surface is trusted and small, so the real reason is worth
+    // more there than a tidy sentence. Anything that reaches a visitor is
+    // still generic.
+    const detail =
+      (error as { type?: string }).type ||
+      (error as { message?: string }).message ||
+      "unknown";
     console.error("[moderate] transaction failed", error);
-    return { ok: false, reason: "could not apply that" };
+    return { ok: false, reason: `could not apply that — ${detail}` };
   }
 }
