@@ -200,6 +200,28 @@ async function main() {
       wrongRequired.length ? wrongRequired.join(",") : "matches schema",
     );
 
+    // An enum whose element set drifted accepts some values and rejects
+    // the rest, which reads as an intermittent 500 rather than as a
+    // schema problem. `reports.reason` sat wrong for the whole life of
+    // the feature this way: two of five reasons happened to match, so
+    // reporting "worked" often enough that nothing looked broken.
+    const wrongElements = spec.columns
+      .filter((c) => c.kind === "enum")
+      .filter((c) => {
+        const live = byKey.get(c.name) as { elements?: string[] } | undefined;
+        if (!live?.elements) return false;
+        const want = [...(c as { values: readonly string[] }).values]
+          .sort()
+          .join(",");
+        return [...live.elements].sort().join(",") !== want;
+      })
+      .map((c) => c.name);
+    add(
+      `${spec.id} enum values`,
+      "match schema",
+      wrongElements.length ? wrongElements.join(",") : "match schema",
+    );
+
     const { indexes } = await admin.listIndexes({
       databaseId: DATABASE_ID,
       tableId: spec.id,
