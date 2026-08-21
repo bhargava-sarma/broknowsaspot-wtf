@@ -29,6 +29,9 @@
  * whose ACL says `any` is publicly readable.
  */
 
+import { REPORT_REASONS } from "@/lib/spots/reports";
+import { ACCESS_TYPES, CATEGORIES, DIFFICULTIES } from "@/lib/types/spot";
+
 export const DATABASE_ID = "broknowsaspot";
 
 export const TABLES = {
@@ -94,25 +97,22 @@ export const ADMIN_READ = `read("team:${ADMIN_TEAM_ID}")`;
  */
 export const REPORT_THRESHOLD = 10;
 
-export const CATEGORIES = [
-  "ruin",
-  "water",
-  "viewpoint",
-  "underground",
-  "shore",
-  "transit",
-  "structure",
-] as const;
-
-export const DIFFICULTIES = ["easy", "moderate", "hard", "serious"] as const;
-export const ACCESS_TYPES = ["open", "permit", "grey", "private"] as const;
-export const REPORT_REASONS = [
-  "dangerous",
-  "private",
-  "wrong",
-  "gone",
-  "spam",
-] as const;
+/**
+ * The value sets the enum columns are built from.
+ *
+ * Imported, never redeclared. They were duplicated here once, and
+ * `REPORT_REASONS` drifted: this file said
+ * `dangerous, private, wrong, gone, spam` while the form sent
+ * `dangerous, illegal_access, private_info, inaccurate, spam`. Only two
+ * of five overlapped, so three of the report reasons were rejected by the
+ * column as invalid enum values — a 500 on report, for the whole life of
+ * the feature, with the two that happened to match working fine and
+ * hiding it.
+ *
+ * The trap is that a copy looks harmless until someone edits one side.
+ * Nothing here declares a value set any more; the schema follows the
+ * app's, which is the one the UI and the validators already use.
+ */
 export const MODERATION_ACTIONS = ["hide", "restore", "remove"] as const;
 
 type Column =
