@@ -1,7 +1,7 @@
 import { cn } from "@/lib/utils/cn";
 
 type PageHeaderProps = {
-  /** Monospace eyebrow, e.g. the section code. */
+  /** Uppercase label above the title. */
   eyebrow: string;
   title: string;
   lede?: string;
@@ -19,7 +19,7 @@ type PageHeaderProps = {
   compact?: boolean;
 };
 
-/** Standard page masthead: eyebrow, title, optional lede, one hairline. */
+/** Standard page masthead: eyebrow, serif title, optional lede. */
 export function PageHeader({
   eyebrow,
   title,
@@ -29,24 +29,27 @@ export function PageHeader({
   compact = false,
 }: PageHeaderProps) {
   return (
-    <header className={cn("rule-b", className)}>
+    <header className={cn("shell", className)}>
       <div
         className={cn(
-          "shell grid-swiss",
+          "flex flex-col gap-8 lg:flex-row lg:items-end lg:justify-between",
           compact
-            ? "py-[clamp(1.1rem,0.7rem+2vw,4.5rem)]"
-            : "py-[clamp(2rem,1.4rem+3vw,4.5rem)]",
+            ? "pt-[clamp(1.75rem,1rem+2.4vw,3.5rem)] pb-[clamp(1rem,0.7rem+1.4vw,2rem)]"
+            : "pt-[clamp(2.5rem,1.6rem+3.4vw,5rem)] pb-[clamp(1.5rem,1rem+2vw,3rem)]",
         )}
       >
-        <div className="col-span-12 lg:col-span-8">
-          <p className="label flex items-center gap-3">
-            <span className="text-accent">{"///"}</span>
+        <div className="max-w-[52ch]">
+          <p className="eyebrow flex items-center gap-3">
+            <span
+              aria-hidden="true"
+              className="breathe block size-[7px] rounded-full bg-accent shadow-[0_0_14px_var(--color-accent)]"
+            />
             {eyebrow}
           </p>
           <h1
             className={cn(
-              "font-light lowercase",
-              compact ? "mt-3 text-h2 sm:mt-5 sm:text-h1" : "mt-5 text-h1",
+              "text-ink",
+              compact ? "mt-4 text-h2 sm:text-h1" : "mt-5 text-h1",
             )}
           >
             {title}
@@ -54,7 +57,7 @@ export function PageHeader({
           {lede ? (
             <p
               className={cn(
-                "max-w-[52ch] text-lead font-light text-muted",
+                "text-lead font-light text-muted",
                 compact ? "mt-4 hidden sm:block" : "mt-5",
               )}
             >
@@ -62,11 +65,7 @@ export function PageHeader({
             </p>
           ) : null}
         </div>
-        {children ? (
-          <div className="col-span-12 mt-8 lg:col-span-4 lg:mt-0">
-            {children}
-          </div>
-        ) : null}
+        {children ? <div className="lg:shrink-0">{children}</div> : null}
       </div>
     </header>
   );

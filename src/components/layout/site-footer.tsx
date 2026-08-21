@@ -1,52 +1,61 @@
 import Link from "next/link";
 
+import { PinMark } from "@/components/layout/brand-mark";
 import { NAV_ITEMS } from "@/lib/nav";
 import { SITE_NAME, SITE_TLD } from "@/lib/site";
 
 /**
- * Terminal block. Reads like a device's back-panel legend: a column of
- * labelled readouts on a rigid grid, separated from the page by one rule.
+ * The last thing on every page. One hairline, then a quiet row — the
+ * footer is the one surface that deliberately is NOT glass, because a
+ * pane floating at the very bottom of a document has nothing to float
+ * over and reads as a stray card.
  */
 export function SiteFooter() {
   return (
-    <footer className="rule-t mt-[clamp(3.5rem,2rem+6vw,8rem)]">
-      <div className="shell grid-swiss py-[clamp(2rem,1.4rem+2.4vw,3.5rem)]">
-        <div className="col-span-12 sm:col-span-6 lg:col-span-5">
-          <p className="font-mono text-tiny text-ink lowercase">
+    <footer className="mt-[clamp(4rem,2.5rem+7vw,9rem)] border-t border-rule">
+      <div className="shell flex flex-col gap-8 py-[clamp(2rem,1.4rem+2.4vw,3rem)] sm:flex-row sm:items-start sm:justify-between">
+        <div className="max-w-[42ch]">
+          <p className="flex items-center gap-2.5 text-small font-semibold text-ink">
+            <PinMark className="text-accent" size={17} />
             {SITE_NAME}
-            <span className="text-accent">{SITE_TLD}</span>
+            <span className="-ml-2.5 text-faint">{SITE_TLD}</span>
           </p>
-          <p className="mt-3 max-w-[38ch] text-small text-muted">
-            a crowdsourced index of places that never made the guidebook. go
-            carefully, leave it as you found it.
+          <p className="mt-3 text-small text-muted">
+            A crowdsourced index of places that never made the guidebook. Go
+            quietly, and leave it as you found it.
           </p>
         </div>
 
-        <div className="col-span-6 mt-8 sm:col-span-3 sm:mt-0 lg:col-span-2 lg:col-start-9">
-          <p className="label">pages</p>
-          <ul className="mt-3 space-y-1.5">
-            {NAV_ITEMS.map((item) => (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  className="tap font-mono text-micro text-muted lowercase"
-                >
-                  {item.label}
-                </Link>
+        <div className="flex gap-[clamp(2rem,1.4rem+3vw,4rem)]">
+          <div>
+            <p className="eyebrow">Pages</p>
+            <ul className="mt-4 space-y-2.5">
+              {NAV_ITEMS.map((item) => (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    className="press text-small text-muted hover:text-ink"
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          <div>
+            <p className="eyebrow">Status</p>
+            <ul className="mt-4 space-y-2.5 text-small text-muted">
+              <li>Next · Appwrite</li>
+              <li className="flex items-center gap-2">
+                <span
+                  aria-hidden="true"
+                  className="breathe block size-1.5 rounded-full bg-accent shadow-[0_0_10px_var(--color-accent)]"
+                />
+                Open to submissions
               </li>
-            ))}
-          </ul>
-        </div>
-
-        <div className="col-span-6 mt-8 sm:col-span-3 sm:mt-0 lg:col-span-2">
-          <p className="label">status</p>
-          <ul className="mt-3 space-y-1.5 font-mono text-micro text-muted lowercase">
-            <li>v0.1</li>
-            <li>next · appwrite</li>
-            <li>
-              <span className="text-accent">●</span> open to submissions
-            </li>
-          </ul>
+            </ul>
+          </div>
         </div>
       </div>
 
@@ -55,7 +64,7 @@ export function SiteFooter() {
           inset is already applied to <body>. */}
       <div
         aria-hidden="true"
-        className="h-[calc(var(--bar-h)+1.2rem)] sm:hidden"
+        className="h-[calc(var(--bar-h)+1.6rem)] sm:hidden"
       />
     </footer>
   );

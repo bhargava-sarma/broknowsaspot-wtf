@@ -21,11 +21,7 @@ export function ReportBreakdown({ reports }: { reports: ReportDetail[] }) {
     // Reported, but the rows are not readable — which on this surface
     // means the session is not an admin. Say so rather than implying
     // nobody gave a reason.
-    return (
-      <p className="mt-3 font-mono text-micro text-faint lowercase">
-        reasons unavailable
-      </p>
-    );
+    return <p className="mt-3 text-tiny text-faint">Reasons unavailable</p>;
   }
 
   const tally = new Map<ReportReason, number>();
@@ -37,16 +33,16 @@ export function ReportBreakdown({ reports }: { reports: ReportDetail[] }) {
 
   return (
     <div className="mt-3">
-      <ul className="border-t border-rule">
+      <ul className="space-y-1">
         {ranked.map(([reason, count]) => (
           <li
             key={reason}
-            className="flex items-baseline justify-between gap-3 border-b border-rule py-1.5"
+            className="flex items-baseline justify-between gap-3 rounded-[var(--radius-xs)] bg-ink/[0.05] px-3 py-2"
           >
-            <span className="max-w-[30ch] text-small leading-snug text-muted">
+            <span className="max-w-[30ch] text-tiny leading-snug text-muted">
               {REPORT_REASON_LABELS[reason] ?? reason}
             </span>
-            <span className="shrink-0 font-mono text-micro text-ink tabular-nums">
+            <span className="shrink-0 text-tiny font-semibold text-ink tabular-nums">
               {count}
             </span>
           </li>
@@ -55,12 +51,12 @@ export function ReportBreakdown({ reports }: { reports: ReportDetail[] }) {
 
       {notes.length > 0 ? (
         <div className="mt-3">
-          <p className="label">what they said</p>
-          <ul className="mt-2 space-y-2">
+          <p className="eyebrow">What they said</p>
+          <ul className="mt-2.5 space-y-2">
             {notes.map((report, index) => (
               <li
                 key={`${report.at}-${index}`}
-                className="max-w-[34ch] border-l border-rule pl-3 text-small leading-snug text-muted"
+                className="max-w-[34ch] border-l-2 border-accent/40 pl-3 text-tiny leading-snug text-muted"
               >
                 {report.detail}
               </li>

@@ -23,9 +23,10 @@ import { cn } from "@/lib/utils/cn";
  *    spring on the main thread while the reader is scrolling, which is
  *    what a phone actually cares about.
  *
- * The motion itself is unchanged: `--ease-damped` is a `linear()`
- * approximation of the same spring the old preset used, so the curve is
- * the one this design has always used.
+ * The motion is Aurora's entrance: up 26px and out of an 8px blur, on
+ * `--ease-glass`, staggered ~80ms down the page. Blur is the part that
+ * makes it read as glass settling rather than a div fading in — and it
+ * is composited, so it costs the same as the transform beside it.
  */
 
 type RevealProps = {

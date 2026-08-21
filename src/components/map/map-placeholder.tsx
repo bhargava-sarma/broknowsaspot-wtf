@@ -9,7 +9,7 @@
 export function MapPlaceholder() {
   return (
     <div className="flex h-full w-full items-center justify-center bg-paper-raised">
-      <p className="font-mono text-micro text-faint lowercase">loading map…</p>
+      <p className="eyebrow">Loading map…</p>
     </div>
   );
 }

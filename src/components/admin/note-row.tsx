@@ -8,6 +8,7 @@ import { ReportBreakdown } from "@/components/admin/report-breakdown";
 import type { NoteEntry } from "@/lib/admin/queue";
 import { formatDate } from "@/lib/utils/date";
 import { cn } from "@/lib/utils/cn";
+import { Button } from "@/components/ui/button";
 
 /**
  * One community note in the review queue, with its controls attached.
@@ -21,24 +22,26 @@ export function NoteRow({ entry }: { entry: NoteEntry }) {
   const [reason, setReason] = useState("");
 
   return (
-    <li className="rule-b">
-      <div className="shell grid-swiss py-[clamp(1.5rem,1.2rem+1.2vw,2.25rem)]">
-        <div className="col-span-12 lg:col-span-8">
+    <li className="glass rounded-[var(--radius-lg)]">
+      <div className="grid gap-x-6 gap-y-5 p-[clamp(1.25rem,1rem+1vw,1.75rem)] lg:grid-cols-12">
+        <div className="lg:col-span-8">
           <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
             <span
               className={cn(
-                "font-mono text-micro tracking-[0.13em] lowercase",
-                entry.hidden ? "text-accent" : "text-faint",
+                "inline-flex items-center rounded-[var(--radius-xs)] px-2.5 py-1 text-[0.6875rem] font-semibold tracking-[0.14em] uppercase",
+                entry.hidden
+                  ? "bg-accent/15 text-accent"
+                  : "bg-ink/[0.07] text-muted",
               )}
             >
-              {entry.hidden ? "hidden" : "live"}
+              {entry.hidden ? "Hidden" : "Live"}
             </span>
-            <span className="font-mono text-micro text-ink lowercase">
+            <span className="text-small font-semibold text-ink">
               {entry.author}
             </span>
-            <span className="font-mono text-micro text-faint lowercase">
+            <span className="text-tiny text-faint">
               on{" "}
-              <a href={`/spot/${entry.spotSlug}`} className="tap">
+              <a href={`/spot/${entry.spotSlug}`} className="press text-muted">
                 {entry.spotName}
               </a>
               {" · visited "}
@@ -55,47 +58,48 @@ export function NoteRow({ entry }: { entry: NoteEntry }) {
           ) : null}
         </div>
 
-        <div className="col-span-12 mt-5 lg:col-span-4 lg:mt-0">
+        <div className="lg:col-span-4">
           <form action={formAction}>
             <input type="hidden" name="noteId" value={entry.id} />
             <input type="hidden" name="slug" value={entry.spotSlug} />
 
-            <label htmlFor={`note-reason-${entry.id}`} className="label block">
-              note
+            <label
+              htmlFor={`note-reason-${entry.id}`}
+              className="eyebrow block"
+            >
+              Note
             </label>
-            <input
-              id={`note-reason-${entry.id}`}
-              name="reason"
-              type="text"
-              maxLength={500}
-              value={reason}
-              onChange={(event) => setReason(event.target.value)}
-              placeholder="why — goes in the record"
-              className="touch-target w-full border-b border-rule bg-transparent pt-2 pb-2 text-body text-ink transition-colors duration-200 outline-none placeholder:text-faint hover:border-muted focus:border-ink"
-            />
+            <div className="well mt-2.5 rounded-[var(--radius-md)] px-4 py-3">
+              <input
+                id={`note-reason-${entry.id}`}
+                name="reason"
+                type="text"
+                maxLength={500}
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+                placeholder="Why — goes in the record"
+                className="block h-6 w-full bg-transparent text-small text-ink outline-none placeholder:text-faint"
+              />
+            </div>
 
-            <div className="mt-5 flex flex-wrap gap-x-8 gap-y-3">
-              <button
+            <div className="mt-4 flex flex-wrap gap-2">
+              <Button
                 type="submit"
                 name="action"
                 value={entry.hidden ? "restore" : "hide"}
                 disabled={pending}
-                className={cn(
-                  "press touch-target border-b pb-1 font-mono text-tiny tracking-[0.04em] lowercase disabled:opacity-50",
-                  entry.hidden
-                    ? "border-rule-strong text-ink"
-                    : "border-accent text-accent",
-                )}
+                tone={entry.hidden ? "glass" : "ember"}
+                size="sm"
               >
-                {entry.hidden ? "restore" : "hide"}
-              </button>
+                {entry.hidden ? "Restore" : "Hide"}
+              </Button>
             </div>
 
             {state.status !== "idle" ? (
               <p
                 role="status"
                 className={cn(
-                  "mt-4 font-mono text-micro lowercase",
+                  "mt-4 text-tiny",
                   state.status === "ok" ? "text-faint" : "text-accent",
                 )}
               >

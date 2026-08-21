@@ -4,6 +4,8 @@ import { useActionState } from "react";
 
 import { IDLE } from "@/lib/admin/action-state";
 import { signInAction } from "@/lib/admin/actions";
+import { ArrowRight, Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils/cn";
 
 /**
  * The same flat language as the submission form: a mono label over a
@@ -13,60 +15,65 @@ import { signInAction } from "@/lib/admin/actions";
 export function LoginForm() {
   const [state, formAction, pending] = useActionState(signInAction, IDLE);
 
-  const control =
-    "w-full border-b border-rule bg-transparent pt-2 pb-2 text-body text-ink outline-none transition-colors duration-200 hover:border-muted focus:border-ink placeholder:text-faint touch-target";
+  const control = "w-full bg-transparent text-body text-ink outline-none";
+  const well = "well mt-2.5 rounded-[var(--radius-md)] px-4 py-3";
 
   return (
-    <form action={formAction} className="max-w-[34rem]">
-      <div className="grid gap-[clamp(1.5rem,1.2rem+1.2vw,2.25rem)]">
+    <form
+      action={formAction}
+      className="glass mx-auto max-w-[26rem] rounded-[var(--radius-xl)] p-[clamp(1.5rem,1.2rem+1.4vw,2.25rem)]"
+    >
+      <div className="grid gap-5">
         <div>
-          <label htmlFor="admin-email" className="label block">
-            email
+          <label htmlFor="admin-email" className="eyebrow block">
+            Email
           </label>
-          <input
-            id="admin-email"
-            name="email"
-            type="email"
-            autoComplete="username"
-            required
-            aria-invalid={state.status === "error"}
-            className={control}
-          />
+          <div className={well}>
+            <input
+              id="admin-email"
+              name="email"
+              type="email"
+              autoComplete="username"
+              required
+              aria-invalid={state.status === "error"}
+              className={cn(control, "block h-6")}
+            />
+          </div>
         </div>
 
         <div>
-          <label htmlFor="admin-password" className="label block">
-            password
+          <label htmlFor="admin-password" className="eyebrow block">
+            Password
           </label>
-          <input
-            id="admin-password"
-            name="password"
-            type="password"
-            autoComplete="current-password"
-            required
-            aria-invalid={state.status === "error"}
-            className={control}
-          />
+          <div className={well}>
+            <input
+              id="admin-password"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              required
+              aria-invalid={state.status === "error"}
+              className={cn(control, "block h-6")}
+            />
+          </div>
         </div>
       </div>
 
       {state.status === "error" ? (
-        <p
-          role="alert"
-          className="mt-6 font-mono text-micro text-accent lowercase"
-        >
+        <p role="alert" className="mt-5 text-tiny font-medium text-accent">
           {state.message}
         </p>
       ) : null}
 
-      <button
+      <Button
         type="submit"
+        tone="ember"
         disabled={pending}
-        className="press touch-target mt-9 inline-flex items-center gap-3 border-b border-rule-strong pb-2 font-mono text-tiny tracking-[0.04em] text-ink lowercase disabled:opacity-50"
+        className="mt-7 w-full"
       >
-        {pending ? "checking…" : "sign in"}
-        <span aria-hidden="true">→</span>
-      </button>
+        {pending ? "Checking…" : "Sign in"}
+        <ArrowRight />
+      </Button>
     </form>
   );
 }

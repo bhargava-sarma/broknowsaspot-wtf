@@ -7,19 +7,15 @@ import { useTheme } from "@/lib/theme/theme-provider";
 import { cn } from "@/lib/utils/cn";
 
 /**
- * Two-position theme switch, read like a hardware toggle: both positions
- * stay legible, the live one is inked, and a glass knob sits under it.
- *
- * The knob is the one place the floating material appears at this size,
- * and it earns it — a switch is the most physical control on the page, so
- * it is the one that most wants to look like an object you could push.
+ * Two-position theme switch, read like a hardware toggle: both icons stay
+ * visible, the live one is inked, and a glass knob slides under it.
  *
  * All of the active-state styling is done with the `dark:` variant rather
  * than by branching on a JS value, so the server and the client render
  * byte-identical markup and the switch shows the correct position in the
  * first paint, before hydration. The knob slides on a CSS transform for
  * the same reason: no layout animation can run before hydration, and a
- * knob that jumps into place on load would undo the point of it.
+ * knob that jumped into place on load would undo the point of it.
  */
 export function ThemeToggle({ className }: { className?: string }) {
   const { toggle } = useTheme();
@@ -33,25 +29,50 @@ export function ThemeToggle({ className }: { className?: string }) {
       transition={springUI}
       // Static label: a state-bearing one would have to be computed in JS
       // and would mismatch on hydration.
-      aria-label="toggle light and dark theme"
-      title="toggle light and dark theme"
+      aria-label="Switch between light and dark"
+      title="Switch between light and dark"
       className={cn(
-        "glass-chip glass-rim glass-r-sm touch-target relative inline-flex items-center gap-1 overflow-hidden px-1.5 py-1.5 font-mono text-micro lowercase select-none",
+        "touch-target relative inline-flex items-center overflow-hidden rounded-[var(--radius-sm)] border border-[var(--glass-rim)] bg-ink/[0.05] p-1 select-none",
         className,
       )}
     >
       {/* The knob. Half the track wide, stepping to the other half in
-          dark — the same trick as the old accent rule, given mass. */}
+          dark — the accent rule of the old switch, given mass. */}
       <span
         aria-hidden="true"
-        className="glass-r-sm absolute inset-y-1 left-1 block w-[calc(50%-0.25rem)] bg-ink/[0.07] transition-transform duration-300 ease-[var(--ease-spring)] motion-reduce:transition-none dark:translate-x-[calc(100%+0.0rem)] dark:bg-ink/[0.1]"
+        className="absolute inset-y-1 left-1 block w-[calc(50%-0.25rem)] rounded-[var(--radius-xs)] bg-paper shadow-[inset_0_1px_0_var(--glass-specular),0_4px_10px_-4px_rgba(0,0,0,0.5)] transition-transform duration-300 ease-[var(--ease-spring)] motion-reduce:transition-none dark:translate-x-full"
       />
 
-      <span className="relative z-1 px-1 text-ink transition-opacity duration-200 dark:text-faint">
-        lt
+      <span className="relative z-1 flex h-7 w-8 items-center justify-center text-ink transition-colors duration-200 dark:text-faint">
+        <svg
+          width="15"
+          height="15"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.8}
+          strokeLinecap="round"
+          aria-hidden="true"
+        >
+          <circle cx="12" cy="12" r="4.2" />
+          <path d="M12 3v2M12 19v2M3 12h2M19 12h2M5.6 5.6l1.4 1.4M17 17l1.4 1.4M18.4 5.6L17 7M7 17l-1.4 1.4" />
+        </svg>
       </span>
-      <span className="relative z-1 px-1 text-faint transition-opacity duration-200 dark:text-ink">
-        dk
+
+      <span className="relative z-1 flex h-7 w-8 items-center justify-center text-faint transition-colors duration-200 dark:text-ink">
+        <svg
+          width="15"
+          height="15"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={1.8}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M20 14.2A8.4 8.4 0 0 1 9.8 4a8.4 8.4 0 1 0 10.2 10.2z" />
+        </svg>
       </span>
     </motion.button>
   );

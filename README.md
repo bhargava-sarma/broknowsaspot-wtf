@@ -12,11 +12,10 @@ Live at **<https://broknowsaspot.app>**.
 | framework | Next.js (App Router) + TypeScript                   |
 | data      | Appwrite Cloud (TablesDB)                           |
 | basemap   | Leaflet + raster tiles (vector path opt-in, see below) |
-| styling   | Tailwind CSS v4 (CSS-first design tokens)           |
-| 3d        | React Three Fiber + drei + three                    |
-| motion    | Framer Motion                                       |
-| maps      | Leaflet + react-leaflet                             |
-| fonts     | JetBrains Mono + Inter, self-hosted via `next/font` |
+| styling   | Tailwind CSS v4 (CSS-first design tokens)                    |
+| motion    | Framer Motion + CSS                                          |
+| maps      | Leaflet + react-leaflet                                      |
+| fonts     | Instrument Serif + Manrope, self-hosted via `next/font`       |
 | hosting   | Vercel, deployed from `main`                        |
 
 ## getting started
@@ -45,62 +44,90 @@ a database of your own.
 
 ## design language
 
-Teenage Engineering flavoured industrial minimalism, with one pane of
-Apple-ish glass in front of it.
+**Aurora** — warm firelight against a cold sky. A midnight ground with
+slow-drifting aurora light behind everything, and content floating on
+layered glass above it.
 
-- everything lowercase in UI copy
-- monospace for chrome/labels, humanist sans for long-form reading
-- sections separated by a single hairline rule, never by cards
-- borderless controls; no fills, no glows, no shadows anywhere
-- near-black / near-white / one muted warm-orange accent used sparingly
-- rigid Swiss grid, fluid `clamp()` type scale instead of breakpoint jumps
+- a display serif for every title, one humanist sans for everything else
+- sentence case throughout; nothing is styled lowercase any more
+- one material — glass — in three depths, and nothing else
+- continuous, generous corner radii; nothing in the app is square
+- one filled control per screen, in the ember accent, and no other fills
+- fluid `clamp()` type scale instead of breakpoint jumps
 
-### two planes
+The previous Teenage Engineering layer — monospace chrome, hairline-ruled
+sections, all-lowercase copy, flat borderless controls, square corners —
+was removed rather than blended.
 
-The two references pull in opposite directions — Teenage Engineering is
-matte and dead-flat, Liquid Glass is depth and refraction — so the split is
-by **role**, not by taste:
+### two skies
 
-|            | content plane                          | floating plane                           |
-| ---------- | -------------------------------------- | ---------------------------------------- |
-| what       | sections, prose, fields, plates        | header, mobile bar, sheets, map controls |
-| material   | flat, nothing behind it                | translucent, blurred, top-lit            |
-| corners    | square, always                         | a tight radius                           |
-| separation | one hairline                           | a specular edge                          |
+Both themes are authored independently; dark is not an inverted light
+theme. Dark is midnight with the aurora at full strength. Light is the
+same idea at dawn: a cool, faintly violet white with the light turned down
+to a wash, because a pale ground turns into smeared pastel otherwise.
 
-Content stays Swiss and flat. Translucency, blur and a corner radius exist
-only on things that genuinely hover above the page — which is also how
-Apple uses the material: a controls layer, not a content layer.
+The glass flips direction with the theme. Light glass is frosted white
+lifted **off** the ground — a pane that matches the page exactly reads as
+flat fog. Dark glass leans **lighter** than its ground, because a dark
+pane on a near-black page has no edge to catch and reads as a hole.
 
-Both themes are authored independently — dark is not an inverted light
-theme, and dark glass leans *darker* than the page rather than lighter.
-Every text pair is contrast-checked. The full system, including the two
-`backdrop-filter` traps that cost real debugging, is in
-[`docs/design-tokens.md`](docs/design-tokens.md).
+### three depths
+
+Depth is blur radius, not shadow spread:
+
+| tier      | blur | what it is                                |
+| --------- | ---- | ----------------------------------------- |
+| `.glass-1` | 14px | chips, segments, map controls             |
+| `.glass`   | 28px | the default — cards, nav, form sections   |
+| `.glass-3` | 44px | sheets, dialogs, the mobile filter tray   |
+
+Phones drop one step across the board; a phone is where the scroll is and
+every blurred pixel is paid for on the compositor.
+
+Every tier carries the same edge — a bright inset line along the top where
+the rim catches light, a dark one along the bottom where the glass is
+thick, and a soft lens highlight off the top-left corner. Drop those three
+and the same blur reads as a grey box.
+
+Every text pair is contrast-checked in both themes (`npm run check:contrast`).
+The full system, including the two `backdrop-filter` traps that cost real
+debugging, is in [`docs/design-tokens.md`](docs/design-tokens.md).
 
 ### motion
+
+Two speeds. Anything that responds to you resolves inside `--dur-surface`
+(620ms) and settles without a bounce — glass is heavy, and a bouncing pane
+reads as plastic. Anything ambient runs on the minute scale: the aurora
+fields drift on periods of 52, 61, 67 and 79 seconds so they never re-sync
+into a loop you can catch.
 
 Most of it is CSS, not JavaScript. Scroll reveals are a class an
 IntersectionObserver flips, with the stagger as an index-derived delay, so
 nothing samples a spring on the main thread mid-scroll. Framer Motion is
-kept for what needs it: the sheet's enter/exit, and the nav marker that
+kept for what needs it: the sheet's enter/exit and the nav marker that
 travels between destinations.
 
-Two rules hold it together:
+Three rules hold it together:
 
 - **Reveals fail visible.** Content is visible by default and a pre-paint
   script opts it into being hidden, so the hidden state cannot outlive the
   JavaScript meant to undo it. With the bundle blocked, the page is plain
   readable text.
+- **The aurora only ever moves on transform and opacity.** A blurred field
+  is expensive to rasterise once and free to move afterwards; nothing in
+  that layer animates size, colour or `filter`.
 - **At most six blurred surfaces at once.** `backdrop-filter` makes the
   compositor re-blur its backdrop on every frame that backdrop changes.
-  Explore, the densest page, runs four.
+
+The design canvas the implementation was built from is in
+[`.design/`](.design/) — six artboards covering the home, explore, spot,
+submit and mobile screens plus the material sheet.
 
 ## routes
 
 | route                      | what it is                                                    |
 | -------------------------- | ------------------------------------------------------------- |
-| `/`                        | hero (3D field), manifesto, readout                           |
+| `/`                        | hero, glass readout, manifesto, recently logged                |
 | `/explore`                 | Leaflet map + faceted filters over the index                  |
 | `/spot/[slug]`             | detail: plates, write-up, access notes, dated community notes |
 | `/submit`                  | submission form with a map picker                             |
@@ -364,33 +391,32 @@ transaction as the change, which is what makes the moderation log complete by
 construction — including automatic hides, which are logged with no actor so
 the screen can say plainly that no person decided them.
 
-## the 3d hero
+## the aurora layer
 
-An ambient topographic point field behind the homepage headline — the same
-survey-contour motif as the SVG fallback, given depth. It is background
-texture, not a centrepiece, and it is budgeted accordingly.
+The sky the whole app sits on: four blurred colour fields drifting behind
+everything, a starfield that only lights in the dark theme, and a vignette
+pulling the corners back toward the page ground.
 
-| rule                      | how it's met                                                                        |
-| ------------------------- | ----------------------------------------------------------------------------------- |
-| cap devicePixelRatio at 2 | `dpr={[1, 2]}` on `<Canvas>` — **measured 2.0 at a device ratio of 3**               |
-| InstancedMesh for repeats | one `InstancedMesh`, ~3.7k instances, one geometry, one material                     |
-| draw calls under ~100     | **measured 2 per frame**                                                             |
-| light triangle count      | ~7.5k (2 per instance)                                                               |
-| no allocation in the loop | instance matrices written once on mount; the loop only increments a group rotation   |
-| simple materials          | `MeshBasicMaterial`; the scene is unlit, so there are no lights at all               |
-| never block first paint   | dynamic import, `ssr: false`; three.js is not in the initial bundle                  |
-| pause when hidden         | IntersectionObserver + `visibilitychange` flip `frameloop` — **measured ~8fps → ~1** |
-| mobile                    | no canvas is created at all — **measured 0 WebGL contexts, 0 draw calls**            |
-| dispose on unmount        | geometry and material disposed explicitly in an effect cleanup                       |
+It is one fixed layer for the whole document, painted once, that never
+re-rasterises on scroll. Three rules keep it affordable, and all three are
+load-bearing:
 
-Numbers come from Playwright probes that patch the WebGL context prototypes
-and count real `drawElements*` calls, so they measure GPU work rather than
-three.js's own bookkeeping. Frame rates were captured under SwiftShader
-(software rasterisation, headless) and are a floor, not a representative
-figure for real hardware.
+| rule                         | why                                                                       |
+| ---------------------------- | ------------------------------------------------------------------------- |
+| transform and opacity only   | a blurred field is expensive to rasterise once and free to move afterwards |
+| `position: fixed`, one layer | not repeated per section, so scrolling costs nothing                       |
+| `contain: layout paint style`| keeps its layout and paint out of the rest of the page's business          |
+| unrelated periods            | 52s / 61s / 67s / 79s, so the fields never re-sync into a visible loop     |
+| disabled under reduced motion| `animation: none` and `will-change: auto` — **verified 0/4 fields running** |
 
-The hero degrades to the static contour SVG on mobile, under
-`prefers-reduced-motion`, and where WebGL is unavailable — all three verified.
+A vignette rather than a horizon line, deliberately: the layer is fixed, so
+a top-to-bottom fade would sit at the same screen position forever and read
+as "the sky only exists above the fold". Pulling the corners back works at
+any scroll position.
+
+The previous homepage carried an ambient WebGL point field. Aurora replaces
+it, so `three`, `@react-three/fiber` and `@react-three/drei` are no longer
+dependencies.
 
 ## deploying
 

@@ -132,26 +132,51 @@ function hereIcon(): L.DivIcon {
 function ZoomControls() {
   const map = useMap();
   return (
-    <div className="leaflet-top leaflet-right">
-      {/* Floating over the map, so: glass. Dense, because the tiles
-          underneath are busy and a 66% pane over a coastline stops
-          reading as a control. */}
-      <div className="leaflet-control glass glass-dense glass-rim glass-r-sm pointer-events-auto m-3! flex flex-col overflow-hidden">
+    <div className="leaflet-bottom leaflet-right">
+      {/* Floating over the map, so: glass — tier 1, because a control
+          sitting on top of tiles should disturb them as little as it can
+          while still catching the light differently.
+
+          Bottom right, because the filters float across the top of the
+          map on wide screens and the two were overlapping there. */}
+      <div className="leaflet-control glass-1 pointer-events-auto mr-3! mb-8! flex flex-col overflow-hidden rounded-[var(--radius-sm)]!">
         <button
           type="button"
           onClick={() => map.zoomIn()}
-          aria-label="zoom in"
-          className="press touch-target flex h-11 w-11 items-center justify-center border-b border-rule/60 font-mono text-tiny text-ink"
+          aria-label="Zoom in"
+          className="press touch-target flex h-11 w-11 items-center justify-center border-b border-[var(--glass-rim)] text-ink"
         >
-          +
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            aria-hidden="true"
+          >
+            <path d="M12 5v14M5 12h14" />
+          </svg>
         </button>
         <button
           type="button"
           onClick={() => map.zoomOut()}
-          aria-label="zoom out"
-          className="press touch-target flex h-11 w-11 items-center justify-center font-mono text-tiny text-ink"
+          aria-label="Zoom out"
+          className="press touch-target flex h-11 w-11 items-center justify-center text-ink"
         >
-          −
+          <svg
+            width="15"
+            height="15"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            aria-hidden="true"
+          >
+            <path d="M5 12h14" />
+          </svg>
         </button>
       </div>
     </div>

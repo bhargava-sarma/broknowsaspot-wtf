@@ -8,7 +8,7 @@ import type { Metadata } from "next";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "admin",
+  title: "Moderation",
   robots: { index: false, follow: false, nocache: true },
 };
 

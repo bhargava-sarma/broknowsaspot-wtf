@@ -66,10 +66,10 @@ export type PrepareFailure =
   "not-an-image" | "too-large" | "unreadable" | "encode-failed";
 
 export const PREPARE_MESSAGES: Record<PrepareFailure, string> = {
-  "not-an-image": "that isn't an image file.",
-  "too-large": "that image is over 12mb. try a smaller one.",
-  unreadable: "couldn't read that image — it may be damaged.",
-  "encode-failed": "couldn't process that image on this device.",
+  "not-an-image": "That isn't an image file.",
+  "too-large": "That image is over 12 MB. Try a smaller one.",
+  unreadable: "Couldn't read that image — it may be damaged.",
+  "encode-failed": "Couldn't process that image on this device.",
 };
 
 function fit(width: number, height: number): { w: number; h: number } {

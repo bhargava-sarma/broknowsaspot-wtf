@@ -6,7 +6,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { FilterRail } from "@/components/explore/filter-rail";
 import { SpotRow } from "@/components/explore/spot-row";
 import { MapPlaceholder } from "@/components/map/map-placeholder";
-import { ActionLink } from "@/components/ui/action-link";
+import { ArrowRight, ButtonLink } from "@/components/ui/button";
 import { useGeolocation } from "@/lib/hooks/use-geolocation";
 import { useMounted } from "@/lib/hooks/use-mounted";
 import { distanceKm } from "@/lib/spots/distance";
@@ -86,91 +86,121 @@ export function ExploreView({ spots }: { spots: Spot[] }) {
     setSelected(null);
   }, []);
 
-  return (
-    <>
-      {/* Sticky under the header, on the same glass. The list and the
-          map both scroll under it, so the controls that govern them stay
-          reachable without a trip back to the top. */}
-      <div className="glass glass-dense sticky top-[var(--bar-h)] z-30 border-b border-rule">
-        <FilterRail
-          filters={filters}
-          onChange={handleFilters}
-          resultCount={visible.length}
-          totalCount={spots.length}
-          geo={{
-            ...geo,
-            // Forgetting the location drops the marker and the fly-to as
-            // well as the sort, so nothing lingers pointing at where the
-            // reader was.
-            clear: () => {
-              setFocus(null);
-              geo.clear();
-            },
-          }}
-        />
-      </div>
+  // Forgetting the location drops the marker and the fly-to as well as
+  // the sort, so nothing lingers pointing at where the reader was.
+  const geoWithClear = {
+    ...geo,
+    clear: () => {
+      setFocus(null);
+      geo.clear();
+    },
+  };
 
-      <div className="grid lg:grid-cols-12">
-        {/* Map first in the DOM on small screens so it isn't buried under
-            the whole list; the grid reorders it on desktop. */}
-        <div className="order-1 lg:order-2 lg:col-span-7">
-          <div className="rule-b h-[58vh] min-h-[320px] lg:sticky lg:top-[var(--bar-h)] lg:h-[calc(100dvh-var(--bar-h))] lg:border-b-0 lg:border-l lg:border-rule">
-            {mounted ? (
-              <SpotMap
-                spots={visible}
-                selectedSlug={selected}
-                onSelect={handleSelect}
-                here={here ? focus : null}
-              />
-            ) : (
-              <MapPlaceholder />
-            )}
-          </div>
+  /**
+   * The results rail, rendered EXACTLY ONCE.
+   *
+   * Rendering a desktop copy and a phone copy and hiding one with CSS
+   * would put two elements with `id="spot-<slug>"` in the document, and
+   * `handleSelect` scrolls by id — so on a phone the tap would scroll the
+   * hidden desktop copy and nothing would appear to happen. One instance
+   * that changes position at the breakpoint has no such failure mode.
+   */
+  const rail =
+    visible.length === 0 ? (
+      <div className="p-[clamp(1.5rem,1.2rem+1.6vw,2.5rem)]">
+        {/* An empty index and an over-tight filter look identical from
+            here and are not the same problem. Telling someone to loosen a
+            filter when there is nothing to filter reads as a broken page,
+            and the honest version of an empty index is an invitation. */}
+        <p className="text-h3 text-ink">
+          {spots.length === 0 ? "Nothing here yet." : "Nothing matches that."}
+        </p>
+        <p className="mt-3 max-w-[38ch] text-small text-muted">
+          {spots.length === 0
+            ? "The index is empty. It fills up one spot at a time, and nobody has gone first."
+            : "The index is still small. Loosen a filter, or add the place you were looking for."}
+        </p>
+        <div className="mt-7">
+          <ButtonLink href="/submit" tone="ember">
+            {spots.length === 0 ? "Add the first spot" : "Add a spot"}
+            <ArrowRight />
+          </ButtonLink>
         </div>
+      </div>
+    ) : (
+      <ul
+        ref={listRef}
+        // Block flow, not a flex column: as a flex column the rows are
+        // flex items and shrink to fit the rail's height, which clipped
+        // every row down to a cut-off title.
+        className="space-y-1 overflow-y-auto overscroll-contain p-2 lg:min-h-0 lg:flex-1"
+      >
+        {visible.map((spot) => (
+          <SpotRow
+            key={spot.slug}
+            spot={spot}
+            selected={spot.slug === selected}
+            onSelect={handleSelect}
+            distanceKm={
+              here ? distanceKm(here.lat, here.lng, spot.lat, spot.lng) : null
+            }
+          />
+        ))}
+      </ul>
+    );
 
-        <div className="order-2 lg:order-1 lg:col-span-5">
-          {visible.length === 0 ? (
-            <div className="shell py-[clamp(3rem,2rem+4vw,6rem)]">
-              {/* An empty index and an over-tight filter look identical
-                  from here and are not the same problem. Telling someone
-                  to loosen a filter when there is nothing to filter reads
-                  as a broken page, and the honest version of an empty
-                  index is an invitation. */}
-              <p className="text-lead font-light text-ink lowercase">
-                {spots.length === 0
-                  ? "nothing here yet."
-                  : "nothing matches that."}
-              </p>
-              <p className="mt-3 max-w-[38ch] text-small text-muted">
-                {spots.length === 0
-                  ? "the index is empty. it fills up one spot at a time, and nobody has gone first."
-                  : "the index is still small. loosen a filter, or add the place you were looking for."}
-              </p>
-              <div className="mt-8">
-                <ActionLink href="/submit" tone="accent">
-                  {spots.length === 0 ? "add the first spot" : "add a spot"}
-                </ActionLink>
-              </div>
-            </div>
+  const filterPane = (
+    <FilterRail
+      filters={filters}
+      onChange={handleFilters}
+      resultCount={visible.length}
+      totalCount={spots.length}
+      geo={geoWithClear}
+    />
+  );
+
+  return (
+    <div className="shell mt-2">
+      {/*
+        The map is the page, and the controls float on it.
+
+        On a laptop the rail and the filter pane are panes ABOVE the map
+        rather than columns beside it — which is the point of the
+        material, and also gives the map the whole width instead of five
+        twelfths of it. Below `lg` the same two panes fall back into the
+        flow, because a rail overlaying a phone-sized map would cover the
+        thing it describes.
+
+        `glass-isolate` on the frame is load-bearing: Leaflet stacks its
+        panes at z-index 400–1000 in whatever stacking context it lands
+        in, and without an isolate here those numbers compete with the
+        page chrome and paint tiles over the header.
+      */}
+      <div className="glass glass-isolate relative rounded-[var(--radius-2xl)] p-2">
+        <div className="relative h-[62vh] min-h-[380px] overflow-hidden rounded-[var(--radius-xl)] lg:h-[calc(100dvh-11rem)] lg:min-h-[560px]">
+          {mounted ? (
+            <SpotMap
+              spots={visible}
+              selectedSlug={selected}
+              onSelect={handleSelect}
+              here={here ? focus : null}
+            />
           ) : (
-            <ul ref={listRef} className="border-t border-rule lg:border-t-0">
-              {visible.map((spot) => (
-                <SpotRow
-                  key={spot.slug}
-                  spot={spot}
-                  selected={spot.slug === selected}
-                  onSelect={handleSelect}
-                  distanceKm={
-                    here
-                      ? distanceKm(here.lat, here.lng, spot.lat, spot.lng)
-                      : null
-                  }
-                />
-              ))}
-            </ul>
+            <MapPlaceholder />
           )}
         </div>
+
+        {/* Filters. Floating top-right of the map on a laptop, in the
+            flow below it on a phone. */}
+        <div className="glass-3 mt-2 rounded-[var(--radius-lg)] lg:absolute lg:top-4 lg:right-4 lg:left-[calc(23rem+1.5rem)] lg:z-30 lg:mt-0">
+          {filterPane}
+        </div>
+
+        {/* Results. Same trick, down the left. */}
+        <div className="glass-3 mt-2 rounded-[var(--radius-lg)] lg:absolute lg:inset-y-4 lg:left-4 lg:z-30 lg:mt-0 lg:flex lg:w-[23rem] lg:flex-col">
+          {rail}
+        </div>
       </div>
-    </>
+    </div>
   );
 }

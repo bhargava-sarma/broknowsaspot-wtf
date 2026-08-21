@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { TurnstileWidget } from "@/components/security/turnstile-widget";
+import { Button } from "@/components/ui/button";
 import {
   REPORT_REASON_LABELS,
   REPORT_REASONS,
@@ -45,7 +46,7 @@ type ReportControlProps = {
 
 export function ReportControl({
   endpoint,
-  label = "report this entry",
+  label = "Report this entry",
   className,
 }: ReportControlProps) {
   const [state, setState] = useState<State>({ kind: "closed" });
@@ -68,7 +69,7 @@ export function ReportControl({
       if (!response.ok) {
         setState({
           kind: "failed",
-          message: payload?.message ?? "couldn't log that. try again shortly.",
+          message: payload?.message ?? "Couldn't log that. Try again shortly.",
         });
         return;
       }
@@ -76,15 +77,15 @@ export function ReportControl({
     } catch {
       setState({
         kind: "failed",
-        message: "couldn't reach the server. try again in a moment.",
+        message: "Couldn't reach the server. Try again in a moment.",
       });
     }
   }
 
   if (state.kind === "done") {
     return (
-      <p className="font-mono text-micro text-muted lowercase">
-        report logged. thanks — someone will look at it.
+      <p className="text-tiny text-muted">
+        Report logged. Thanks — someone will look at it.
       </p>
     );
   }
@@ -95,7 +96,7 @@ export function ReportControl({
         type="button"
         onClick={() => setState({ kind: "open" })}
         className={cn(
-          "press touch-target font-mono text-micro text-faint lowercase",
+          "press touch-target text-tiny text-faint hover:text-muted",
           className,
         )}
       >
@@ -105,13 +106,15 @@ export function ReportControl({
   }
 
   return (
-    <div className={cn("max-w-[46ch]", className)}>
-      <p className="label">why are you reporting it?</p>
+    <div
+      className={cn(
+        "glass w-full max-w-[46ch] rounded-[var(--radius-lg)] p-5",
+        className,
+      )}
+    >
+      <p className="eyebrow">Why are you reporting it?</p>
 
-      <div
-        role="radiogroup"
-        className="mt-3 flex flex-col gap-1 border-b border-rule pb-3"
-      >
+      <div role="radiogroup" className="mt-3.5 flex flex-col gap-1">
         {REPORT_REASONS.map((value) => {
           const active = value === reason;
           return (
@@ -122,60 +125,65 @@ export function ReportControl({
               aria-checked={active}
               onClick={() => setReason(value)}
               className={cn(
-                "press touch-target relative text-left font-mono text-micro lowercase",
-                active ? "text-ink" : "text-faint",
+                "press touch-target flex items-center gap-2.5 rounded-[var(--radius-xs)] px-2.5 py-2 text-left text-tiny transition-colors duration-[var(--dur-ui)]",
+                active
+                  ? "bg-ink/[0.08] font-semibold text-ink"
+                  : "font-medium text-muted hover:bg-ink/[0.05] hover:text-ink",
               )}
             >
-              <span className="mr-2" aria-hidden="true">
-                {active ? "▪" : "▫"}
-              </span>
+              <span
+                aria-hidden="true"
+                className={cn(
+                  "block size-2 shrink-0 rounded-full",
+                  active ? "bg-accent" : "bg-ink/20",
+                )}
+              />
               {REPORT_REASON_LABELS[value]}
             </button>
           );
         })}
       </div>
 
-      <label className="label mt-5 block" htmlFor="report-detail">
-        anything else (optional)
+      <label className="eyebrow mt-5 block" htmlFor="report-detail">
+        Anything else (optional)
       </label>
-      <textarea
-        id="report-detail"
-        value={detail}
-        rows={2}
-        maxLength={500}
-        onChange={(event) => setDetail(event.target.value)}
-        className="w-full resize-y border-b border-rule bg-transparent pt-2 pb-2 text-small text-ink transition-colors duration-200 outline-none hover:border-muted focus:border-ink"
-      />
+      <div className="well mt-2.5 rounded-[var(--radius-md)] px-3.5 py-2.5">
+        <textarea
+          id="report-detail"
+          value={detail}
+          rows={2}
+          maxLength={500}
+          onChange={(event) => setDetail(event.target.value)}
+          className="w-full resize-y bg-transparent text-small text-ink outline-none"
+        />
+      </div>
 
       <div className="mt-5">
         <TurnstileWidget onToken={setToken} />
       </div>
 
       {state.kind === "failed" ? (
-        <p
-          role="alert"
-          className="mt-4 font-mono text-micro text-accent lowercase"
-        >
+        <p role="alert" className="mt-4 text-tiny text-accent">
           {state.message}
         </p>
       ) : null}
 
-      <div className="mt-6 flex flex-wrap items-center gap-x-8 gap-y-3">
-        <button
-          type="button"
+      <div className="mt-5 flex flex-wrap items-center gap-3">
+        <Button
+          tone="ember"
+          size="sm"
           onClick={submit}
           disabled={!reason || state.kind === "sending"}
-          className="press touch-target border-b border-accent pb-1 font-mono text-micro text-accent lowercase disabled:opacity-40"
         >
-          {state.kind === "sending" ? "sending…" : "send report"}
-        </button>
-        <button
-          type="button"
+          {state.kind === "sending" ? "Sending…" : "Send report"}
+        </Button>
+        <Button
+          tone="quiet"
+          size="sm"
           onClick={() => setState({ kind: "closed" })}
-          className="press touch-target font-mono text-micro text-faint lowercase"
         >
-          cancel
-        </button>
+          Cancel
+        </Button>
       </div>
     </div>
   );

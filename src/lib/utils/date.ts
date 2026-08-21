@@ -13,16 +13,14 @@ const minuteFormat = new Intl.DateTimeFormat("en-GB", {
   timeZone: "UTC",
 });
 
-/** `14 aug 2026`. Lowercased to match the rest of the UI copy. */
+/** `14 Aug 2026`. */
 export function formatDate(iso: string): string {
   const parsed = new Date(iso);
-  return Number.isNaN(parsed.getTime())
-    ? iso
-    : dayFormat.format(parsed).toLowerCase();
+  return Number.isNaN(parsed.getTime()) ? iso : dayFormat.format(parsed);
 }
 
 /**
- * `14 aug 2026, 09:31 utc`. Pinned to UTC rather than the viewer's zone:
+ * `14 Aug 2026, 09:31 UTC`. Pinned to UTC rather than the viewer's zone:
  * these render in moderation records, where two people comparing notes
  * need to be reading the same clock. It also keeps the server and client
  * renders identical, which a local-time format would not.
@@ -30,5 +28,5 @@ export function formatDate(iso: string): string {
 export function formatTimestamp(iso: string): string {
   const parsed = new Date(iso);
   if (Number.isNaN(parsed.getTime())) return iso;
-  return `${minuteFormat.format(parsed).toLowerCase()} utc`;
+  return `${minuteFormat.format(parsed)} UTC`;
 }

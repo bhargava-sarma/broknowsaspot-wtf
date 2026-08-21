@@ -5,14 +5,14 @@ export function SignOut({ email }: { email: string }) {
   return (
     <form
       action={signOutAction}
-      className="flex flex-wrap items-baseline gap-4"
+      className="glass flex flex-wrap items-center gap-4 rounded-[var(--radius-lg)] px-4 py-3"
     >
-      <span className="font-mono text-micro text-faint lowercase">{email}</span>
+      <span className="text-tiny text-faint">{email}</span>
       <button
         type="submit"
-        className="press touch-target border-b border-rule pb-1 font-mono text-micro text-muted lowercase"
+        className="press touch-target text-tiny font-semibold text-accent"
       >
-        sign out
+        Sign out
       </button>
     </form>
   );

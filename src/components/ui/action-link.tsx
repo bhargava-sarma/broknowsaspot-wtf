@@ -5,24 +5,18 @@ import { cn } from "@/lib/utils/cn";
 type ActionLinkProps = {
   href: string;
   children: React.ReactNode;
-  /** `accent` is the single primary call to action on a page — use once. */
+  /** `accent` is the single primary text link on a page — use once. */
   tone?: "accent" | "ink" | "muted";
   className?: string;
 };
 
 /**
- * The site's only call-to-action idiom.
+ * A text link that goes somewhere, as distinct from a `Button`.
  *
- * Borderless by definition: a monospace label, a hairline underneath, and
- * a mark that steps right on hover. No fill, no radius, no shadow — the
- * rule *is* the button, which is why it stays on the flat content plane
- * rather than becoming glass like the floating controls did.
- *
- * The hairline is two stacked rules rather than one. The lower is the
- * resting state; the upper is the same line in a stronger tone, scaled to
- * nothing on its left origin and drawn across on hover. A single line
- * changing colour reads as a state change — a line being *drawn* reads as
- * a response, and costs one composited transform to say so.
+ * Where a button is a surface, this is just words and a mark that steps
+ * right when you reach for it. It is what a section heading's "see all"
+ * wants to be — present enough to click, quiet enough not to compete with
+ * the glass panes around it.
  */
 export function ActionLink({
   href,
@@ -34,48 +28,33 @@ export function ActionLink({
     tone === "accent"
       ? "text-accent"
       : tone === "muted"
-        ? "text-muted"
+        ? "text-muted hover:text-ink"
         : "text-ink";
-
-  const ruleClass =
-    tone === "accent"
-      ? "bg-accent"
-      : tone === "muted"
-        ? "bg-rule"
-        : "bg-rule-strong";
-
-  const drawClass = tone === "muted" ? "bg-ink" : ruleClass;
 
   return (
     <Link
       href={href}
       className={cn(
-        "group press touch-target relative inline-flex items-center gap-3 pb-2 font-mono text-tiny tracking-[0.04em] lowercase",
+        "group press touch-target inline-flex items-center gap-2 text-small font-medium",
         toneClass,
         className,
       )}
     >
       <span>{children}</span>
-      <span
+      <svg
+        width="15"
+        height="15"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth={2.2}
+        strokeLinecap="round"
+        strokeLinejoin="round"
         aria-hidden="true"
-        className="inline-block transition-transform duration-300 ease-[var(--ease-spring)] group-hover:translate-x-1 motion-reduce:transition-none"
+        className="transition-transform duration-300 ease-[var(--ease-glass)] group-hover:translate-x-1 motion-reduce:transition-none"
       >
-        →
-      </span>
-
-      {/* resting rule */}
-      <span
-        aria-hidden="true"
-        className={cn("absolute inset-x-0 bottom-0 block h-px", ruleClass)}
-      />
-      {/* the one that draws across */}
-      <span
-        aria-hidden="true"
-        className={cn(
-          "absolute inset-x-0 bottom-0 block h-px origin-left scale-x-0 transition-transform duration-400 ease-[var(--ease-damped)] group-hover:scale-x-100 motion-reduce:transition-none",
-          drawClass,
-        )}
-      />
+        <path d="M5 12h13M13 6l6 6-6 6" />
+      </svg>
     </Link>
   );
 }

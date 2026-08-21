@@ -47,6 +47,9 @@ type SheetProps = {
   footer?: ReactNode;
 };
 
+/** Mirrors `--ease-exit` in globals.css. */
+const EXIT = [0.32, 0, 0.67, 0] as const;
+
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
@@ -140,13 +143,13 @@ export function Sheet({ open, onClose, title, children, footer }: SheetProps) {
         >
           <motion.button
             type="button"
-            aria-label="close filters"
+            aria-label="Close"
             onClick={onClose}
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={fade}
-            className="absolute inset-0 w-full cursor-default bg-ink/25 backdrop-blur-[2px]"
+            className="absolute inset-0 w-full cursor-default bg-ink/35 backdrop-blur-[3px]"
           />
 
           <motion.div
@@ -157,29 +160,34 @@ export function Sheet({ open, onClose, title, children, footer }: SheetProps) {
             tabIndex={-1}
             initial={reduce ? { opacity: 0 } : { y: "100%" }}
             animate={reduce ? { opacity: 1 } : { y: 0 }}
-            exit={reduce ? { opacity: 0 } : { y: "100%" }}
+            // Arrives on a spring — it should feel picked up. Leaves on a
+            // curve: the spring took over 800ms to clear the screen, and
+            // dismissing something has to feel immediate.
+            exit={
+              reduce
+                ? { opacity: 0 }
+                : { y: "100%", transition: { duration: 0.26, ease: EXIT } }
+            }
             transition={reduce ? fade : springSurface}
-            className="glass glass-dense glass-rim absolute inset-x-0 bottom-0 max-h-[82dvh] overflow-hidden rounded-t-[var(--radius-glass-lg)] outline-none"
+            className="glass-3 absolute inset-x-0 bottom-0 max-h-[82dvh] overflow-hidden rounded-t-[var(--radius-2xl)] outline-none"
           >
             {/* Grab handle. Purely a signifier — it says "this came from
                 the bottom edge and goes back there" at a glance. */}
             <div className="flex justify-center pt-2.5 pb-1">
               <span
                 aria-hidden="true"
-                className="block h-1 w-9 rounded-full bg-ink/20"
+                className="block h-1 w-10 rounded-full bg-ink/25"
               />
             </div>
 
             <div className="flex items-center justify-between px-[var(--gutter)] pt-2 pb-3">
-              <h2 className="font-mono text-micro tracking-[0.13em] text-faint lowercase">
-                {title}
-              </h2>
+              <h2 className="text-h3 text-ink">{title}</h2>
               <button
                 type="button"
                 onClick={onClose}
-                className="press touch-target -mr-2 px-2 font-mono text-micro text-muted lowercase"
+                className="press touch-target -mr-2 px-2 text-small font-semibold text-accent"
               >
-                done
+                Done
               </button>
             </div>
 
