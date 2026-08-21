@@ -29,3 +29,22 @@ export const REPORT_REASON_LABELS: Record<ReportReason, string> = {
 export function isReportReason(value: unknown): value is ReportReason {
   return REPORT_REASONS.includes(value as ReportReason);
 }
+
+/**
+ * What a report tells a moderator, and nothing more.
+ *
+ * Lives here rather than beside the query that builds it because the
+ * admin screen is a client component: a type imported from a
+ * `server-only` module is erased at compile time and safe in principle,
+ * but it puts a server module's name in a client file's imports for no
+ * reason. This module is pure.
+ *
+ * `reporterKey` is deliberately absent and must stay absent. It is an
+ * HMAC of a network address — pseudonymous, but stable enough that a
+ * list of them beside a list of reports is a map of who objects to what.
+ */
+export type ReportDetail = {
+  reason: ReportReason;
+  detail: string | null;
+  at: string;
+};

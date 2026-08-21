@@ -341,6 +341,100 @@ async function hideSpotRow(spotId: string, reporters: number): Promise<void> {
   }
 }
 
+/**
+ * Record a report against a note, and hide the note if enough distinct
+ * people have now reported it.
+ *
+ * Mirrors `reportSpot`, including answering a duplicate as success: the
+ * outcome the reporter wanted is already true, and "you already reported
+ * this" would confirm that their pseudonymous key is stable, which is an
+ * invitation to probe it.
+ *
+ * A note carries no denormalised count the way a spot does, because
+ * nothing sorts by it — the moderation screen reads the reports
+ * themselves. So the threshold is counted at report time and nowhere
+ * else.
+ */
+export async function reportNote(
+  noteId: string,
+  reason: string,
+  detail: string | null,
+  reporterKey: string,
+): Promise<Result<{ hidden: boolean }>> {
+  const tables = adminTables();
+  if (!tables) return { ok: false, reason: "no database connection" };
+
+  let note: { $id: string; spotId: string; hiddenAt?: string | null };
+  try {
+    // Cast through unknown: getRow is generic over the row shape and
+    // its default carries only the $-prefixed system fields.
+    note = (await tables.getRow({
+      databaseId: DATABASE_ID,
+      tableId: TABLES.notes,
+      rowId: noteId,
+    })) as unknown as typeof note;
+  } catch {
+    return { ok: false, reason: "no such note" };
+  }
+
+  try {
+    await tables.createRow({
+      databaseId: DATABASE_ID,
+      tableId: TABLES.noteReports,
+      rowId: ID.unique(),
+      data: {
+        noteId: note.$id,
+        spotId: String(note.spotId),
+        reason,
+        detail: detail || null,
+        reporterKey,
+      },
+    });
+  } catch (error) {
+    if (!conflict(error)) throw error;
+    return { ok: true, value: { hidden: Boolean(note.hiddenAt) } };
+  }
+
+  const { total } = await tables.listRows({
+    databaseId: DATABASE_ID,
+    tableId: TABLES.noteReports,
+    queries: [Query.equal("noteId", note.$id), Query.limit(1)],
+  });
+  const reporters = total ?? 0;
+
+  if (reporters < REPORT_THRESHOLD || note.hiddenAt) {
+    return { ok: true, value: { hidden: Boolean(note.hiddenAt) } };
+  }
+
+  // The parent's visibility is the ceiling either way, so hiding a note
+  // only ever tightens: notePermissions(false, _) is the same set
+  // whatever the spot's state.
+  await tables.updateRow({
+    databaseId: DATABASE_ID,
+    tableId: TABLES.notes,
+    rowId: note.$id,
+    data: { hiddenAt: new Date().toISOString() },
+    permissions: notePermissions(false, false),
+  });
+
+  await tables.createRow({
+    databaseId: DATABASE_ID,
+    tableId: TABLES.moderationLog,
+    rowId: ID.unique(),
+    data: {
+      spotId: String(note.spotId),
+      noteId: note.$id,
+      action: "hide",
+      reason: `auto-hidden at ${reporters} reports`,
+      // Nobody decided this; the admin screen reads the absence.
+      actorId: null,
+      actorEmail: null,
+    },
+  });
+
+  return { ok: true, value: { hidden: true } };
+}
+
 /** Rows written by one key inside a window — the rate limiter's counter. */
 /** Records an uploaded file against the key that sent it. */
 export async function logPhoto(

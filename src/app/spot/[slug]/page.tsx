@@ -195,7 +195,7 @@ export default async function SpotPage({
 
           {/* Deliberately quiet and last. Findable, not an invitation. */}
           <div className="col-span-12 mt-8 lg:col-span-4 lg:mt-0 lg:text-right">
-            <ReportControl slug={spot.slug} />
+            <ReportControl endpoint={`/api/spots/${spot.slug}/report`} />
           </div>
         </div>
       </section>

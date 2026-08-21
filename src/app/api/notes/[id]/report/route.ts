@@ -1,28 +1,32 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 
-import { reportSpot } from "@/lib/appwrite/write";
 import { isAppwriteWriteEnabled } from "@/lib/appwrite/server";
-import { requestKey } from "@/lib/security/request-key";
+import { reportNote } from "@/lib/appwrite/write";
 import { checkHuman } from "@/lib/security/human-check";
+import { requestKey } from "@/lib/security/request-key";
 import { isReportReason } from "@/lib/spots/reports";
 
 /**
- * Report a spot.
+ * Report a note.
  *
- * A spot auto-hides once enough distinct people report it. The threshold
- * lives in server-only code and is never sent to the client: publishing
- * "N reports removes a spot" is an instruction manual for brigading.
+ * The same shape as reporting a spot, and the same silences. The
+ * threshold is never sent to the client, and the response never says how
+ * many reports a note has or whether this one hid it — a reply that
+ * changed once the count moved would turn the endpoint into the progress
+ * bar the threshold exists to avoid.
  *
- * The response never reveals the running total or how close a spot is.
- * Saying so turns the count into a progress bar for taking an entry down.
+ * A duplicate is answered as success by `reportNote`, for the same
+ * reason: the reporter's desired outcome is already true, and telling
+ * them "you already reported this" confirms their pseudonymous key is
+ * stable enough to probe.
  */
 
 export async function POST(
   request: Request,
-  { params }: { params: Promise<{ slug: string }> },
+  { params }: { params: Promise<{ id: string }> },
 ) {
-  const { slug } = await params;
+  const { id } = await params;
 
   if (!isAppwriteWriteEnabled) {
     return NextResponse.json(
@@ -65,9 +69,6 @@ export async function POST(
     );
   }
 
-  // A fresh Turnstile token, or the ticket from one already redeemed.
-  // Reporting two things in a row is one visit and one human, and the
-  // widget only issues a token once.
   const human = await checkHuman(request, body.turnstileToken, reporterKey);
   if (!human.ok) {
     return NextResponse.json(
@@ -77,23 +78,26 @@ export async function POST(
   }
 
   try {
-    const logged = await reportSpot(slug, body.reason, detail, reporterKey);
+    const logged = await reportNote(id, body.reason, detail, reporterKey);
     if (!logged.ok) {
       return NextResponse.json(
-        { ok: false, message: "no such spot." },
+        { ok: false, message: "no such note." },
         { status: 404 },
       );
     }
 
-    // The threshold may have just hidden it, in which case the cached
-    // pages have to go.
-    revalidatePath("/");
+    // The threshold may have just hidden it, so the spot page's cached
+    // copy is stale. The note id alone does not name a route, so the
+    // whole index is refreshed rather than one page.
     revalidatePath("/explore");
-    revalidatePath(`/spot/${slug}`);
+    revalidatePath("/spot/[slug]", "page");
 
     return NextResponse.json({ ok: true, message: "logged. thanks." });
   } catch (thrown) {
-    console.error(`[reports] could not record a report for "${slug}"`, thrown);
+    console.error(
+      `[reports] could not record a report for note "${id}"`,
+      thrown,
+    );
     return NextResponse.json(
       { ok: false, message: "couldn't log that. try again in a moment." },
       { status: 500 },

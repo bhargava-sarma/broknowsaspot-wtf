@@ -5,6 +5,7 @@ import { ID, type Models, Query, TablesDB } from "node-appwrite";
 import { adminSessionClient } from "@/lib/appwrite/auth";
 import { notePermissions, spotPermissions } from "@/lib/appwrite/permissions";
 import { DATABASE_ID, TABLES } from "@/lib/appwrite/schema";
+import type { ReportDetail, ReportReason } from "@/lib/spots/reports";
 import { adminTables } from "@/lib/appwrite/server";
 
 /**
@@ -46,6 +47,8 @@ export type NoteEntry = {
   body: string;
   notedOn: string;
   hidden: boolean;
+  /** Why it was reported. Never who by. */
+  reports: ReportDetail[];
 };
 
 type Row = Record<string, unknown> & { $id: string; $createdAt: string };
@@ -54,6 +57,55 @@ function stateOf(row: Row): QueueState {
   if (row.removedAt) return "removed";
   if (row.hiddenAt) return "hidden";
   return "visible";
+}
+
+/**
+ * Reports for the spots in the queue, read as the signed-in admin.
+ *
+ * The count on the spot row says *how many*, which is enough to sort by
+ * and nothing else. A moderator deciding whether to restore something
+ * needs to know it was reported as "unsafe" rather than "spam" — those
+ * are opposite decisions, and until now the screen showed the same
+ * number for both.
+ *
+ * Read through the session rather than the API key, like everything else
+ * on this surface: the reports table grants read to the admins team, so
+ * Appwrite refuses this outright for anyone else instead of trusting a
+ * check in our code.
+ */
+export async function readReports(
+  secret: string,
+  spotIds: string[],
+): Promise<Map<string, ReportDetail[]>> {
+  const byId = new Map<string, ReportDetail[]>();
+  if (spotIds.length === 0) return byId;
+
+  const client = adminSessionClient(secret);
+  if (!client) return byId;
+
+  const { rows } = await new TablesDB(client).listRows({
+    databaseId: DATABASE_ID,
+    tableId: TABLES.reports,
+    // Only the spots actually on screen, newest first.
+    queries: [
+      Query.equal("spotId", spotIds),
+      Query.orderDesc("$createdAt"),
+      Query.limit(500),
+    ],
+  });
+
+  for (const row of rows as unknown as Row[]) {
+    const spotId = String(row.spotId);
+    const list = byId.get(spotId) ?? [];
+    list.push({
+      reason: row.reason as ReportReason,
+      detail: (row.detail as string | null) || null,
+      at: row.$createdAt,
+    });
+    byId.set(spotId, list);
+  }
+
+  return byId;
 }
 
 export async function readQueue(secret: string): Promise<QueueEntry[]> {
@@ -97,18 +149,40 @@ export async function readNoteQueue(secret: string): Promise<NoteEntry[]> {
   if (!client) return [];
   const tables = new TablesDB(client);
 
-  const [{ rows: noteRows }, { rows: spotRows }] = await Promise.all([
-    tables.listRows({
-      databaseId: DATABASE_ID,
-      tableId: TABLES.notes,
-      queries: [Query.orderDesc("$createdAt"), Query.limit(200)],
-    }),
-    tables.listRows({
-      databaseId: DATABASE_ID,
-      tableId: TABLES.spots,
-      queries: [Query.limit(500)],
-    }),
-  ]);
+  const [{ rows: noteRows }, { rows: spotRows }, { rows: reportRows }] =
+    await Promise.all([
+      tables.listRows({
+        databaseId: DATABASE_ID,
+        tableId: TABLES.notes,
+        queries: [Query.orderDesc("$createdAt"), Query.limit(200)],
+      }),
+      tables.listRows({
+        databaseId: DATABASE_ID,
+        tableId: TABLES.spots,
+        queries: [Query.limit(500)],
+      }),
+      // Unfiltered: a note carries no denormalised count to pre-filter
+      // on, and the whole table is small enough that one read beats a
+      // second round trip per note.
+      tables.listRows({
+        databaseId: DATABASE_ID,
+        tableId: TABLES.noteReports,
+        queries: [Query.orderDesc("$createdAt"), Query.limit(500)],
+      }),
+    ]);
+
+  const reportsByNote = new Map<string, ReportDetail[]>();
+  for (const row of reportRows as unknown as Row[]) {
+    const noteId = String(row.noteId);
+    const list = reportsByNote.get(noteId) ?? [];
+    // reporterKey stops here, as it does everywhere else.
+    list.push({
+      reason: row.reason as ReportReason,
+      detail: (row.detail as string | null) || null,
+      at: row.$createdAt,
+    });
+    reportsByNote.set(noteId, list);
+  }
 
   const spots = new Map(
     (spotRows as unknown as Row[]).map((row) => [
@@ -117,19 +191,28 @@ export async function readNoteQueue(secret: string): Promise<NoteEntry[]> {
     ]),
   );
 
-  return (noteRows as unknown as Row[]).map((row) => {
-    const parent = spots.get(String(row.spotId));
-    return {
-      id: row.$id,
-      spotId: String(row.spotId),
-      spotSlug: parent?.slug ?? "—",
-      spotName: parent?.name ?? "unknown spot",
-      author: String(row.author ?? "anonymous"),
-      body: String(row.body ?? ""),
-      notedOn: String(row.notedOn ?? "").slice(0, 10),
-      hidden: Boolean(row.hiddenAt),
-    };
-  });
+  return (noteRows as unknown as Row[])
+    .map((row) => {
+      const parent = spots.get(String(row.spotId));
+      return {
+        reports: reportsByNote.get(row.$id) ?? [],
+        id: row.$id,
+        spotId: String(row.spotId),
+        spotSlug: parent?.slug ?? "—",
+        spotName: parent?.name ?? "unknown spot",
+        author: String(row.author ?? "anonymous"),
+        body: String(row.body ?? ""),
+        notedOn: String(row.notedOn ?? "").slice(0, 10),
+        hidden: Boolean(row.hiddenAt),
+      };
+    })
+    .sort((a, b) => {
+      // Reported notes first, then the rest newest-first as before. A
+      // note nobody has objected to needs no decision; the list exists
+      // for the ones that do.
+      const weight = (note: NoteEntry) => (note.reports.length > 0 ? 1 : 0);
+      return weight(b) - weight(a) || b.reports.length - a.reports.length;
+    });
 }
 
 export type LogEntry = {

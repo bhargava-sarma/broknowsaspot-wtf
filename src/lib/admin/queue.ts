@@ -1,7 +1,7 @@
 import "server-only";
 
 import * as moderate from "@/lib/appwrite/moderate";
-import type { ReportReason } from "@/lib/spots/reports";
+import type { ReportDetail } from "@/lib/spots/reports";
 
 /**
  * What the moderation screen reads.
@@ -24,7 +24,8 @@ export type QueueEntry = {
   addedAt: string;
   hiddenReason: string | null;
   reportCount: number;
-  reasons: ReportReason[];
+  /** Why it was reported. Never who by — see moderate.readReports. */
+  reports: ReportDetail[];
   autoHidden: boolean;
 };
 
@@ -36,6 +37,8 @@ export type NoteEntry = {
   body: string;
   notedOn: string;
   hidden: boolean;
+  /** Why it was reported. Never who by. */
+  reports: ReportDetail[];
 };
 
 export type LogEntry = {
@@ -73,8 +76,15 @@ async function read<T>(
 }
 
 export function readQueue(secret?: string): Promise<Result<QueueEntry>> {
-  return read("the queue", secret, async (session) =>
-    (await moderate.readQueue(session)).map((entry) => ({
+  return read("the queue", secret, async (session) => {
+    const entries = await moderate.readQueue(session);
+
+    // Only for spots that have been reported at all — most have not, and
+    // there is no reason to ask the reports table about them.
+    const reported = entries.filter((e) => e.reportCount > 0).map((e) => e.id);
+    const reports = await moderate.readReports(session, reported);
+
+    return entries.map((entry) => ({
       slug: entry.slug,
       name: entry.name,
       region: entry.region,
@@ -83,14 +93,13 @@ export function readQueue(secret?: string): Promise<Result<QueueEntry>> {
       addedAt: entry.addedAt,
       hiddenReason: entry.hiddenReason,
       reportCount: entry.reportCount,
-      // Per-reason breakdown would mean shipping report rows to the
-      // server to length() them, and reports are the one table whose
-      // contents should travel as little as possible. The count is
-      // denormalised onto the spot for exactly this.
-      reasons: [] as ReportReason[],
+      // What was reported, never who reported it. `readReports` drops
+      // reporterKey before this sees a row; the count on the spot row is
+      // still what the sort uses.
+      reports: reports.get(entry.id) ?? [],
       autoHidden: entry.autoHidden,
-    })),
-  );
+    }));
+  });
 }
 
 export function readNoteQueue(secret?: string): Promise<Result<NoteEntry>> {
@@ -103,6 +112,7 @@ export function readNoteQueue(secret?: string): Promise<Result<NoteEntry>> {
       body: note.body,
       notedOn: note.notedOn,
       hidden: note.hidden,
+      reports: note.reports,
     })),
   );
 }
