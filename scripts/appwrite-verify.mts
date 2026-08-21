@@ -16,6 +16,7 @@
 
 import {
   Client,
+  ID,
   Storage,
   TablesDB,
   Teams,
@@ -23,6 +24,7 @@ import {
   Permission,
   Role,
 } from "node-appwrite";
+import { InputFile } from "node-appwrite/file";
 import {
   ADMIN_READ,
   ADMIN_TEAM_ID,
@@ -33,6 +35,12 @@ import {
   SCHEMA,
   TABLES,
 } from "@/lib/appwrite/schema";
+
+/** A valid 1x1 JPEG, so the probe upload passes the bucket's own rules. */
+const PROBE_JPEG_B64 =
+  "/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0a" +
+  "HBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAFAABAAAAAAAA" +
+  "AAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AKp//2Q==";
 
 const endpoint = process.env.APPWRITE_ENDPOINT;
 const projectId =
@@ -506,6 +514,46 @@ async function main() {
   } catch {
     add("photo bucket exists", "true", "false");
   }
+
+  // Configuration is not capability. Everything above reads the bucket,
+  // which needs `buckets.read`; uploading needs `files.write`, which is a
+  // separate scope on the same key. A project can pass every check above
+  // and still refuse every upload — and it did, which is why this now
+  // performs a real write instead of inferring one.
+  let uploadable = "no";
+  try {
+    const probe = (await storage.createFile({
+      bucketId: PHOTO_BUCKET_ID,
+      fileId: ID.unique(),
+      // A 1x1 jpeg: the smallest thing the bucket's own rules accept.
+      file: InputFile.fromBuffer(
+        Buffer.from(PROBE_JPEG_B64, "base64"),
+        "probe.jpg",
+      ),
+      permissions: [Permission.read(Role.any())],
+    })) as { $id: string };
+
+    uploadable = "yes";
+    // Cleaning up also proves `files.write` covers deletion, which the
+    // moderation path needs when a photo is taken down.
+    try {
+      await storage.deleteFile({
+        bucketId: PHOTO_BUCKET_ID,
+        fileId: probe.$id,
+      });
+    } catch {
+      uploadable = "yes (but could not delete)";
+    }
+  } catch (error) {
+    const code = (error as { code?: number }).code ?? 0;
+    const type = (error as { type?: string }).type ?? "";
+    uploadable =
+      code === 401 || code === 403 || /scope|unauthorized/i.test(type)
+        ? "no — key lacks files.write"
+        : `no — ${type || code || "unknown"}`;
+    if (process.env.VERIFY_DEBUG) console.error("[probe]", error);
+  }
+  add("api key can upload a photo", "yes", uploadable);
 
   // ----------------------------------------------------------- report --
   const width = Math.max(...checks.map((c) => c.name.length), 4);

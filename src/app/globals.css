@@ -753,6 +753,18 @@
   background-color: var(--color-paper-raised);
   font-family: var(--font-mono);
   outline-offset: -2px;
+
+  /* Leaflet stacks its panes from z-index 400 to 700 and its controls at
+     1000. Those are absolute values in whatever stacking context the map
+     happens to land in — and with none of its own, they were competing
+     with the page's chrome, which sits between 30 and 100. The result:
+     tiles and markers painting over the sticky header and the filter bar
+     as the page scrolled past.
+
+     `isolation` makes the container a stacking context without giving it
+     a z-index of its own, so the whole map resolves as one layer at its
+     place in the document and its internals stay inside it. */
+  isolation: isolate;
 }
 
 .leaflet-container.leaflet-container a {
