@@ -27,6 +27,12 @@
   "include": [
     "next-env.d.ts",
     "**/*.ts",
+    // `**/*.ts` does not match `.mts`, so every script — provision,
+    // seed, verify, the border check — sat outside typecheck entirely.
+    // Two bugs shipped through that gap: an undefined import in the
+    // verifier and a redeclared binding in the provisioner, both of
+    // which only surfaced when the script was actually run.
+    "**/*.mts",
     "**/*.tsx",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"

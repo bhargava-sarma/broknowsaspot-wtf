@@ -74,6 +74,26 @@ function isMissing(error: unknown): boolean {
   return (error as { code?: number })?.code === 404;
 }
 
+/**
+ * Waits for a dropped index to actually disappear.
+ *
+ * Deleting is asynchronous like everything else here, and creating the
+ * replacement while the old one is still `deleting` conflicts — which
+ * `step` would report as "(exists)", leaving the wrong index in place and
+ * the run looking successful.
+ */
+async function waitForIndexGone(tableId: string, key: string): Promise<void> {
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    const { indexes } = (await db.listIndexes({
+      databaseId: DATABASE_ID,
+      tableId,
+    })) as { indexes: Array<{ key: string }> };
+    if (!indexes.some((index) => index.key === key)) return;
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  throw new Error(`index ${key} on ${tableId} did not finish deleting`);
+}
+
 async function step<T>(label: string, run: () => Promise<T>): Promise<void> {
   try {
     await run();
@@ -390,7 +410,66 @@ async function provisionTable(table: TableSpec): Promise<void> {
   await waitForColumns(table.id);
   console.log(" — available");
 
+  // What is actually on the table, so an index whose definition moved can
+  // be told from one that is simply already there.
+  //
+  // Creating an index that exists returns a conflict, which `step` reports
+  // as "(exists)" and moves past — correct when the definition matches and
+  // silently wrong when it does not. An index widened by a column would
+  // keep its old, narrower constraint with nothing anywhere to say so,
+  // which for a *unique* index means a duplicate the schema forbids is
+  // still accepted. That is the kind of drift this whole script exists to
+  // prevent, so a changed definition is dropped and rebuilt.
+  let liveIndexes: Map<string, { columns: string[]; type: string }>;
+  try {
+    const { indexes } = (await db.listIndexes({
+      databaseId: DATABASE_ID,
+      tableId: table.id,
+    })) as {
+      indexes: Array<{
+        key: string;
+        type: string;
+        attributes?: string[];
+        columns?: string[];
+      }>;
+    };
+    liveIndexes = new Map(
+      indexes.map((index) => [
+        index.key,
+        {
+          // The field is `attributes` on older responses and `columns` on
+          // newer ones; neither is guaranteed, so both are read.
+          columns: index.columns ?? index.attributes ?? [],
+          type: String(index.type),
+        },
+      ]),
+    );
+  } catch {
+    // A table too new to list indexes on has none to reconcile.
+    liveIndexes = new Map();
+  }
+
   for (const index of table.indexes) {
+    const existing = liveIndexes.get(index.key);
+    if (existing) {
+      const sameColumns =
+        existing.columns.length === index.columns.length &&
+        existing.columns.every((column, i) => column === index.columns[i]);
+      if (!sameColumns || existing.type !== index.type) {
+        console.log(
+          `  ~ index ${index.key} changed ` +
+            `(${existing.type} [${existing.columns.join(", ")}] → ` +
+            `${index.type} [${index.columns.join(", ")}]) — rebuilding`,
+        );
+        await db.deleteIndex({
+          databaseId: DATABASE_ID,
+          tableId: table.id,
+          key: index.key,
+        });
+        await waitForIndexGone(table.id, index.key);
+      }
+    }
+
     // A spatial index refuses a nullable column, which is why `location`
     // is required. If this fails with column_index_invalid, the column's
     // `required` is the thing to look at, not the index.

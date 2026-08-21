@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useState } from "react";
 
 import { NoteForm } from "@/components/spot/note-form";
+import { ReportControl } from "@/components/spot/report-control";
 import type { CommunityNote } from "@/lib/types/spot";
 import { formatDate } from "@/lib/utils/date";
 
@@ -72,6 +73,16 @@ export function SpotNotes({
                   ))}
                 </ul>
               ) : null}
+
+              {/* Quiet, and last. A note is somebody's account of going
+                  somewhere; the way to disagree with one is to leave your
+                  own, and reporting is for the cases where that will not
+                  do. Prominence here would invite the opposite. */}
+              <ReportControl
+                endpoint={`/api/notes/${note.id}/report`}
+                label="report this note"
+                className="mt-4"
+              />
             </li>
           ))}
         </ul>

@@ -37,6 +37,7 @@ export const TABLES = {
   reports: "reports",
   submissionLog: "submission_log",
   noteLog: "note_log",
+  noteReports: "note_reports",
   photoLog: "photo_log",
   moderationLog: "moderation_log",
 } as const;
@@ -295,6 +296,42 @@ export const SCHEMA: TableSpec[] = [
         type: "unique",
         columns: ["spotId", "reporterKey"],
       },
+      { key: "spot_idx", type: "key", columns: ["spotId"] },
+    ],
+  },
+
+  {
+    id: TABLES.noteReports,
+    name: "note reports",
+    // Notes get their own table rather than a `noteId` column on
+    // `reports`. Sharing would mean widening that table's unique index
+    // from (spotId, reporterKey) to include the note — and an index whose
+    // columns change is exactly what the provisioner cannot migrate: it
+    // sees the key already exists and moves on, leaving the old
+    // constraint in place with nothing to say so. A second table needs no
+    // migration and no null-comparison semantics to reason about.
+    permissions: [ADMIN_READ],
+    rowSecurity: false,
+    columns: [
+      { name: "noteId", kind: "string", size: 64, required: true },
+      // Denormalised so the moderation screen can group a note's reports
+      // under its spot without reading the note first.
+      { name: "spotId", kind: "string", size: 64, required: true },
+      { name: "reason", kind: "enum", values: REPORT_REASONS, required: true },
+      { name: "detail", kind: "string", size: 500, required: false },
+      // HMAC of the client address, never the address — same weak,
+      // deliberate identity as the spot reports.
+      { name: "reporterKey", kind: "string", size: 64, required: true },
+    ],
+    indexes: [
+      // One report per person per note, enforced here rather than by the
+      // route remembering to check.
+      {
+        key: "one_per_note_reporter",
+        type: "unique",
+        columns: ["noteId", "reporterKey"],
+      },
+      { key: "note_idx", type: "key", columns: ["noteId"] },
       { key: "spot_idx", type: "key", columns: ["spotId"] },
     ],
   },
