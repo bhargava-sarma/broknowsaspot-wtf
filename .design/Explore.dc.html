@@ -1,0 +1,271 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <script>
+    /* The webfonts are attached from script rather than as a <link> in this
+       block. A stylesheet link here is awaited before the artboard compiles,
+       and a request that never resolves — offline, or a network that blocks
+       the font CDN — leaves the frame stuck on "Loading artboard…" with no
+       error path out. Appending it after the fact makes the fonts an
+       enhancement: they swap in when they arrive, and the fallback stack
+       renders the design either way. */
+    (function () {
+      var id = "aurora-webfonts";
+      if (document.getElementById(id)) return;
+      var link = document.createElement("link");
+      link.id = id;
+      link.rel = "stylesheet";
+      link.href = "https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700&display=swap";
+      document.head.appendChild(link);
+    })();
+  </script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body { margin: 0; background: #07060f; color: #f2eff5; font-family: Manrope, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #ffb489; text-decoration: none; } a:hover { color: #ffd0b4; }
+    .serif { font-family: "Instrument Serif", Georgia, serif; font-weight: 400; }
+    .eyebrow { font-size: 11px; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; color: #b6aecb; }
+    .glass {
+      position: relative;
+      background: linear-gradient(158deg, rgba(255,255,255,0.12), rgba(255,255,255,0.04) 46%, rgba(255,255,255,0.07));
+      backdrop-filter: blur(30px) saturate(200%);
+      border: 1px solid rgba(255,255,255,0.14);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.36), inset 0 -1px 0 rgba(0,0,0,0.24), 0 30px 70px -26px rgba(0,0,0,0.9);
+    }
+    .glass::before { content: ""; position: absolute; inset: 0; pointer-events: none; border-radius: inherit; background: radial-gradient(120% 70% at 8% -10%, rgba(255,255,255,0.20), transparent 58%); }
+    .chip { transition: all 340ms cubic-bezier(0.16,0.84,0.28,1); cursor: pointer; border: 1px solid transparent; }
+    .row { transition: background 380ms cubic-bezier(0.16,0.84,0.28,1), transform 380ms cubic-bezier(0.16,0.84,0.28,1); cursor: pointer; }
+    .row:hover { background: rgba(255,255,255,0.06); transform: translateX(3px); }
+    @keyframes ping { 0% { transform: scale(1); opacity: 0.7; } 70%,100% { transform: scale(2.6); opacity: 0; } }
+    @keyframes drift { 0%,100% { transform: translate3d(0,0,0) scale(1); } 50% { transform: translate3d(7%,-6%,0) scale(1.16); } }
+    @keyframes rise { from { opacity: 0; transform: translate3d(0,22px,0); filter: blur(8px); } to { opacity: 1; transform: none; filter: blur(0); } }
+    .rise { animation: rise 0.95s cubic-bezier(0.16,0.84,0.28,1) both; }
+    @keyframes sheen { from { transform: translateX(-120%) skewX(-18deg); } to { transform: translateX(320%) skewX(-18deg); } }
+    .sheen { overflow: hidden; }
+    .sheen::after { content: ""; position: absolute; top:0; bottom:0; width: 34%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.16), transparent); transform: translateX(-120%) skewX(-18deg); pointer-events: none; }
+    .sheen:hover::after { animation: sheen 1s cubic-bezier(0.3,0,0.2,1); }
+  </style>
+</helmet>
+
+<div style="--ember: {{accent}}; position: relative; width: 1440px; height: 900px; overflow: hidden; background: #07060f;">
+
+  <!-- ---------- the map ---------- -->
+  <div style="position: absolute; inset: 0;">
+    <div style="position: absolute; width: 860px; height: 700px; left: -140px; top: -180px; border-radius: 50%; filter: blur(90px); background: radial-gradient(circle, rgba(80,170,255,0.46), transparent 68%); animation: drift 58s ease-in-out infinite;"></div>
+    <div style="position: absolute; width: 900px; height: 720px; right: -200px; bottom: -240px; border-radius: 50%; filter: blur(95px); background: radial-gradient(circle, rgba(170,110,255,0.42), transparent 68%); animation: drift 71s ease-in-out infinite reverse;"></div>
+    <div style="position: absolute; width: 700px; height: 560px; left: 46%; top: 18%; border-radius: 50%; filter: blur(100px); background: radial-gradient(circle, var(--ember), transparent 66%); opacity: 0.3; animation: drift 83s ease-in-out infinite;"></div>
+
+    <svg width="1440" height="900" style="position: absolute; inset: 0;" aria-hidden="true">
+      <defs>
+        <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
+          <path d="M60 0H0V60" fill="none" stroke="rgba(255,255,255,0.045)" stroke-width="1"/>
+        </pattern>
+        <radialGradient id="vig" cx="52%" cy="46%" r="72%">
+          <stop offset="55%" stop-color="#07060f" stop-opacity="0"/>
+          <stop offset="100%" stop-color="#07060f" stop-opacity="0.72"/>
+        </radialGradient>
+      </defs>
+      <rect width="1440" height="900" fill="url(#grid)"/>
+
+      <!-- water -->
+      <path d="M0 200 C 180 250, 320 180, 470 226 C 620 272, 700 210, 780 246 L 780 0 L 0 0 Z"
+            fill="rgba(60,120,200,0.10)" stroke="rgba(120,170,255,0.16)" stroke-width="1"/>
+
+      <!-- landmass -->
+      <path d="M240 640 C 340 560, 430 600, 520 540 C 610 480, 700 520, 800 470 C 900 420, 1010 460, 1120 400 L 1240 430 L 1300 560 L 1180 700 L 980 760 L 700 800 L 420 760 Z"
+            fill="rgba(120,150,220,0.10)" stroke="rgba(150,180,255,0.26)" stroke-width="1.2"/>
+      <path d="M300 300 C 400 250, 520 290, 640 240 C 760 190, 880 230, 1000 180 L 1080 210 L 1040 300 L 860 340 L 620 370 L 400 350 Z"
+            fill="rgba(120,150,220,0.07)" stroke="rgba(150,180,255,0.18)" stroke-width="1.1"/>
+      <path d="M1080 300 C 1160 262, 1250 300, 1330 268 L 1420 292 L 1440 400 L 1330 452 L 1180 430 L 1096 372 Z"
+            fill="rgba(120,150,220,0.08)" stroke="rgba(150,180,255,0.2)" stroke-width="1.1"/>
+      <path d="M180 470 C 250 436, 330 470, 400 442 L 470 466 L 440 540 L 320 566 L 208 536 Z"
+            fill="rgba(120,150,220,0.06)" stroke="rgba(150,180,255,0.16)" stroke-width="1"/>
+
+      <!-- contours -->
+      <g fill="none" stroke="rgba(160,190,255,0.14)" stroke-width="1">
+        <path d="M420 620 Q 560 566 700 606 T 1000 586"/>
+        <path d="M400 660 Q 560 600 720 644 T 1040 620"/>
+        <path d="M380 700 Q 560 636 740 682 T 1080 654"/>
+        <path d="M440 580 Q 580 532 720 568 T 1010 548"/>
+        <path d="M1120 330 Q 1220 300 1320 336 T 1440 320"/>
+        <path d="M1140 380 Q 1240 350 1340 384 T 1440 372"/>
+        <path d="M220 500 Q 310 470 400 502 T 470 496"/>
+      </g>
+
+      <!-- routes -->
+      <g fill="none" stroke="rgba(255,255,255,0.11)" stroke-width="1.5" stroke-dasharray="6 9" stroke-linecap="round">
+        <path d="M180 780 C 380 700, 520 600, 700 540 C 880 480, 1020 440, 1240 420"/>
+        <path d="M620 860 C 700 720, 760 620, 880 540 C 980 474, 1120 470, 1260 500"/>
+      </g>
+      <g fill="none" stroke="rgba(255,255,255,0.07)" stroke-width="1" stroke-linecap="round">
+        <path d="M330 340 C 470 320, 600 300, 760 268"/>
+        <path d="M900 210 C 980 240, 1060 300, 1140 340"/>
+      </g>
+
+      <rect width="1440" height="900" fill="url(#vig)"/>
+    </svg>
+  </div>
+
+  <!-- ---------- markers ---------- -->
+  <sc-for list="{{pins}}" as="p" hint-placeholder-count="6">
+    <div style="position: absolute; left: {{p.x}}px; top: {{p.y}}px; transform: translate(-50%, -50%);">
+      <sc-if value="{{p.active}}" hint-placeholder-val="{{ true }}">
+        <span style="position: absolute; inset: -6px; border-radius: 50%; border: 2px solid var(--ember); animation: ping 2.6s cubic-bezier(0,0,0.2,1) infinite;"></span>
+      </sc-if>
+      <span style="display: block; width: 14px; height: 14px; border-radius: 50%; background: {{p.fill}}; border: 2px solid rgba(255,255,255,0.85); box-shadow: 0 0 18px {{p.glow}}, 0 4px 12px rgba(0,0,0,0.6);"></span>
+    </div>
+  </sc-for>
+
+  <!-- you-are-here — kept clear of the selected pin so the two never read as one -->
+  <div style="position: absolute; left: 580px; top: 646px; transform: translate(-50%,-50%);">
+    <span style="position: absolute; inset: -22px; border-radius: 50%; background: radial-gradient(circle, rgba(80,190,255,0.30), transparent 70%);"></span>
+    <span style="position: absolute; inset: -10px; border-radius: 50%; border: 2px solid rgba(110,200,255,0.8); animation: ping 3s cubic-bezier(0,0,0.2,1) infinite;"></span>
+    <span style="display: block; width: 15px; height: 15px; border-radius: 50%; background: #5ec8ff; border: 3px solid #07060f; box-shadow: 0 0 22px #5ec8ff;"></span>
+  </div>
+
+  <!-- scale + readout -->
+  <div style="position: absolute; left: 448px; bottom: 28px; z-index: 20; display: flex; align-items: center; gap: 18px;">
+    <div style="display: flex; flex-direction: column; gap: 5px;">
+      <div style="display: flex; align-items: flex-end; height: 7px;">
+        <span style="width: 1px; height: 7px; background: rgba(255,255,255,0.5);"></span>
+        <span style="width: 62px; height: 1px; background: rgba(255,255,255,0.5);"></span>
+        <span style="width: 1px; height: 7px; background: rgba(255,255,255,0.5);"></span>
+      </div>
+      <span style="font-size: 10.5px; letter-spacing: 0.08em; color: rgba(255,255,255,0.45);">20 km</span>
+    </div>
+    <span style="font-size: 10.5px; letter-spacing: 0.08em; color: rgba(255,255,255,0.32); font-variant-numeric: tabular-nums;">40.1642° N &nbsp; 19.6708° E &nbsp;·&nbsp; z9</span>
+  </div>
+
+  <!-- ---------- top nav ---------- -->
+  <div class="rise" style="position: absolute; left: 28px; right: 28px; top: 24px; z-index: 30; display: flex; align-items: center; justify-content: space-between; gap: 16px;">
+    <div class="glass" style="border-radius: 20px; display: flex; align-items: center; gap: 11px; padding: 12px 20px;">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ember)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>
+      <span style="font-size: 15px; font-weight: 600;">broknowsaspot</span>
+    </div>
+
+    <!-- filter bar -->
+    <div class="glass" style="border-radius: 20px; display: flex; align-items: center; gap: 8px; padding: 10px 12px;">
+      <sc-for list="{{cats}}" as="c" hint-placeholder-count="5">
+        <button class="chip" onClick="{{c.pick}}" style="padding: 9px 16px; border-radius: 13px; font-size: 13.5px; font-weight: {{c.weight}}; color: {{c.color}}; background: {{c.bg}}; border-color: {{c.border}};">{{c.label}}</button>
+      </sc-for>
+      <div style="width: 1px; height: 22px; background: rgba(255,255,255,0.14); margin: 0 4px;"></div>
+      <button class="chip sheen" style="position: relative; display: inline-flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: 13px; font-size: 13.5px; font-weight: 600; color: #0b1a22; background: linear-gradient(180deg, #a5e4ff, #5ec8ff); box-shadow: 0 8px 22px -8px #5ec8ff, inset 0 1px 0 rgba(255,255,255,0.6);">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+        Near me
+      </button>
+    </div>
+
+    <div class="glass" style="border-radius: 20px; padding: 12px 18px; font-size: 13.5px; font-weight: 600; font-variant-numeric: tabular-nums;">
+      <span style="color: #f2eff5;">6</span><span style="color: #8d85a5;"> / 14 spots</span>
+    </div>
+  </div>
+
+  <!-- ---------- results rail ---------- -->
+  <div class="rise" style="animation-delay: 0.12s; position: absolute; left: 28px; top: 104px; bottom: 28px; width: 396px; z-index: 20;">
+    <div class="glass" style="border-radius: 28px; height: 100%; display: flex; flex-direction: column; overflow: hidden;">
+      <div style="padding: 24px 26px 18px; border-bottom: 1px solid rgba(255,255,255,0.09);">
+        <div class="eyebrow">Nearest first</div>
+        <h2 class="serif" style="margin: 10px 0 0; font-size: 34px; line-height: 1; letter-spacing: -0.02em;">Around you</h2>
+      </div>
+      <div style="flex: 1; overflow: hidden; padding: 10px;">
+        <sc-for list="{{results}}" as="r" hint-placeholder-count="5">
+          <div class="row" style="padding: 16px 16px; border-radius: 18px; background: {{r.bg}};">
+            <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px;">
+              <div class="serif" style="font-size: 22px; letter-spacing: -0.01em;">{{r.name}}</div>
+              <div style="font-size: 13px; font-weight: 700; color: {{r.distColor}}; font-variant-numeric: tabular-nums; white-space: nowrap;">{{r.dist}}</div>
+            </div>
+            <div style="margin-top: 4px; font-size: 12.5px; color: #9d95b5;">{{r.where}}</div>
+            <div style="margin-top: 12px; display: flex; align-items: center; gap: 14px;">
+              <div style="display: flex; gap: 3px;">
+                <sc-for list="{{r.bars}}" as="b" hint-placeholder-count="4">
+                  <span style="width: 16px; height: 4px; border-radius: 2px; background: {{b.c}};"></span>
+                </sc-for>
+              </div>
+              <span style="font-size: 12px; color: #b6aecb;">{{r.diff}}</span>
+              <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #b6aecb;">
+                <span style="width: 5px; height: 5px; border-radius: 50%; background: {{r.accessDot}};"></span>{{r.access}}
+              </span>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+
+  <!-- ---------- map controls ---------- -->
+  <div class="rise" style="animation-delay: 0.2s; position: absolute; right: 28px; bottom: 28px; z-index: 20; display: flex; flex-direction: column; gap: 10px; align-items: flex-end;">
+    <div class="glass" style="border-radius: 18px; display: flex; flex-direction: column; overflow: hidden;">
+      <button class="chip" style="width: 48px; height: 48px; display: grid; place-items: center; color: #f2eff5; background: transparent; border: none; border-bottom: 1px solid rgba(255,255,255,0.1);">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+      </button>
+      <button class="chip" style="width: 48px; height: 48px; display: grid; place-items: center; color: #f2eff5; background: transparent; border: none;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 12h14"/></svg>
+      </button>
+    </div>
+    <div class="glass" style="border-radius: 14px; padding: 8px 13px; font-size: 10.5px; letter-spacing: 0.04em; color: #8d85a5;">© OpenStreetMap</div>
+  </div>
+
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{
+  "accent": {"editor": "color", "default": "#ff7a45", "options": ["#ff7a45", "#ff4d6d", "#4dd0ff", "#b06bff"], "section": "Theme"},
+  "$preview": {"width": 1440, "height": 900}
+}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { cat: "Shore" }; }
+
+  renderVals() {
+    const ember = this.props.accent ?? "#ff7a45";
+    const labels = ["All", "Ruin", "Water", "Shore", "Underground"];
+
+    const cats = labels.map((label) => {
+      const on = this.state.cat === label;
+      return {
+        label,
+        weight: on ? 600 : 500,
+        color: on ? "#0d0a16" : "#c3bcd4",
+        bg: on ? "rgba(255,255,255,0.92)" : "transparent",
+        border: on ? "rgba(255,255,255,0.4)" : "transparent",
+        pick: () => this.setState({ cat: label }),
+      };
+    });
+
+    const bars = (n, c) =>
+      [0, 1, 2, 3].map((i) => ({ c: i < n ? c : "rgba(255,255,255,0.16)" }));
+
+    const results = [
+      { name: "Gjipe cove", where: "Vlorë, Albania", dist: "12 km", diff: "Moderate", access: "Open", n: 2, sel: true },
+      { name: "Mena Creek overflow", where: "Queensland, Australia", dist: "38 km", diff: "Easy", access: "Permit", n: 1, sel: false },
+      { name: "Vlorë ridge line", where: "Albania", dist: "54 km", diff: "Hard", access: "Grey", n: 3, sel: false },
+      { name: "Wieliczka lower chamber", where: "Lesser Poland", dist: "112 km", diff: "Moderate", access: "Permit", n: 2, sel: false },
+      { name: "Kanne marl works", where: "Limburg", dist: "168 km", diff: "Serious", access: "Grey", n: 4, sel: false },
+    ].map((r) => ({
+      ...r,
+      bars: bars(r.n, r.n === 4 ? "#ff8a5c" : "#ffffff"),
+      bg: r.sel ? "rgba(255,255,255,0.09)" : "transparent",
+      distColor: r.sel ? ember : "#b6aecb",
+      accessDot: r.access === "Open" ? "#6ee7a8" : r.access === "Permit" ? "#ffd166" : "#ff8a5c",
+    }));
+
+    const pins = [
+      { x: 742, y: 452, active: true, fill: ember, glow: ember },
+      { x: 880, y: 386, active: false, fill: "#ffffff", glow: "rgba(255,255,255,0.5)" },
+      { x: 1004, y: 512, active: false, fill: "#ffffff", glow: "rgba(255,255,255,0.5)" },
+      { x: 612, y: 566, active: false, fill: "#ffffff", glow: "rgba(255,255,255,0.5)" },
+      { x: 1122, y: 448, active: false, fill: "#ffffff", glow: "rgba(255,255,255,0.5)" },
+      { x: 820, y: 620, active: false, fill: "#ffffff", glow: "rgba(255,255,255,0.5)" },
+    ];
+
+    return { accent: ember, cats, results, pins };
+  }
+}
+</script>
+</body>
+</html>

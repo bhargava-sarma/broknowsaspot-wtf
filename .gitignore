@@ -50,3 +50,7 @@ yarn-error.log*
 # caches
 .eslintcache
 .turbo
+
+# seeded design-canvas payloads (~2.4 MB build artifacts; re-seed from .design/*.dc.html)
+.design/*.html
+!.design/*.dc.html

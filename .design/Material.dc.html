@@ -1,0 +1,427 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <script>
+    /* The webfonts are attached from script rather than as a <link> in this
+       block. A stylesheet link here is awaited before the artboard compiles,
+       and a request that never resolves — offline, or a network that blocks
+       the font CDN — leaves the frame stuck on "Loading artboard…" with no
+       error path out. Appending it after the fact makes the fonts an
+       enhancement: they swap in when they arrive, and the fallback stack
+       renders the design either way. */
+    (function () {
+      var id = "aurora-webfonts";
+      if (document.getElementById(id)) return;
+      var link = document.createElement("link");
+      link.id = id;
+      link.rel = "stylesheet";
+      link.href = "https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700&display=swap";
+      document.head.appendChild(link);
+    })();
+  </script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #0a0912;
+      color: #f2eff5;
+      font-family: Manrope, "Helvetica Neue", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+    .aurora { position: absolute; border-radius: 50%; filter: blur(90px); pointer-events: none; }
+    @keyframes drift-a { 0%,100% { transform: translate3d(0,0,0) scale(1); } 50% { transform: translate3d(9%,-7%,0) scale(1.18); } }
+    @keyframes drift-b { 0%,100% { transform: translate3d(0,0,0) scale(1.1); } 50% { transform: translate3d(-11%,8%,0) scale(0.92); } }
+    @keyframes drift-c { 0%,100% { transform: translate3d(0,0,0) rotate(0deg) scale(1); } 50% { transform: translate3d(6%,10%,0) rotate(8deg) scale(1.22); } }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translate3d(0, 30px, 0); filter: blur(10px); }
+      to   { opacity: 1; transform: none; filter: blur(0); }
+    }
+    .rise { animation: rise 1.15s cubic-bezier(0.16, 0.84, 0.28, 1) both; }
+    @keyframes floaty { 0%,100% { transform: translate3d(0,0,0) rotate(-0.4deg); } 50% { transform: translate3d(0,-16px,0) rotate(0.4deg); } }
+    @keyframes breathe { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
+    @keyframes sweep { from { transform: translateX(-120%) skewX(-18deg); } to { transform: translateX(320%) skewX(-18deg); } }
+    @keyframes ping { 0% { transform: scale(0.6); opacity: 0.85; } 100% { transform: scale(3.4); opacity: 0; } }
+    @keyframes demo-sweep {
+      0%, 62%  { transform: translateX(-120%) skewX(-18deg); }
+      100%     { transform: translateX(320%) skewX(-18deg); }
+    }
+
+    .glass {
+      position: relative;
+      background: linear-gradient(158deg, rgba(255,255,255,0.11), rgba(255,255,255,0.035) 46%, rgba(255,255,255,0.06));
+      backdrop-filter: blur(28px) saturate(190%);
+      border: 1px solid rgba(255,255,255,0.13);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.34),
+        inset 0 -1px 0 rgba(0,0,0,0.22),
+        0 28px 70px -26px rgba(0,0,0,0.85);
+      overflow: hidden;
+    }
+    .glass::before {
+      content: "";
+      position: absolute; inset: 0; pointer-events: none;
+      background: radial-gradient(120% 70% at 8% -10%, rgba(255,255,255,0.20), transparent 58%);
+    }
+
+    /* tier 1 — chips and controls: thin, close to the ground */
+    .glass-1 {
+      background: linear-gradient(158deg, rgba(255,255,255,0.09), rgba(255,255,255,0.03));
+      backdrop-filter: blur(14px) saturate(160%);
+      border: 1px solid rgba(255,255,255,0.11);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,0.24), 0 10px 24px -14px rgba(0,0,0,0.8);
+    }
+    /* tier 3 — sheets and modals: dense, and it takes the ground with it */
+    .glass-3 {
+      background: linear-gradient(158deg, rgba(255,255,255,0.14), rgba(255,255,255,0.05) 46%, rgba(255,255,255,0.08));
+      backdrop-filter: blur(44px) saturate(210%);
+      border: 1px solid rgba(255,255,255,0.17);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.42),
+        inset 0 -1px 0 rgba(0,0,0,0.28),
+        0 44px 100px -30px rgba(0,0,0,0.95);
+    }
+
+    .eyebrow { font-size: 12px; font-weight: 600; letter-spacing: 0.24em; text-transform: uppercase; color: #b6aecb; }
+    .serif { font-family: "Instrument Serif", Georgia, serif; font-weight: 400; }
+    .label { font-size: 11.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #8b83a6; }
+    .mono-num { font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+    .card { border-radius: 28px; padding: 28px; }
+  </style>
+</helmet>
+
+<div style="--ember: {{accent}}; position: relative; width: 1240px; min-height: 3240px; overflow: hidden;">
+
+  <!-- ============================== ground -->
+  <div style="position: absolute; inset: 0; overflow: hidden; pointer-events: none;">
+    <div class="aurora" style="width: 860px; height: 720px; left: -200px; top: -240px; background: radial-gradient(circle, rgba(96,214,255,0.5), transparent 68%); opacity: 0.6; animation: drift-a 52s ease-in-out infinite;"></div>
+    <div class="aurora" style="width: 900px; height: 740px; right: -220px; top: -140px; background: radial-gradient(circle, rgba(168,110,255,0.5), transparent 68%); opacity: 0.6; animation: drift-b 67s ease-in-out infinite;"></div>
+    <div class="aurora" style="width: 760px; height: 620px; left: 40%; top: 640px; background: radial-gradient(circle, var(--ember), transparent 66%); opacity: 0.42; animation: drift-c 79s ease-in-out infinite;"></div>
+    <div class="aurora" style="width: 880px; height: 700px; left: -160px; top: 1180px; background: radial-gradient(circle, rgba(120,190,255,0.42), transparent 70%); opacity: 0.5; animation: drift-b 61s ease-in-out infinite;"></div>
+    <div class="aurora" style="width: 940px; height: 760px; right: -220px; top: 1980px; background: radial-gradient(circle, rgba(168,110,255,0.44), transparent 70%); opacity: 0.5; animation: drift-a 74s ease-in-out infinite;"></div>
+    <div class="aurora" style="width: 860px; height: 700px; left: -180px; top: 2620px; background: radial-gradient(circle, var(--ember), transparent 68%); opacity: 0.38; animation: drift-c 66s ease-in-out infinite;"></div>
+  </div>
+
+  <!-- ============================== header -->
+  <div style="position: relative; z-index: 10; padding: 52px 48px 0;">
+    <div class="rise eyebrow" style="display: flex; align-items: center; gap: 12px;">
+      <span style="width: 7px; height: 7px; border-radius: 50%; background: var(--ember); box-shadow: 0 0 14px var(--ember); animation: breathe 3.4s ease-in-out infinite;"></span>
+      broknowsaspot — design system
+    </div>
+    <h1 class="rise serif" style="animation-delay: 0.1s; margin: 20px 0 0; font-size: 84px; line-height: 0.95; letter-spacing: -0.035em;">
+      Aurora
+    </h1>
+    <p class="rise" style="animation-delay: 0.18s; margin: 20px 0 0; max-width: 62ch; font-size: 18px; line-height: 1.62; font-weight: 300; color: #c3bcd4; text-wrap: pretty;">
+      Warm firelight against a cold sky. Everything sits on a midnight ground with slow-moving aurora behind it, and every surface is one sheet of glass floating above that light — never a flat panel, never a hairline box. The mono type, the exposed hardware chrome and the all-lowercase labels are gone.
+    </p>
+  </div>
+
+  <!-- ============================== palette -->
+  <div style="position: relative; z-index: 10; margin: 54px 48px 0;">
+    <div class="label">Ground and light</div>
+    <div style="margin-top: 18px; display: grid; grid-template-columns: repeat(6, 1fr); gap: 14px;">
+      <sc-for list="{{palette}}" as="p" hint-placeholder-count="6">
+        <div class="glass" style="border-radius: 22px; padding: 12px;">
+          <div style="height: 78px; border-radius: 15px; background: {{p.swatch}}; box-shadow: inset 0 1px 0 rgba(255,255,255,0.3), inset 0 0 0 1px rgba(255,255,255,0.08);"></div>
+          <div style="padding: 13px 5px 4px;">
+            <div style="font-size: 13.5px; font-weight: 600;">{{p.name}}</div>
+            <div class="mono-num" style="margin-top: 4px; font-size: 12px; color: #8b83a6;">{{p.hex}}</div>
+            <div style="margin-top: 8px; font-size: 11.5px; line-height: 1.5; color: #6f6889;">{{p.use}}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- ============================== the material -->
+  <div style="position: relative; z-index: 10; margin: 56px 48px 0;">
+    <div class="label">The material — three depths</div>
+    <p style="margin: 12px 0 0; max-width: 74ch; font-size: 14.5px; line-height: 1.66; color: #a89fc0;">
+      Depth is blur radius, not shadow spread. A chip barely disturbs what is behind it; a sheet takes the whole ground with it. Every tier carries the same two inset lines — a bright one on the top edge where light catches the rim, a dark one on the bottom where the glass is thick.
+    </p>
+
+    <div style="margin-top: 22px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;">
+      <!-- tier 1 -->
+      <div style="position: relative; border-radius: 30px; overflow: hidden; height: 268px; background: #0d0b18;">
+        <svg viewBox="0 0 380 268" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%;">
+          <rect width="380" height="268" fill="#160f2c"/>
+          <circle cx="90" cy="70" r="70" fill="#4dd0ff" opacity="0.5"/>
+          <circle cx="280" cy="180" r="82" fill="#ff7a45" opacity="0.45"/>
+          <circle cx="200" cy="60" r="54" fill="#b06bff" opacity="0.45"/>
+        </svg>
+        <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;">
+          <div class="glass-1" style="border-radius: 16px; padding: 13px 22px; font-size: 14px; font-weight: 500;">Chip · blur 14</div>
+        </div>
+        <div style="position: absolute; left: 16px; bottom: 14px;">
+          <div style="font-size: 13px; font-weight: 600;">Tier 1</div>
+          <div style="margin-top: 3px; font-size: 11.5px; color: rgba(255,255,255,0.6);">chips, segments, map controls</div>
+        </div>
+      </div>
+
+      <!-- tier 2 -->
+      <div style="position: relative; border-radius: 30px; overflow: hidden; height: 268px; background: #0d0b18;">
+        <svg viewBox="0 0 380 268" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%;">
+          <rect width="380" height="268" fill="#160f2c"/>
+          <circle cx="90" cy="70" r="70" fill="#4dd0ff" opacity="0.5"/>
+          <circle cx="280" cy="180" r="82" fill="#ff7a45" opacity="0.45"/>
+          <circle cx="200" cy="60" r="54" fill="#b06bff" opacity="0.45"/>
+        </svg>
+        <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;">
+          <div class="glass" style="border-radius: 24px; padding: 22px 30px; font-size: 14px; font-weight: 500;">Panel · blur 28</div>
+        </div>
+        <div style="position: absolute; left: 16px; bottom: 14px;">
+          <div style="font-size: 13px; font-weight: 600;">Tier 2</div>
+          <div style="margin-top: 3px; font-size: 11.5px; color: rgba(255,255,255,0.6);">cards, nav, form sections</div>
+        </div>
+      </div>
+
+      <!-- tier 3 -->
+      <div style="position: relative; border-radius: 30px; overflow: hidden; height: 268px; background: #0d0b18;">
+        <svg viewBox="0 0 380 268" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%;">
+          <rect width="380" height="268" fill="#160f2c"/>
+          <circle cx="90" cy="70" r="70" fill="#4dd0ff" opacity="0.5"/>
+          <circle cx="280" cy="180" r="82" fill="#ff7a45" opacity="0.45"/>
+          <circle cx="200" cy="60" r="54" fill="#b06bff" opacity="0.45"/>
+        </svg>
+        <div style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;">
+          <div class="glass-3" style="border-radius: 28px; padding: 26px 34px; font-size: 14px; font-weight: 500;">Sheet · blur 44</div>
+        </div>
+        <div style="position: absolute; left: 16px; bottom: 14px;">
+          <div style="font-size: 13px; font-weight: 600;">Tier 3</div>
+          <div style="margin-top: 3px; font-size: 11.5px; color: rgba(255,255,255,0.6);">sheets, dialogs, the mobile filter tray</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- anatomy -->
+    <div class="glass card" style="margin-top: 20px; display: grid; grid-template-columns: 380px 1fr; gap: 40px; align-items: center;">
+      <div style="position: relative; height: 200px; border-radius: 24px; overflow: hidden; background: linear-gradient(158deg, rgba(255,255,255,0.13), rgba(255,255,255,0.04) 46%, rgba(255,255,255,0.07)); border: 1px solid rgba(255,255,255,0.14); box-shadow: inset 0 1px 0 rgba(255,255,255,0.4), inset 0 -1px 0 rgba(0,0,0,0.3);">
+        <div style="position: absolute; inset: 0; background: radial-gradient(120% 70% at 8% -10%, rgba(255,255,255,0.22), transparent 58%);"></div>
+        <svg viewBox="0 0 380 200" style="position: absolute; inset: 0; width: 100%; height: 100%;">
+          <g stroke="var(--ember)" stroke-width="1" fill="none" opacity="0.85">
+            <path d="M60 14 L60 44"/><circle cx="60" cy="12" r="2.4" fill="var(--ember)" stroke="none"/>
+            <path d="M300 186 L300 156"/><circle cx="300" cy="188" r="2.4" fill="var(--ember)" stroke="none"/>
+            <path d="M96 66 L146 88"/><circle cx="94" cy="64" r="2.4" fill="var(--ember)" stroke="none"/>
+          </g>
+          <g fill="#f2eff5" font-family="Manrope, sans-serif" font-size="10.5" font-weight="600">
+            <text x="68" y="52">1 px specular rim</text>
+            <text x="196" y="152">1 px shade, underside</text>
+            <text x="152" y="92">lens highlight, top-left</text>
+          </g>
+        </svg>
+      </div>
+      <div>
+        <h3 class="serif" style="margin: 0; font-size: 32px; letter-spacing: -0.018em;">The rim is the whole trick</h3>
+        <p style="margin: 14px 0 0; font-size: 15px; line-height: 1.7; color: #b6aecb; text-wrap: pretty;">
+          Glass reads as glass because of what happens at its edge. One inset highlight along the top, one inset shade along the bottom, and a soft radial lens sitting off the top-left corner — a hint of the light source the aurora already implies. Drop those three and the same blur reads as a grey box.
+        </p>
+        <div style="margin-top: 20px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+          <sc-for list="{{anatomy}}" as="a" hint-placeholder-count="3">
+            <div>
+              <div class="label">{{a.label}}</div>
+              <div class="mono-num" style="margin-top: 7px; font-size: 13px; color: #d8d2e6;">{{a.value}}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================== type -->
+  <div style="position: relative; z-index: 10; margin: 56px 48px 0; display: grid; grid-template-columns: 1fr 420px; gap: 20px; align-items: start;">
+    <div class="glass card">
+      <div class="label">Type</div>
+      <div style="margin-top: 22px; display: flex; flex-direction: column; gap: 24px;">
+        <sc-for list="{{type}}" as="t" hint-placeholder-count="5">
+          <div style="display: grid; grid-template-columns: 132px 1fr; gap: 24px; align-items: baseline; padding-bottom: 22px; border-bottom: 1px solid rgba(255,255,255,0.07);">
+            <div>
+              <div class="label">{{t.role}}</div>
+              <div class="mono-num" style="margin-top: 6px; font-size: 12px; color: #6f6889;">{{t.spec}}</div>
+            </div>
+            <div class="{{t.cls}}" style="font-size: {{t.size}}; line-height: {{t.lh}}; letter-spacing: {{t.ls}}; font-weight: {{t.weight}}; font-style: {{t.style}}; color: {{t.color}};">{{t.sample}}</div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+      <div class="glass card">
+        <div class="label">Radii</div>
+        <p style="margin: 12px 0 0; font-size: 13.5px; line-height: 1.62; color: #8b83a6;">Continuous, generous, and scaled to the surface — a bigger sheet gets a bigger corner so the curvature reads the same.</p>
+        <div style="margin-top: 20px; display: flex; align-items: flex-end; gap: 12px;">
+          <sc-for list="{{radii}}" as="r" hint-placeholder-count="5">
+            <div style="flex: 1; text-align: center;">
+              <div style="height: {{r.box}}; border-radius: {{r.value}}; background: linear-gradient(158deg, rgba(255,255,255,0.16), rgba(255,255,255,0.05)); border: 1px solid rgba(255,255,255,0.14); box-shadow: inset 0 1px 0 rgba(255,255,255,0.34);"></div>
+              <div class="mono-num" style="margin-top: 9px; font-size: 11.5px; color: #8b83a6;">{{r.value}}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <div class="glass card">
+        <div class="label">State colour</div>
+        <div style="margin-top: 18px; display: flex; flex-direction: column; gap: 13px;">
+          <sc-for list="{{states}}" as="s" hint-placeholder-count="4">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="width: 10px; height: 10px; border-radius: 50%; background: {{s.color}}; box-shadow: 0 0 12px {{s.color}};"></span>
+              <span style="font-size: 14px; font-weight: 500;">{{s.label}}</span>
+              <span class="mono-num" style="margin-left: auto; font-size: 12px; color: #6f6889;">{{s.hex}}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================== motion -->
+  <div style="position: relative; z-index: 10; margin: 56px 48px 0;">
+    <div class="label">Motion</div>
+    <p style="margin: 12px 0 0; max-width: 74ch; font-size: 14.5px; line-height: 1.66; color: #a89fc0;">
+      Two speeds only. Things that respond to you move in about half a second and settle without a bounce. Things that live in the background — the aurora, a hero card breathing on its own — move over a minute, slow enough that you never catch them starting.
+    </p>
+
+    <div style="margin-top: 22px; display: grid; grid-template-columns: 380px 1fr; gap: 20px;">
+      <div class="glass card">
+        <div style="font-size: 15px; font-weight: 600;">The curve</div>
+        <div class="mono-num" style="margin-top: 6px; font-size: 12px; color: #8b83a6;">cubic-bezier(0.16, 0.84, 0.28, 1)</div>
+        <svg viewBox="0 0 300 190" style="margin-top: 18px; width: 100%; height: auto;">
+          <defs>
+            <linearGradient id="curveg" x1="0" y1="1" x2="1" y2="0">
+              <stop offset="0%" stop-color="#4dd0ff"/><stop offset="100%" stop-color="var(--ember)"/>
+            </linearGradient>
+          </defs>
+          <g stroke="rgba(255,255,255,0.08)" stroke-width="1">
+            <path d="M30 160 H285"/><path d="M30 20 V160"/>
+            <path d="M30 90 H285" stroke-dasharray="3 5"/>
+          </g>
+          <path d="M30 160 C 68 42, 102 24, 285 20" fill="none" stroke="url(#curveg)" stroke-width="2.6" stroke-linecap="round"/>
+          <circle cx="30" cy="160" r="3.4" fill="#4dd0ff"/>
+          <circle cx="285" cy="20" r="3.4" fill="var(--ember)"/>
+          <g fill="#6f6889" font-family="Manrope, sans-serif" font-size="10">
+            <text x="30" y="178">0</text><text x="262" y="178">done</text>
+          </g>
+        </svg>
+        <p style="margin: 14px 0 0; font-size: 13px; line-height: 1.6; color: #8b83a6;">Nearly all of the distance is covered in the first third, then it coasts. Fast to start feels responsive; no overshoot keeps glass feeling heavy rather than springy.</p>
+      </div>
+
+      <div class="glass card">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 26px 30px;">
+          <sc-for list="{{motions}}" as="m" hint-placeholder-count="6">
+            <div style="padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.07);">
+              <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px;">
+                <span style="font-size: 14.5px; font-weight: 600;">{{m.name}}</span>
+                <span class="mono-num" style="font-size: 12px; color: var(--ember);">{{m.dur}}</span>
+              </div>
+              <p style="margin: 8px 0 0; font-size: 13px; line-height: 1.6; color: #8b83a6;">{{m.body}}</p>
+            </div>
+          </sc-for>
+        </div>
+
+        <!-- live specimens -->
+        <div style="margin-top: 6px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px;">
+          <div style="position: relative; overflow: hidden; border-radius: 20px; height: 118px; background: rgba(0,0,0,0.24); border: 1px solid rgba(255,255,255,0.09); display: flex; align-items: center; justify-content: center;">
+            <div class="glass-1" style="border-radius: 15px; padding: 14px 20px; font-size: 13px; animation: floaty 11s ease-in-out infinite;">floaty</div>
+            <span class="label" style="position: absolute; left: 12px; bottom: 10px; font-size: 10px;">ambient</span>
+          </div>
+          <div style="position: relative; overflow: hidden; border-radius: 20px; height: 118px; background: rgba(0,0,0,0.24); border: 1px solid rgba(255,255,255,0.09); display: flex; align-items: center; justify-content: center;">
+            <div class="glass-1" style="position: relative; overflow: hidden; border-radius: 15px; padding: 14px 20px; font-size: 13px;">
+              sheen
+              <span style="position: absolute; top: 0; bottom: 0; width: 40%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.28), transparent); animation: demo-sweep 4.2s cubic-bezier(0.3,0,0.2,1) infinite;"></span>
+            </div>
+            <span class="label" style="position: absolute; left: 12px; bottom: 10px; font-size: 10px;">on hover</span>
+          </div>
+          <div style="position: relative; overflow: hidden; border-radius: 20px; height: 118px; background: rgba(0,0,0,0.24); border: 1px solid rgba(255,255,255,0.09); display: flex; align-items: center; justify-content: center;">
+            <div style="position: relative;">
+              <span style="position: absolute; left: 50%; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; background: var(--ember); opacity: 0.5; animation: ping 2.6s cubic-bezier(0,0,0.2,1) infinite;"></span>
+              <span style="position: relative; display: block; width: 14px; height: 14px; border-radius: 50%; background: var(--ember); border: 2.5px solid #0a0912; box-shadow: 0 0 20px var(--ember);"></span>
+            </div>
+            <span class="label" style="position: absolute; left: 12px; bottom: 10px; font-size: 10px;">live marker</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================== rules -->
+  <div style="position: relative; z-index: 10; margin: 56px 48px 64px;">
+    <div class="glass card" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 34px;">
+      <sc-for list="{{rules}}" as="r" hint-placeholder-count="3">
+        <div>
+          <div class="serif" style="font-size: 34px; line-height: 1; color: var(--ember);">{{r.n}}</div>
+          <h3 style="margin: 16px 0 0; font-size: 16px; font-weight: 600; letter-spacing: -0.005em;">{{r.title}}</h3>
+          <p style="margin: 10px 0 0; font-size: 13.5px; line-height: 1.68; color: #a89fc0; text-wrap: pretty;">{{r.body}}</p>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{
+  "accent": {"editor": "color", "default": "#ff7a45", "options": ["#ff7a45", "#ff4d6d", "#4dd0ff", "#b06bff"], "section": "Theme"},
+  "$preview": {"width": 1240, "height": 3240}
+}'>
+class Component extends DCLogic {
+  renderVals() {
+    const ember = this.props.accent ?? "#ff7a45";
+    return {
+      accent: ember,
+      palette: [
+        { name: "Midnight", hex: "#0a0912", swatch: "#0a0912", use: "The ground. Everything else floats on it." },
+        { name: "Ember", hex: "#ff7a45", swatch: `linear-gradient(158deg, #ffc9a4, ${ember})`, use: "Brand, primary action, the live marker." },
+        { name: "Ice", hex: "#4dd0ff", swatch: "linear-gradient(158deg, #9be8ff, #4dd0ff)", use: "Aurora, your own position, cold accents." },
+        { name: "Violet", hex: "#a86eff", swatch: "linear-gradient(158deg, #d0b0ff, #a86eff)", use: "Aurora, the second light source." },
+        { name: "Paper", hex: "#f2eff5", swatch: "#f2eff5", use: "Body text on the ground." },
+        { name: "Muted", hex: "#8b83a6", swatch: "#8b83a6", use: "Labels, metadata, anything secondary." },
+      ],
+      anatomy: [
+        { label: "Rim", value: "inset 0 1px 0 rgba(255,255,255,0.34)" },
+        { label: "Shade", value: "inset 0 -1px 0 rgba(0,0,0,0.22)" },
+        { label: "Cast", value: "0 28px 70px -26px rgba(0,0,0,0.85)" },
+      ],
+      type: [
+        { role: "Display", spec: "Instrument Serif · 124/0.93", cls: "serif", size: "62px", lh: "0.95", ls: "-0.035em", weight: "400", style: "normal", color: "#f2eff5", sample: "Bro knows a spot" },
+        { role: "Display italic", spec: "Instrument Serif italic", cls: "serif", size: "48px", lh: "1", ls: "-0.03em", weight: "400", style: "italic", color: "#ffb489", sample: "the accent half" },
+        { role: "Section", spec: "Instrument Serif · 40/1.1", cls: "serif", size: "34px", lh: "1.1", ls: "-0.02em", weight: "400", style: "normal", color: "#f2eff5", sample: "Within an hour of here" },
+        { role: "Body", spec: "Manrope 300 · 16/1.75", cls: "", size: "16px", lh: "1.75", ls: "0", weight: "300", style: "normal", color: "#b6aecb", sample: "The canyon does the work — you park where the track gives up and walk in." },
+        { role: "Label", spec: "Manrope 600 · 12/0.24em", cls: "eyebrow", size: "12px", lh: "1", ls: "0.24em", weight: "600", style: "normal", color: "#b6aecb", sample: "INDEX OF THE UNLISTED" },
+      ],
+      radii: [
+        { value: "12px", box: "34px" },
+        { value: "18px", box: "44px" },
+        { value: "24px", box: "56px" },
+        { value: "30px", box: "68px" },
+        { value: "38px", box: "82px" },
+      ],
+      states: [
+        { label: "Open access", color: "#6ee7a8", hex: "#6ee7a8" },
+        { label: "Permit needed", color: "#ffd166", hex: "#ffd166" },
+        { label: "Grey area", color: "#ff8a5c", hex: "#ff8a5c" },
+        { label: "Reported / hidden", color: "#ff6b6b", hex: "#ff6b6b" },
+      ],
+      motions: [
+        { name: "rise", dur: "1150 ms", body: "Entrance. Up 30 px, out of a 10 px blur, staggered ~80 ms down the page." },
+        { name: "lift", dur: "620 ms", body: "Hover on a card. Up 7 px and the cast shadow deepens with it." },
+        { name: "sheen", dur: "1050 ms", body: "A specular band crossing the surface once, on hover. Never loops." },
+        { name: "press", dur: "220 ms", body: "Touch. Scale to 0.972 — the only motion that is faster than the eye expects." },
+        { name: "floaty", dur: "11 – 13 s", body: "The hero card, drifting 16 px with a fraction of a degree of roll." },
+        { name: "drift", dur: "52 – 81 s", body: "The aurora itself. Three fields on prime-ish periods so they never re-sync." },
+      ],
+      rules: [
+        { n: "01", title: "One material, three depths", body: "If a surface is not glass, it is the ground or it is the ember button. There is no fourth thing — no flat cards, no outlined boxes, no filled greys." },
+        { n: "02", title: "Light comes from the top left", body: "Every rim highlight, lens gradient and cast shadow agrees on that. A surface lit from anywhere else stops reading as the same pane of glass." },
+        { n: "03", title: "Ambient motion never asks for attention", body: "Background movement is slow enough to be felt rather than watched. Anything that responds to a pointer resolves inside 620 ms and settles flat." },
+      ],
+    };
+  }
+}
+</script>
+</body>
+</html>
