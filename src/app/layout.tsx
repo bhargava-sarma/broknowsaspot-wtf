@@ -1,5 +1,7 @@
 import type { Metadata, Viewport } from "next";
 
+import { SpeedInsights } from "@vercel/speed-insights/next";
+
 import { AuroraGround } from "@/components/aurora/aurora-ground";
 import { MobileBar } from "@/components/layout/mobile-bar";
 import { SiteFooter } from "@/components/layout/site-footer";
@@ -83,6 +85,7 @@ export default function RootLayout({
           <SiteFooter />
           <MobileBar />
         </ThemeProvider>
+        <SpeedInsights />
       </body>
     </html>
   );
