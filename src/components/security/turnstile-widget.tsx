@@ -112,11 +112,8 @@ export function TurnstileWidget({
     <div>
       <div ref={holder} />
       {failed ? (
-        <p
-          role="alert"
-          className="mt-2 font-mono text-micro text-accent lowercase"
-        >
-          the anti-bot check couldn&rsquo;t load. check your connection and
+        <p role="alert" className="mt-2 text-tiny font-medium text-accent">
+          The anti-bot check couldn&rsquo;t load. Check your connection and
           reload.
         </p>
       ) : null}

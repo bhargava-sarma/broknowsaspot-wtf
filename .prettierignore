@@ -9,3 +9,9 @@ package-lock.json
 # offline. Reformatting them would make every provider update a noisy
 # diff and hide what actually changed.
 scripts/fixtures/
+
+# Design-canvas artboards. These are sources for the Claude Design editor,
+# not app code: they carry `{{ hole }}` templating and a `data-props` JSON
+# attribute that Prettier has no reason to understand, and they were
+# verified rendering in exactly the form they are committed in.
+.design/

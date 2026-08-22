@@ -1,0 +1,362 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <script>
+    /* The webfonts are attached from script rather than as a <link> in this
+       block. A stylesheet link here is awaited before the artboard compiles,
+       and a request that never resolves — offline, or a network that blocks
+       the font CDN — leaves the frame stuck on "Loading artboard…" with no
+       error path out. Appending it after the fact makes the fonts an
+       enhancement: they swap in when they arrive, and the fallback stack
+       renders the design either way. */
+    (function () {
+      var id = "aurora-webfonts";
+      if (document.getElementById(id)) return;
+      var link = document.createElement("link");
+      link.id = id;
+      link.rel = "stylesheet";
+      link.href = "https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700&display=swap";
+      document.head.appendChild(link);
+    })();
+  </script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #0a0912;
+      color: #f2eff5;
+      font-family: Manrope, "Helvetica Neue", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+    a { color: #ffb489; text-decoration: none; }
+    button { font-family: inherit; cursor: pointer; }
+
+    .aurora { position: absolute; border-radius: 50%; filter: blur(70px); pointer-events: none; }
+    @keyframes drift-a { 0%,100% { transform: translate3d(0,0,0) scale(1); } 50% { transform: translate3d(9%,-7%,0) scale(1.18); } }
+    @keyframes drift-b { 0%,100% { transform: translate3d(0,0,0) scale(1.1); } 50% { transform: translate3d(-11%,8%,0) scale(0.92); } }
+    @keyframes drift-c { 0%,100% { transform: translate3d(0,0,0) rotate(0deg) scale(1); } 50% { transform: translate3d(6%,10%,0) rotate(8deg) scale(1.22); } }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translate3d(0, 24px, 0); filter: blur(8px); }
+      to   { opacity: 1; transform: none; filter: blur(0); }
+    }
+    .rise { animation: rise 1.05s cubic-bezier(0.16, 0.84, 0.28, 1) both; }
+    @keyframes floaty { 0%,100% { transform: translate3d(0,0,0) rotate(-0.3deg); } 50% { transform: translate3d(0,-10px,0) rotate(0.3deg); } }
+    @keyframes breathe { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
+    @keyframes ping { 0% { transform: scale(0.6); opacity: 0.85; } 100% { transform: scale(3.2); opacity: 0; } }
+    @keyframes sweep { from { transform: translateX(-120%) skewX(-18deg); } to { transform: translateX(320%) skewX(-18deg); } }
+
+    .glass {
+      position: relative;
+      background: linear-gradient(158deg, rgba(255,255,255,0.11), rgba(255,255,255,0.035) 46%, rgba(255,255,255,0.06));
+      /* one step lighter than desktop: phone GPUs pay for every blurred pixel */
+      backdrop-filter: blur(20px) saturate(180%);
+      border: 1px solid rgba(255,255,255,0.13);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.32),
+        inset 0 -1px 0 rgba(0,0,0,0.22),
+        0 20px 48px -20px rgba(0,0,0,0.85);
+      overflow: hidden;
+    }
+    .glass::before {
+      content: "";
+      position: absolute; inset: 0; pointer-events: none;
+      background: radial-gradient(120% 70% at 8% -10%, rgba(255,255,255,0.18), transparent 58%);
+    }
+    .sheen::after {
+      content: "";
+      position: absolute; top: 0; bottom: 0; width: 34%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.16), transparent);
+      transform: translateX(-120%) skewX(-18deg);
+      pointer-events: none;
+    }
+    .sheen:hover::after { animation: sweep 1.05s cubic-bezier(0.3, 0, 0.2, 1); }
+    /* touch answers with depth, not hover */
+    .press { transition: transform 220ms cubic-bezier(0.16,0.84,0.28,1); }
+    .press:active { transform: scale(0.972); }
+
+    .eyebrow { font-size: 10.5px; font-weight: 600; letter-spacing: 0.22em; text-transform: uppercase; color: #b6aecb; }
+    .serif { font-family: "Instrument Serif", Georgia, serif; font-weight: 400; }
+  </style>
+</helmet>
+
+<div style="--ember: {{accent}}; --aur: {{aurora}}; position: relative; width: 390px; min-height: 2120px; overflow: hidden;">
+
+  <!-- ============================== ground -->
+  <div style="position: absolute; inset: 0; overflow: hidden; pointer-events: none;">
+    <div class="aurora" style="width: 420px; height: 400px; left: -140px; top: -120px; background: radial-gradient(circle, rgba(96,214,255,0.55), transparent 68%); opacity: var(--aur); animation: drift-a 52s ease-in-out infinite;"></div>
+    <div class="aurora" style="width: 460px; height: 420px; right: -170px; top: -60px; background: radial-gradient(circle, rgba(168,110,255,0.52), transparent 68%); opacity: var(--aur); animation: drift-b 67s ease-in-out infinite;"></div>
+    <div class="aurora" style="width: 400px; height: 360px; left: 20%; top: 520px; background: radial-gradient(circle, var(--ember), transparent 66%); opacity: calc(var(--aur) * 0.6); animation: drift-c 79s ease-in-out infinite;"></div>
+    <div class="aurora" style="width: 440px; height: 400px; left: -120px; top: 1240px; background: radial-gradient(circle, rgba(120,190,255,0.42), transparent 70%); opacity: calc(var(--aur) * 0.8); animation: drift-b 61s ease-in-out infinite;"></div>
+    <svg width="390" height="2120" style="position: absolute; inset: 0; opacity: 0.5;" aria-hidden="true">
+      <g fill="#ffffff">
+        <circle cx="64" cy="112" r="1" opacity="0.7"/><circle cx="188" cy="62" r="0.8" opacity="0.5"/>
+        <circle cx="298" cy="150" r="1.1" opacity="0.55"/><circle cx="352" cy="252" r="0.9" opacity="0.45"/>
+        <circle cx="110" cy="300" r="0.8" opacity="0.42"/><circle cx="248" cy="380" r="1" opacity="0.4"/>
+      </g>
+    </svg>
+  </div>
+
+  <!-- ============================== status bar -->
+  <div style="position: relative; z-index: 30; display: flex; align-items: center; justify-content: space-between; padding: 14px 22px 0; font-size: 13px; font-weight: 600; letter-spacing: -0.01em;">
+    <span style="font-variant-numeric: tabular-nums;">9:41</span>
+    <div style="display: flex; align-items: center; gap: 6px; opacity: 0.9;">
+      <svg width="16" height="11" viewBox="0 0 16 11" fill="#f2eff5"><rect x="0" y="7" width="3" height="4" rx="1"/><rect x="4.3" y="5" width="3" height="6" rx="1"/><rect x="8.6" y="2.6" width="3" height="8.4" rx="1"/><rect x="12.9" y="0" width="3" height="11" rx="1" opacity="0.4"/></svg>
+      <svg width="24" height="11" viewBox="0 0 24 11" fill="none"><rect x="0.5" y="0.5" width="20" height="10" rx="3" stroke="#f2eff5" opacity="0.5"/><rect x="2" y="2" width="14" height="7" rx="1.8" fill="#f2eff5"/><path d="M22 4v3a2.2 2.2 0 0 0 0-3z" fill="#f2eff5" opacity="0.5"/></svg>
+    </div>
+  </div>
+
+  <!-- ============================== floating nav -->
+  <div class="rise" style="position: relative; z-index: 25; padding: 12px 16px 0;">
+    <div class="glass" style="border-radius: 20px; display: flex; align-items: center; justify-content: space-between; padding: 10px 10px 10px 16px;">
+      <div style="display: flex; align-items: center; gap: 9px;">
+        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ember)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/>
+        </svg>
+        <span style="font-size: 14.5px; font-weight: 600; letter-spacing: -0.01em;">broknowsaspot</span>
+      </div>
+      <button class="press" style="width: 36px; height: 36px; border: 1px solid rgba(255,255,255,0.12); border-radius: 12px; background: rgba(255,255,255,0.07); display: flex; align-items: center; justify-content: center;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#f2eff5" stroke-width="1.9" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ============================== hero -->
+  <div style="position: relative; z-index: 10; padding: 46px 22px 0;">
+    <div class="rise eyebrow" style="animation-delay: 0.08s; display: flex; align-items: center; gap: 9px;">
+      <span style="width: 6px; height: 6px; border-radius: 50%; background: var(--ember); box-shadow: 0 0 12px var(--ember); animation: breathe 3.4s ease-in-out infinite;"></span>
+      Index of the unlisted
+    </div>
+
+    <h1 class="rise serif" style="animation-delay: 0.14s; margin: 18px 0 0; font-size: 62px; line-height: 0.92; letter-spacing: -0.032em;">
+      Bro knows<br>
+      <span style="font-style: italic; background: linear-gradient(102deg, #ffd9c2, var(--ember) 52%, #c9a2ff); -webkit-background-clip: text; background-clip: text; color: transparent;">a spot</span>
+    </h1>
+
+    <p class="rise" style="animation-delay: 0.22s; margin: 20px 0 0; font-size: 16px; line-height: 1.6; font-weight: 300; color: #c3bcd4; text-wrap: pretty;">
+      A crowdsourced guide to the places that never made the guidebook.
+    </p>
+
+    <div class="rise" style="animation-delay: 0.3s; margin-top: 26px; display: flex; flex-direction: column; gap: 11px;">
+      <a href="#" class="sheen press" style="position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; gap: 10px; padding: 16px; border-radius: 18px; font-size: 15.5px; font-weight: 600; color: #1a0d06; background: linear-gradient(180deg, #ffc9a4, var(--ember)); box-shadow: 0 18px 40px -14px var(--ember), inset 0 1px 0 rgba(255,255,255,0.65);">
+        Open the map
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h13M13 6l6 6-6 6"/></svg>
+      </a>
+      <a href="#" class="glass press" style="display: flex; align-items: center; justify-content: center; gap: 10px; padding: 16px; border-radius: 18px; font-size: 15.5px; font-weight: 500; color: #f2eff5;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        Add a spot
+      </a>
+    </div>
+  </div>
+
+  <!-- ============================== map card -->
+  <div class="rise" style="animation-delay: 0.38s; position: relative; z-index: 10; margin: 34px 16px 0;">
+    <div class="glass sheen" style="border-radius: 28px; padding: 12px;">
+      <div style="position: relative; border-radius: 20px; overflow: hidden; height: 250px; background: #0c0a16;">
+        <svg viewBox="0 0 334 250" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%;">
+          <defs>
+            <pattern id="gridm2" width="26" height="26" patternUnits="userSpaceOnUse">
+              <path d="M26 0H0V26" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+            </pattern>
+          </defs>
+          <rect width="334" height="250" fill="#0c0a16"/>
+          <rect width="334" height="250" fill="url(#gridm2)"/>
+          <path d="M-10 168 C40 146, 96 186, 152 164 S262 122, 344 156 L344 260 L-10 260 Z" fill="#151129"/>
+          <path d="M-10 200 C50 178, 110 214, 176 196 S284 160, 344 190 L344 260 L-10 260 Z" fill="#1c1636"/>
+          <g stroke="rgba(140,120,220,0.26)" stroke-width="1" fill="none">
+            <path d="M-10 144 C44 122, 104 162, 164 138 S268 96, 344 128"/>
+            <path d="M-10 222 C56 202, 120 234, 190 214 S292 178, 344 204"/>
+          </g>
+          <path d="M22 66 C90 50, 138 100, 200 82 S298 44, 330 70" stroke="rgba(255,255,255,0.09)" stroke-width="1.3" fill="none" stroke-dasharray="4 6"/>
+        </svg>
+
+        <sc-for list="{{pins}}" as="p" hint-placeholder-count="4">
+          <div style="position: absolute; left: {{p.x}}; top: {{p.y}}; transform: translate(-50%,-50%);">
+            <sc-if value="{{p.active}}" hint-placeholder-val="{{ true }}">
+              <span style="position: absolute; left: 50%; top: 50%; width: 16px; height: 16px; margin: -8px 0 0 -8px; border-radius: 50%; background: {{p.glow}}; opacity: 0.5; animation: ping 2.6s cubic-bezier(0,0,0.2,1) infinite;"></span>
+            </sc-if>
+            <span style="position: relative; display: block; width: {{p.size}}; height: {{p.size}}; border-radius: 50%; background: {{p.fill}}; border: 2px solid #0a0912; box-shadow: 0 0 16px {{p.glow}};"></span>
+          </div>
+        </sc-for>
+
+        <!-- the you-are-here ring -->
+        <div style="position: absolute; left: 46%; top: 68%; transform: translate(-50%,-50%);">
+          <span style="position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; border: 1.5px solid #4dd0ff; opacity: 0.55; animation: ping 3.2s cubic-bezier(0,0,0.2,1) infinite;"></span>
+          <span style="position: relative; display: block; width: 12px; height: 12px; border-radius: 50%; background: #4dd0ff; border: 2.5px solid #0a0912; box-shadow: 0 0 18px #4dd0ff;"></span>
+        </div>
+
+        <button class="press" style="position: absolute; right: 12px; bottom: 12px; display: inline-flex; align-items: center; gap: 8px; padding: 10px 14px; border-radius: 14px; background: rgba(10,9,18,0.6); backdrop-filter: blur(16px); border: 1px solid rgba(255,255,255,0.14); font-size: 12.5px; font-weight: 600; color: #4dd0ff;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.2"/><circle cx="12" cy="12" r="8"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
+          Near me
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================== filter chips (scroll rail) -->
+  <div class="rise" style="animation-delay: 0.44s; position: relative; z-index: 10; margin: 20px 0 0; padding: 0 16px;">
+    <div class="glass" style="border-radius: 18px; padding: 6px; display: flex; gap: 4px; overflow: hidden;">
+      <sc-for list="{{cats}}" as="c" hint-placeholder-count="4">
+        <button class="press" onClick="{{c.pick}}" style="flex: none; padding: 9px 14px; border: 1px solid {{c.border}}; border-radius: 13px; font-size: 12.5px; font-weight: {{c.weight}}; color: {{c.color}}; background: {{c.bg}}; box-shadow: {{c.shadow}};">{{c.label}}</button>
+      </sc-for>
+      <div style="flex: none; width: 26px; background: linear-gradient(90deg, transparent, rgba(10,9,18,0.6));"></div>
+    </div>
+  </div>
+
+  <!-- ============================== results -->
+  <div style="position: relative; z-index: 10; margin: 26px 16px 0;">
+    <div style="display: flex; align-items: baseline; justify-content: space-between; padding: 0 6px;">
+      <h2 class="serif" style="margin: 0; font-size: 27px; letter-spacing: -0.018em;">Nearest first</h2>
+      <span style="font-size: 12.5px; color: #8b83a6;">{{count}}</span>
+    </div>
+
+    <div style="margin-top: 16px; display: flex; flex-direction: column; gap: 14px;">
+      <sc-for list="{{results}}" as="r" hint-placeholder-count="4">
+        <div class="glass sheen press" style="border-radius: 24px; padding: 12px; display: grid; grid-template-columns: 96px 1fr; gap: 14px; align-items: center;">
+          <div style="position: relative; border-radius: 17px; overflow: hidden; height: 96px;">
+            <svg viewBox="0 0 96 96" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%;">
+              <rect width="96" height="96" fill="{{r.sky}}"/>
+              <path d="{{r.ridge}}" fill="#0a0814" opacity="0.92"/>
+              <path d="{{r.ridge2}}" fill="#06050d"/>
+            </svg>
+          </div>
+          <div style="padding-right: 8px;">
+            <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 10px;">
+              <div class="serif" style="font-size: 21px; line-height: 1.1; letter-spacing: -0.012em;">{{r.name}}</div>
+              <div style="font-size: 12.5px; font-weight: 600; color: {{r.distColor}}; font-variant-numeric: tabular-nums; flex: none;">{{r.dist}}</div>
+            </div>
+            <div style="margin-top: 5px; font-size: 12.5px; color: #9d95b5;">{{r.where}}</div>
+            <div style="margin-top: 11px; display: flex; align-items: center; gap: 10px;">
+              <span style="display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: #b6aecb;">
+                <span style="width: 6px; height: 6px; border-radius: 50%; background: {{r.accessDot}};"></span>{{r.access}}
+              </span>
+              <span style="width: 1px; height: 11px; background: rgba(255,255,255,0.14);"></span>
+              <span style="font-size: 11.5px; color: #b6aecb;">{{r.diff}}</span>
+            </div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- ============================== sheet peek -->
+  <div class="rise" style="animation-delay: 0.5s; position: relative; z-index: 12; margin: 28px 16px 0;">
+    <div class="glass" style="border-radius: 28px 28px 22px 22px; padding: 12px 20px 22px;">
+      <div style="width: 38px; height: 4px; border-radius: 99px; background: rgba(255,255,255,0.24); margin: 0 auto 18px;"></div>
+      <div style="display: flex; align-items: baseline; justify-content: space-between;">
+        <h3 class="serif" style="margin: 0; font-size: 24px; letter-spacing: -0.015em;">Refine</h3>
+        <button class="press" style="border: none; background: transparent; font-size: 13px; font-weight: 600; color: var(--ember); padding: 0;">Reset</button>
+      </div>
+      <div style="margin-top: 18px;">
+        <div class="eyebrow">Walk-in</div>
+        <div style="margin-top: 12px; height: 5px; border-radius: 99px; background: rgba(255,255,255,0.1); position: relative;">
+          <div style="position: absolute; left: 0; top: 0; bottom: 0; width: 58%; border-radius: 99px; background: linear-gradient(90deg, #6ee7a8, var(--ember));"></div>
+          <div style="position: absolute; left: 58%; top: 50%; transform: translate(-50%,-50%); width: 20px; height: 20px; border-radius: 50%; background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.6), inset 0 -1px 2px rgba(0,0,0,0.2);"></div>
+        </div>
+        <div style="margin-top: 10px; display: flex; justify-content: space-between; font-size: 11.5px; color: #6f6889; font-variant-numeric: tabular-nums;"><span>0 min</span><span>Under 45 min</span><span>3 h+</span></div>
+      </div>
+      <button class="sheen press" style="position: relative; overflow: hidden; margin-top: 22px; width: 100%; padding: 15px; border: none; border-radius: 17px; font-size: 15px; font-weight: 600; color: #1a0d06; background: linear-gradient(180deg, #ffc9a4, var(--ember)); box-shadow: 0 16px 36px -14px var(--ember), inset 0 1px 0 rgba(255,255,255,0.65);">Show 9 spots</button>
+    </div>
+  </div>
+
+  <!-- ============================== floating tab bar -->
+  <div class="rise" style="animation-delay: 0.56s; position: relative; z-index: 30; margin: 34px 16px 0;">
+    <div class="glass" style="border-radius: 24px; padding: 8px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;">
+      <sc-for list="{{tabs}}" as="t" hint-placeholder-count="4">
+        <button class="press" onClick="{{t.pick}}" style="display: flex; flex-direction: column; align-items: center; gap: 6px; padding: 10px 4px; border: 1px solid {{t.border}}; border-radius: 17px; background: {{t.bg}}; color: {{t.color}}; box-shadow: {{t.shadow}};">
+          <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="{{t.icon}}"/></svg>
+          <span style="font-size: 10.5px; font-weight: {{t.weight}}; letter-spacing: 0.01em;">{{t.label}}</span>
+        </button>
+      </sc-for>
+    </div>
+    <div style="height: 6px; width: 130px; border-radius: 99px; background: rgba(255,255,255,0.3); margin: 14px auto 0;"></div>
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{
+  "accent": {"editor": "color", "default": "#ff7a45", "options": ["#ff7a45", "#ff4d6d", "#4dd0ff", "#b06bff"], "section": "Theme"},
+  "aurora": {"editor": "range", "default": 0.6, "min": 0, "max": 1, "step": 0.05, "section": "Theme"},
+  "$preview": {"width": 390, "height": 2120}
+}'>
+class Component extends DCLogic {
+  constructor(props) { super(props); this.state = { cat: "Shore", tab: "Explore" }; }
+
+  renderVals() {
+    const ember = this.props.accent ?? "#ff7a45";
+
+    const cats = ["All", "Ruin", "Shore", "Water"].map((label) => {
+      const on = this.state.cat === label;
+      return {
+        label,
+        weight: on ? 600 : 500,
+        color: on ? "#0d0a16" : "#b6aecb",
+        bg: on ? "rgba(255,255,255,0.92)" : "transparent",
+        border: on ? "rgba(255,255,255,0.5)" : "rgba(255,255,255,0.08)",
+        shadow: on ? "0 6px 16px -6px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.8)" : "none",
+        pick: () => this.setState({ cat: label }),
+      };
+    });
+
+    // one path per icon — bound as a `d` attribute, so no markup is injected
+    const icons = {
+      Home: "M4 11l8-7 8 7v8a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2z",
+      Explore: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zm3.5 5.5l-2 5-5 2 2-5z",
+      Add: "M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18zM12 8.5v7M8.5 12h7",
+      Saved: "M6 4h12v17l-6-4-6 4z",
+    };
+
+    const tabs = ["Home", "Explore", "Add", "Saved"].map((label) => {
+      const on = this.state.tab === label;
+      return {
+        label,
+        icon: icons[label],
+        weight: on ? 600 : 500,
+        color: on ? "#0d0a16" : "#9d95b5",
+        bg: on ? "rgba(255,255,255,0.92)" : "transparent",
+        border: on ? "rgba(255,255,255,0.5)" : "transparent",
+        shadow: on ? "0 8px 20px -8px rgba(0,0,0,0.85), inset 0 1px 0 rgba(255,255,255,0.85)" : "none",
+        pick: () => this.setState({ tab: label }),
+      };
+    });
+
+    const pins = [
+      { x: "46%", y: "38%", size: "13px", active: true,  fill: ember,     glow: ember },
+      { x: "70%", y: "26%", size: "10px", active: false, fill: "#ffffff", glow: "rgba(255,255,255,0.45)" },
+      { x: "26%", y: "54%", size: "10px", active: false, fill: "#ffffff", glow: "rgba(255,255,255,0.45)" },
+      { x: "80%", y: "58%", size: "10px", active: false, fill: "#ffffff", glow: "rgba(255,255,255,0.45)" },
+    ];
+
+    const results = [
+      { name: "Gjipe cove", where: "Vlorë, Albania", dist: "12 km", diff: "Moderate", access: "Open", sel: true,
+        sky: "#2b1f45", ridge: "M0 54 L20 36 L36 50 L54 30 L74 48 L96 38 L96 96 L0 96 Z", ridge2: "M0 68 L24 54 L44 66 L66 50 L86 62 L96 56 L96 96 L0 96 Z" },
+      { name: "Llogara bunker", where: "Vlorë", dist: "26 km", diff: "Easy", access: "Grey", sel: false,
+        sky: "#1e2748", ridge: "M0 48 L18 32 L34 46 L52 26 L72 44 L96 34 L96 96 L0 96 Z", ridge2: "M0 64 L22 50 L42 62 L64 46 L84 58 L96 52 L96 96 L0 96 Z" },
+      { name: "Mena Creek", where: "Queensland", dist: "38 km", diff: "Easy", access: "Permit", sel: false,
+        sky: "#33203a", ridge: "M0 58 L22 40 L38 54 L58 34 L78 52 L96 42 L96 96 L0 96 Z", ridge2: "M0 72 L26 58 L46 70 L68 54 L88 66 L96 60 L96 96 L0 96 Z" },
+      { name: "Vlorë ridge line", where: "Albania", dist: "54 km", diff: "Hard", access: "Grey", sel: false,
+        sky: "#232f4e", ridge: "M0 50 L20 34 L36 48 L56 28 L76 46 L96 36 L96 96 L0 96 Z", ridge2: "M0 66 L24 52 L44 64 L66 48 L86 60 L96 54 L96 96 L0 96 Z" },
+    ].map((r) => ({
+      ...r,
+      distColor: r.sel ? ember : "#b6aecb",
+      accessDot: r.access === "Open" ? "#6ee7a8" : r.access === "Permit" ? "#ffd166" : "#ff8a5c",
+    }));
+
+    return {
+      accent: ember,
+      aurora: this.props.aurora ?? 0.6,
+      cats, tabs, pins, results,
+      count: "9 within 60 km",
+    };
+  }
+}
+</script>
+</body>
+</html>

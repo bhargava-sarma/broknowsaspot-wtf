@@ -1,11 +1,11 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import Link from "next/link";
 import { useCallback, useState } from "react";
 
 import { MapPlaceholder } from "@/components/map/map-placeholder";
 import { TurnstileWidget } from "@/components/security/turnstile-widget";
+import { ArrowRight, Button, ButtonLink } from "@/components/ui/button";
 import { ChoiceField, TextField } from "@/components/ui/field";
 import { LocateButton } from "@/components/ui/locate-button";
 import { PhotoField, type AttachedPhoto } from "@/components/ui/photo-field";
@@ -62,6 +62,24 @@ type Status =
   | { kind: "submitting" }
   | { kind: "sent"; name: string; url: string }
   | { kind: "failed"; message: string };
+
+/**
+ * The four promises the submission path actually keeps, stated where
+ * someone is deciding whether to make one. Each line corresponds to a
+ * real property of the code — see `lib/security/request-key.ts` for the
+ * salted hash and `lib/photos/prepare.ts` for the canvas re-encode.
+ */
+const PRIVACY = [
+  "No account, no email, no name.",
+  "Your IP address is never stored — only a salted hash, used for rate limiting.",
+  "Photo GPS, timestamps and camera data are removed in your browser.",
+  "Your location is read only when you press the button, and never saved.",
+];
+
+/** Every section of the form is the same pane. */
+const PANEL =
+  "glass rounded-[var(--radius-xl)] p-[clamp(1.25rem,1rem+1.4vw,2.25rem)]";
+const PANEL_TITLE = "text-h3 text-ink";
 
 export function SubmitForm() {
   const [form, setForm] = useState<FormState>(EMPTY);
@@ -180,43 +198,42 @@ export function SubmitForm() {
 
   if (status.kind === "sent") {
     return (
-      <section className="shell grid-swiss py-[clamp(3rem,2rem+5vw,7rem)]">
-        <div className="col-span-12 lg:col-span-7">
-          <p className="label flex items-center gap-3">
-            <span className="text-accent">{"///"}</span>
-            received
-          </p>
-          <h2 className="mt-6 text-h2 font-light text-ink lowercase">
-            {status.name} is on the map
-          </h2>
-          <p className="mt-5 max-w-[46ch] text-body text-muted">
-            it&rsquo;s live now — no queue, no moderation wait. if it turns out
+      <section className="shell py-[clamp(2.5rem,1.8rem+3vw,5rem)]">
+        <div className="glass sheen mx-auto max-w-[46rem] rounded-[var(--radius-2xl)] px-[clamp(1.5rem,1rem+3vw,4rem)] py-[clamp(2.5rem,1.6rem+4vw,4.5rem)] text-center">
+          <span
+            aria-hidden="true"
+            className="mx-auto flex size-14 items-center justify-center rounded-[var(--radius-md)] bg-gradient-to-b from-accent/70 to-accent text-accent-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.55),0_16px_36px_-14px_var(--color-accent)]"
+          >
+            <svg
+              width="24"
+              height="24"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={2.8}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M4 12.5l5.5 5.5L20 7" />
+            </svg>
+          </span>
+          <h2 className="mt-7 text-h2 text-ink">{status.name} is on the map</h2>
+          <p className="mx-auto mt-5 max-w-[48ch] text-body text-muted">
+            It&rsquo;s live now — no queue, no moderation wait. If it turns out
             to be wrong or unsafe, anyone can report it and enough reports take
             it down again.
           </p>
-          <div className="mt-10 flex flex-wrap gap-x-10 gap-y-4">
-            <Link
-              href={status.url}
-              className="press touch-target inline-flex items-center gap-3 border-b border-accent pb-2 font-mono text-tiny tracking-[0.04em] text-accent lowercase"
-            >
-              see the entry
-              <span aria-hidden="true">→</span>
-            </Link>
-            <button
-              type="button"
-              onClick={() => setStatus({ kind: "idle" })}
-              className="press touch-target inline-flex items-center gap-3 border-b border-rule-strong pb-2 font-mono text-tiny tracking-[0.04em] text-ink lowercase"
-            >
-              add another
-              <span aria-hidden="true">→</span>
-            </button>
-            <Link
-              href="/explore"
-              className="press touch-target inline-flex items-center gap-3 border-b border-rule pb-2 font-mono text-tiny tracking-[0.04em] text-muted lowercase"
-            >
-              back to the map
-              <span aria-hidden="true">→</span>
-            </Link>
+          <div className="mt-9 flex flex-wrap justify-center gap-3">
+            <ButtonLink href={status.url} tone="ember">
+              See the entry
+              <ArrowRight />
+            </ButtonLink>
+            <Button onClick={() => setStatus({ kind: "idle" })}>
+              Add another
+            </Button>
+            <ButtonLink href="/explore" tone="quiet">
+              Back to the map
+            </ButtonLink>
           </div>
         </div>
       </section>
@@ -227,235 +244,277 @@ export function SubmitForm() {
     <form
       onSubmit={handleSubmit}
       noValidate
-      className="shell py-[clamp(2rem,1.4rem+3vw,4rem)]"
+      className="shell pb-[clamp(2rem,1.4rem+3vw,4rem)]"
     >
-      <div className="grid gap-x-[var(--gutter)] gap-y-[clamp(1.75rem,1.4rem+1.4vw,2.5rem)] lg:grid-cols-12">
-        {/* ------------------------------------------------ what it is */}
-        <div className="lg:col-span-3">
-          <p className="label">what it is</p>
-        </div>
-        <div className="grid gap-[clamp(1.5rem,1.2rem+1.2vw,2.25rem)] sm:grid-cols-2 lg:col-span-8">
-          <TextField
-            label="name"
-            value={form.name}
-            onChange={(v) => set("name", v)}
-            error={errors.name}
-            placeholder="what people call it"
-            maxLength={80}
-            className="sm:col-span-2"
-          />
-          <TextField
-            label="region"
-            value={form.region}
-            onChange={(v) => set("region", v)}
-            error={errors.region}
-            placeholder="county, state, province"
-            maxLength={60}
-          />
-          <TextField
-            label="country"
-            value={form.country}
-            onChange={(v) => set("country", v)}
-            error={errors.country}
-            maxLength={60}
-          />
-          <TextField
-            label="summary"
-            value={form.summary}
-            onChange={(v) => set("summary", v)}
-            error={errors.summary}
-            hint="one line. what makes it worth the detour."
-            maxLength={140}
-            className="sm:col-span-2"
-          />
-        </div>
+      {/* A rail beside the panels, not under them: full-bleed text fields
+          on a wide screen run to about 160 characters, which is roughly
+          twice a readable measure. The rail spends that width on
+          something worth reading instead. */}
+      <div className="grid items-start gap-4 lg:grid-cols-[1fr_minmax(0,21rem)]">
+        <div className="grid gap-4">
+          {/* ------------------------------------------------ what it is */}
+          <section className={PANEL}>
+            <h2 className={PANEL_TITLE}>What is it</h2>
+            <div className="mt-6 grid gap-[clamp(1.25rem,1rem+1vw,1.75rem)] sm:grid-cols-2">
+              <TextField
+                label="Name"
+                value={form.name}
+                onChange={(v) => set("name", v)}
+                error={errors.name}
+                placeholder="What people call it"
+                maxLength={80}
+                className="sm:col-span-2"
+              />
+              <TextField
+                label="Region"
+                value={form.region}
+                onChange={(v) => set("region", v)}
+                error={errors.region}
+                placeholder="County, state, province"
+                maxLength={60}
+              />
+              <TextField
+                label="Country"
+                value={form.country}
+                onChange={(v) => set("country", v)}
+                error={errors.country}
+                maxLength={60}
+              />
+              <TextField
+                label="Summary"
+                value={form.summary}
+                onChange={(v) => set("summary", v)}
+                error={errors.summary}
+                hint="One line. What makes it worth the detour."
+                maxLength={140}
+                className="sm:col-span-2"
+              />
+            </div>
+          </section>
 
-        <div className="lg:col-span-12">
-          <hr className="border-0 border-t border-rule" />
-        </div>
+          {/* --------------------------------------------------- tagging */}
+          <section className={PANEL}>
+            <h2 className={PANEL_TITLE}>How hard, and how open</h2>
+            <p className="mt-3 max-w-[52ch] text-small text-muted">
+              Be honest about difficulty and access. Someone is going to drive
+              four hours on this.
+            </p>
+            <div className="mt-6 grid gap-[clamp(1.25rem,1rem+1vw,1.75rem)]">
+              <ChoiceField
+                label="Category"
+                options={CATEGORIES}
+                labels={CATEGORY_LABELS}
+                value={form.category}
+                onChange={(v) => set("category", v)}
+                error={errors.category}
+              />
+              <ChoiceField
+                label="Difficulty"
+                options={DIFFICULTIES}
+                labels={DIFFICULTY_LABELS}
+                value={form.difficulty}
+                onChange={(v) => set("difficulty", v)}
+                error={errors.difficulty}
+              />
+              <ChoiceField
+                label="Access type"
+                options={ACCESS_TYPES}
+                labels={ACCESS_LABELS}
+                value={form.access}
+                onChange={(v) => set("access", v)}
+                error={errors.access}
+              />
+            </div>
+          </section>
 
-        {/* ---------------------------------------------------- photos */}
-        <div className="lg:col-span-3">
-          <p className="label">photos</p>
-          <p className="mt-3 max-w-[30ch] text-small text-muted">
-            optional, and worth more than the write-up. what it actually looks
-            like when you get there.
-          </p>
-        </div>
-        <div className="lg:col-span-8">
-          <PhotoField
-            label="attach"
-            max={3}
-            photos={photos}
-            onChange={setPhotos}
-            turnstileToken={turnstileToken ?? undefined}
-          />
-        </div>
+          {/* -------------------------------------------------- location */}
+          <section className={PANEL}>
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h2 className={PANEL_TITLE}>Where is it</h2>
+                <p className="mt-3 max-w-[46ch] text-small text-muted">
+                  Drag the map, or type coordinates. The pin is what gets
+                  logged.
+                </p>
+              </div>
 
-        <div className="lg:col-span-12">
-          <hr className="border-0 border-t border-rule" />
-        </div>
-
-        {/* --------------------------------------------------- tagging */}
-        <div className="lg:col-span-3">
-          <p className="label">tagging</p>
-          <p className="mt-3 max-w-[30ch] text-small text-muted">
-            be honest about difficulty and access. someone is going to drive
-            four hours on this.
-          </p>
-        </div>
-        <div className="grid gap-[clamp(1.5rem,1.2rem+1.2vw,2.25rem)] lg:col-span-8">
-          <ChoiceField
-            label="category"
-            options={CATEGORIES}
-            labels={CATEGORY_LABELS}
-            value={form.category}
-            onChange={(v) => set("category", v)}
-            error={errors.category}
-          />
-          <ChoiceField
-            label="difficulty"
-            options={DIFFICULTIES}
-            labels={DIFFICULTY_LABELS}
-            value={form.difficulty}
-            onChange={(v) => set("difficulty", v)}
-            error={errors.difficulty}
-          />
-          <ChoiceField
-            label="access type"
-            options={ACCESS_TYPES}
-            labels={ACCESS_LABELS}
-            value={form.access}
-            onChange={(v) => set("access", v)}
-            error={errors.access}
-          />
-        </div>
-
-        <div className="lg:col-span-12">
-          <hr className="border-0 border-t border-rule" />
-        </div>
-
-        {/* -------------------------------------------------- location */}
-        <div className="lg:col-span-3">
-          <p className="label">location</p>
-          <p className="mt-3 max-w-[30ch] text-small text-muted">
-            tap the map, or type coordinates. the pin is what gets logged.
-          </p>
-
-          {/*
+              {/*
             Off until pressed, and it only *moves the pin* — it does not
             submit anything. The caption is deliberately blunt about the
             consequence: this is the one place on the site where a
             coordinate becomes public, and "use my location" is an easy
             way to publish where you are standing without meaning to.
           */}
-          <LocateButton
-            className="mt-5"
-            status={geo.status}
-            onRequest={geo.request}
-            onClear={geo.clear}
-            label="use my location"
-            caption="moves the pin to where you are. nothing is sent until you submit — and the pin is published, so drop it on the spot rather than on your doorstep."
-          />
-        </div>
-        <div className="lg:col-span-8">
-          <div className="h-[46vh] min-h-[280px] border border-rule">
-            {mounted ? (
-              <LocationPicker
-                lat={form.lat}
-                lng={form.lng}
-                focus={focus}
-                onPick={(lat, lng) => {
-                  set("lat", lat);
-                  set("lng", lng);
-                }}
+              <LocateButton
+                className="w-full sm:w-auto sm:max-w-[24rem]"
+                status={geo.status}
+                onRequest={geo.request}
+                onClear={geo.clear}
+                label="Use my location"
+                caption="Moves the pin to where you are. Nothing is sent until you submit — and the pin is published, so drop it on the spot rather than on your doorstep."
               />
-            ) : (
-              <MapPlaceholder />
-            )}
-          </div>
+            </div>
+            <div className="mt-6">
+              {/* `glass-isolate`: Leaflet stacks its panes at z-index 400–1000,
+              which without a stacking context of their own compete with
+              the page chrome. */}
+              <div className="glass-isolate h-[46vh] min-h-[280px] overflow-hidden rounded-[var(--radius-lg)] border border-[var(--glass-rim)]">
+                {mounted ? (
+                  <LocationPicker
+                    lat={form.lat}
+                    lng={form.lng}
+                    focus={focus}
+                    onPick={(lat, lng) => {
+                      set("lat", lat);
+                      set("lng", lng);
+                    }}
+                  />
+                ) : (
+                  <MapPlaceholder />
+                )}
+              </div>
 
-          <div className="mt-5 grid gap-[var(--gutter)] sm:grid-cols-2">
-            <TextField
-              label="latitude"
-              inputMode="decimal"
-              value={form.lat === null ? "" : String(form.lat)}
-              onChange={(v) => set("lat", v === "" ? null : Number(v))}
-              error={errors.lat}
-              placeholder="-90 to 90"
-            />
-            <TextField
-              label="longitude"
-              inputMode="decimal"
-              value={form.lng === null ? "" : String(form.lng)}
-              onChange={(v) => set("lng", v === "" ? null : Number(v))}
-              error={errors.lng}
-              placeholder="-180 to 180"
-            />
-          </div>
-        </div>
+              <div className="mt-5 grid gap-[clamp(1.25rem,1rem+1vw,1.75rem)] sm:grid-cols-2">
+                <TextField
+                  label="Latitude"
+                  inputMode="decimal"
+                  value={form.lat === null ? "" : String(form.lat)}
+                  onChange={(v) => set("lat", v === "" ? null : Number(v))}
+                  error={errors.lat}
+                  placeholder="-90 to 90"
+                />
+                <TextField
+                  label="Longitude"
+                  inputMode="decimal"
+                  value={form.lng === null ? "" : String(form.lng)}
+                  onChange={(v) => set("lng", v === "" ? null : Number(v))}
+                  error={errors.lng}
+                  placeholder="-180 to 180"
+                />
+              </div>
+            </div>
+          </section>
 
-        <div className="lg:col-span-12">
-          <hr className="border-0 border-t border-rule" />
-        </div>
-
-        {/* ------------------------------------------------- the intel */}
-        <div className="lg:col-span-3">
-          <p className="label">the intel</p>
-        </div>
-        <div className="grid gap-[clamp(1.5rem,1.2rem+1.2vw,2.25rem)] lg:col-span-8">
-          <TextField
-            label="description"
-            multiline
-            rows={8}
-            value={form.description}
-            onChange={(v) => set("description", v)}
-            error={errors.description}
-            hint="how to get there, what it's actually like, what it isn't."
-            maxLength={4000}
-          />
-          <TextField
-            label="watch out"
-            multiline
-            rows={3}
-            value={form.watchOut}
-            onChange={(v) => set("watchOut", v)}
-            error={errors.watchOut}
-            hint="the thing that will catch someone out. tides, loose rock, dogs."
-            maxLength={500}
-          />
-        </div>
-
-        {/* ---------------------------------------------------- submit */}
-        <div className="lg:col-span-3" />
-        <div className="lg:col-span-8">
-          <div className="mb-6">
-            <TurnstileWidget onToken={setTurnstileToken} />
-          </div>
-
-          {status.kind === "failed" ? (
-            <p
-              role="alert"
-              className="mb-6 font-mono text-micro text-accent lowercase"
-            >
-              {status.message}
+          {/* ---------------------------------------------------- photos */}
+          <section className={PANEL}>
+            <div className="flex flex-wrap items-baseline justify-between gap-3">
+              <h2 className={PANEL_TITLE}>Photos</h2>
+              <p className="text-tiny text-faint">Optional · up to 3</p>
+            </div>
+            <p className="mt-3 max-w-[52ch] text-small text-muted">
+              Worth more than the write-up. What it actually looks like when you
+              get there.
             </p>
-          ) : null}
+            <PhotoField
+              className="mt-6"
+              label="Attach"
+              max={3}
+              photos={photos}
+              onChange={setPhotos}
+              turnstileToken={turnstileToken ?? undefined}
+            />
+          </section>
 
-          <button
-            type="submit"
-            disabled={status.kind === "submitting"}
-            className="press touch-target inline-flex items-center gap-3 border-b border-rule-strong pb-2 font-mono text-tiny tracking-[0.04em] text-ink lowercase disabled:opacity-50"
-          >
-            {status.kind === "submitting" ? "sending…" : "submit the spot"}
-            <span aria-hidden="true">→</span>
-          </button>
+          {/* ------------------------------------------------- the intel */}
+          <section className={PANEL}>
+            <h2 className={PANEL_TITLE}>The intel</h2>
+            <div className="mt-6 grid gap-[clamp(1.25rem,1rem+1vw,1.75rem)]">
+              <TextField
+                label="Description"
+                multiline
+                rows={8}
+                value={form.description}
+                onChange={(v) => set("description", v)}
+                error={errors.description}
+                hint="How to get there, what it's actually like, what it isn't."
+                maxLength={4000}
+              />
+              <TextField
+                label="Watch out"
+                multiline
+                rows={3}
+                value={form.watchOut}
+                onChange={(v) => set("watchOut", v)}
+                error={errors.watchOut}
+                hint="The thing that will catch someone out. Tides, loose rock, dogs."
+                maxLength={500}
+              />
+            </div>
+          </section>
 
-          <p className="mt-5 max-w-[46ch] font-mono text-micro text-faint lowercase">
-            no account, no email. it goes live immediately — and anyone can
-            report it, so please be accurate about access and difficulty.
-          </p>
+          {/* ---------------------------------------------------- submit */}
+          <section className={PANEL}>
+            <div className="mb-6">
+              <TurnstileWidget onToken={setTurnstileToken} />
+            </div>
+
+            {status.kind === "failed" ? (
+              <p
+                role="alert"
+                className="mb-6 text-tiny font-medium text-accent"
+              >
+                {status.message}
+              </p>
+            ) : null}
+
+            <Button
+              type="submit"
+              tone="ember"
+              size="lg"
+              disabled={status.kind === "submitting"}
+              className="w-full sm:w-auto"
+            >
+              {status.kind === "submitting" ? "Sending…" : "Submit the spot"}
+              <ArrowRight />
+            </Button>
+
+            <p className="mt-5 max-w-[56ch] text-tiny text-faint">
+              No account, no email. It goes live immediately — and anyone can
+              report it, so please be accurate about access and difficulty.
+            </p>
+          </section>
         </div>
+
+        <aside className="glass rounded-[var(--radius-xl)] p-6 lg:sticky lg:top-[calc(var(--bar-h)+1.5rem)]">
+          <p className="flex items-center gap-2.5 text-small font-semibold text-ink">
+            <svg
+              width="17"
+              height="17"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth={1.8}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+              className="text-accent"
+            >
+              <path d="M12 22s8-4 8-10V5.5L12 2 4 5.5V12c0 6 8 10 8 10z" />
+            </svg>
+            What we do not keep
+          </p>
+          <ul className="mt-5 space-y-3.5">
+            {PRIVACY.map((line) => (
+              <li key={line} className="flex items-start gap-2.5">
+                <svg
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={3}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  aria-hidden="true"
+                  className="mt-1 shrink-0 text-accent"
+                >
+                  <path d="M4 12.5l5.5 5.5L20 7" />
+                </svg>
+                <span className="text-tiny text-muted">{line}</span>
+              </li>
+            ))}
+          </ul>
+        </aside>
       </div>
     </form>
   );

@@ -12,17 +12,17 @@ export default function AdminLoginPage() {
   return (
     <>
       <PageHeader
-        eyebrow="restricted"
-        title="admin"
-        lede={`moderation for ${SITE_TITLE}. accounts are issued by hand — there is no sign-up.`}
+        eyebrow="Restricted"
+        title="Moderation"
+        lede={`Moderation for ${SITE_TITLE}. Accounts are issued by hand — there is no sign-up.`}
       />
 
       <section className="shell py-[clamp(2.5rem,1.8rem+4vw,5rem)]">
         {isAuthConfigured ? (
           <LoginForm />
         ) : (
-          <p className="max-w-[46ch] font-mono text-micro text-faint lowercase">
-            no appwrite credentials in this environment, so there is nothing to
+          <p className="glass mx-auto max-w-[26rem] rounded-[var(--radius-xl)] p-6 text-small text-muted">
+            No Appwrite credentials in this environment, so there is nothing to
             sign in to.
           </p>
         )}

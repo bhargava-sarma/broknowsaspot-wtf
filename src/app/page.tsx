@@ -1,7 +1,14 @@
-import { HeroContours } from "@/components/hero/hero-contours";
-import { HeroVisual } from "@/components/hero/hero-visual";
+import Link from "next/link";
+
 import { Reveal, RevealGroup } from "@/components/motion/reveal";
+import { SpotPlate } from "@/components/spot/spot-plate";
 import { ActionLink } from "@/components/ui/action-link";
+import { ArrowRight, ButtonLink } from "@/components/ui/button";
+import {
+  AccessTag,
+  CategoryTag,
+  DifficultyMeter,
+} from "@/components/ui/spot-tags";
 import { Ticker } from "@/components/ui/ticker";
 import { listSpots } from "@/lib/data/spots-repo";
 import type { Spot } from "@/lib/types/spot";
@@ -9,18 +16,18 @@ import type { Spot } from "@/lib/types/spot";
 const MANIFESTO = [
   {
     n: "01",
-    title: "the guidebook is a filter",
-    body: "everything that makes it into one is there because it scales — parking, opening hours, a gift shop. the places worth the detour fail every one of those tests.",
+    title: "The guidebook is a filter",
+    body: "Everything that makes it into one is there because it scales — parking, opening hours, a gift shop. The places worth the detour fail every one of those tests.",
   },
   {
     n: "02",
-    title: "difficulty is the point",
-    body: "every entry is tagged for what getting there actually costs you: the walk in, the scramble, the tide window, the fence nobody mentions.",
+    title: "Difficulty is the point",
+    body: "Every entry is tagged for what getting there actually costs you: the walk in, the scramble, the tide window, the fence nobody mentions.",
   },
   {
     n: "03",
-    title: "log it honestly",
-    body: "conditions change. access closes. notes come from people who actually went, dated, so you know how stale the intel is before you drive four hours.",
+    title: "Log it honestly",
+    body: "Conditions change. Access closes. Notes come from people who actually went, dated, so you know how stale the intel is before you drive four hours.",
   },
 ];
 
@@ -33,7 +40,7 @@ const MANIFESTO = [
  * cannot open with four invented numbers, and the failure mode is quiet:
  * they look plausible at any size, so nothing ever prompts you to check.
  *
- * "gift shops: 0" is the joke, and it stays, because it is the one figure
+ * "Gift shops: 0" is the joke, and it stays, because it is the one figure
  * that is true by construction.
  */
 function readout(spots: Spot[]) {
@@ -56,23 +63,23 @@ function readout(spots: Spot[]) {
   const middle = median();
 
   return [
-    { label: "spots logged", value: String(spots.length) },
-    { label: "countries", value: String(countries) },
+    { label: "Spots logged", value: String(spots.length) },
+    { label: "Countries", value: String(countries) },
     {
-      label: "median walk-in",
+      label: "Median walk-in",
       // An em dash rather than "0km", which would read as a measurement
       // rather than as an absence.
       value: middle === null ? "—" : `${middle.toFixed(1)}km`,
     },
-    { label: "gift shops", value: "0" },
+    { label: "Gift shops", value: "0" },
   ];
 }
 
 const UNAVAILABLE = [
-  { label: "spots logged", value: "—" },
-  { label: "countries", value: "—" },
-  { label: "median walk-in", value: "—" },
-  { label: "gift shops", value: "0" },
+  { label: "Spots logged", value: "—" },
+  { label: "Countries", value: "—" },
+  { label: "Median walk-in", value: "—" },
+  { label: "Gift shops", value: "0" },
 ];
 
 export const revalidate = 300;
@@ -82,128 +89,258 @@ export default async function HomePage() {
   // figures nor zero. Showing dashes says so without a scary banner on
   // a page that is mostly manifesto.
   const spots = await listSpots();
-  const READOUT = spots === null ? UNAVAILABLE : readout(spots);
+  const stats = spots === null ? UNAVAILABLE : readout(spots);
+
+  // Newest first, and only what the hero and the strip can actually show.
+  const recent = (spots ?? [])
+    .slice()
+    .sort((a, b) => b.addedAt.localeCompare(a.addedAt));
+  const featured = recent[0] ?? null;
+  const strip = recent.slice(featured ? 1 : 0, featured ? 4 : 3);
+
   return (
     <>
       {/* ---------------------------------------------------------- hero */}
-      <section className="rule-b relative overflow-hidden">
-        {/* Sits behind the type, bleeding off the right edge. Resolves to
-            the WebGL field on capable desktops, the SVG contours elsewhere. */}
-        <HeroVisual className="absolute top-1/2 -right-[18%] hidden h-[132%] w-[62%] -translate-y-1/2 opacity-90 sm:block" />
+      <section className="shell pt-[clamp(3rem,2rem+6vw,7rem)]">
+        <div className="grid items-center gap-[clamp(2.5rem,1.6rem+4vw,4rem)] lg:grid-cols-[1fr_minmax(0,26rem)]">
+          <RevealGroup>
+            <Reveal index={0}>
+              <p className="eyebrow flex items-center gap-3">
+                <span
+                  aria-hidden="true"
+                  className="breathe block size-[7px] rounded-full bg-accent shadow-[0_0_14px_var(--color-accent)]"
+                />
+                Index of the unlisted
+              </p>
+            </Reveal>
 
-        <div className="shell grid-swiss relative items-end pt-[clamp(3rem,2rem+6vw,8rem)] pb-[clamp(2.5rem,1.6rem+4vw,5rem)]">
-          <div className="col-span-12 lg:col-span-8">
-            <RevealGroup>
-              <Reveal index={0}>
-                <p className="label flex items-center gap-3">
-                  <span className="text-accent">{"///"}</span>
-                  index of the unlisted
-                </p>
-              </Reveal>
+            <Reveal index={1}>
+              <h1 className="mt-[clamp(1.25rem,0.9rem+1.6vw,2rem)] text-mega text-ink">
+                Bro knows
+                <br />
+                {/* The one gradient in the app, and the reason the display
+                    face carries an italic: it is the half of the line that
+                    catches the light. */}
+                <span className="bg-gradient-to-r from-[#c96a2e] via-accent to-[#7a4bd0] bg-clip-text text-transparent italic dark:from-[#ffd9c2] dark:via-accent dark:to-[#c9a2ff]">
+                  a spot
+                </span>
+              </h1>
+            </Reveal>
 
-              <Reveal index={1}>
-                <h1 className="mt-[clamp(1.5rem,1rem+2vw,3rem)] text-mega font-light lowercase">
-                  bro knows
-                  <br />a spot
-                </h1>
-              </Reveal>
+            <Reveal index={2}>
+              <p className="mt-[clamp(1.5rem,1rem+1.4vw,2.25rem)] max-w-[44ch] text-lead font-light text-muted">
+                A crowdsourced guide to the places that never made the
+                guidebook. Abandoned rail cuttings, unmarked springs, ridge
+                lines with no trail and a view that ruins other views.
+              </p>
+            </Reveal>
 
-              <Reveal index={2}>
-                <p className="mt-[clamp(1.5rem,1rem+1.6vw,2.5rem)] max-w-[46ch] text-lead font-light text-muted">
-                  a crowdsourced guide to the places that never made the
-                  guidebook. abandoned rail cuttings, unmarked springs, ridge
-                  lines with no trail and a view that ruins other views.
-                </p>
-              </Reveal>
+            <Reveal index={3}>
+              <div className="mt-[clamp(2rem,1.4rem+2vw,3rem)] flex flex-wrap items-center gap-3">
+                <ButtonLink href="/explore" tone="ember" size="lg">
+                  Open the map
+                  <ArrowRight />
+                </ButtonLink>
+                <ButtonLink href="/submit" size="lg">
+                  <svg
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                    strokeLinecap="round"
+                    aria-hidden="true"
+                  >
+                    <path d="M12 5v14M5 12h14" />
+                  </svg>
+                  Add a spot
+                </ButtonLink>
+              </div>
+            </Reveal>
+          </RevealGroup>
 
-              <Reveal index={3}>
-                <div className="mt-[clamp(2rem,1.4rem+2.4vw,3.5rem)] flex flex-wrap items-center gap-x-[clamp(1.5rem,1rem+2vw,3rem)] gap-y-4">
-                  <ActionLink href="/explore" tone="accent">
-                    open the map
-                  </ActionLink>
-                  <ActionLink href="/submit" tone="muted">
-                    add a spot
-                  </ActionLink>
+          {/* The floating card. Only rendered when there is a real spot to
+              put in it — a placeholder here would be exactly the invented
+              content the readout above refuses to print. */}
+          {featured ? (
+            <Reveal index={4} className="hidden lg:block">
+              <article className="glass floaty relative rounded-[var(--radius-2xl)] p-4">
+                <SpotPlate
+                  photo={
+                    featured.photos[0] ?? {
+                      src: null,
+                      alt: featured.name,
+                    }
+                  }
+                  index={0}
+                  sizes="26rem"
+                  priority
+                  className="[&>figcaption]:hidden"
+                />
+                <div className="px-2 pt-5 pb-2">
+                  <div className="flex items-baseline justify-between gap-4">
+                    <h2 className="text-h3 text-ink">
+                      <Link
+                        href={`/spot/${featured.slug}`}
+                        className="press before:absolute before:inset-0 before:content-['']"
+                      >
+                        {featured.name}
+                      </Link>
+                    </h2>
+                    <CategoryTag value={featured.category} />
+                  </div>
+                  <p className="mt-1.5 text-small text-faint">
+                    {featured.region}, {featured.country}
+                  </p>
+                  <p className="mt-4 text-small text-muted">
+                    {featured.summary}
+                  </p>
+                  <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2">
+                    <DifficultyMeter value={featured.difficulty} />
+                    <AccessTag value={featured.access} />
+                  </div>
                 </div>
-              </Reveal>
-            </RevealGroup>
-          </div>
-
-          {/* Contours again, but inline and small, for narrow screens. */}
-          <div className="col-span-12 mt-10 sm:hidden">
-            <HeroContours className="h-40 w-full" />
-          </div>
+              </article>
+            </Reveal>
+          ) : null}
         </div>
       </section>
 
       {/* ------------------------------------------------------- readout */}
-      <section className="rule-b" aria-label="index statistics">
-        <RevealGroup className="shell grid grid-cols-2 sm:grid-cols-4">
-          {READOUT.map((item, i) => (
-            <Reveal
-              key={item.label}
-              index={i}
-              className={[
-                "py-[clamp(1.25rem,1rem+1.2vw,2rem)]",
-                // Hairline column dividers that reset per row on mobile.
-                i % 2 === 1 ? "border-l border-rule pl-[var(--gutter)]" : "",
-                i >= 2 ? "border-t border-rule sm:border-t-0" : "",
-                i % 4 !== 0 ? "sm:border-l sm:pl-[var(--gutter)]" : "",
-              ].join(" ")}
-            >
-              <p className="font-mono text-h3 font-light text-ink">
-                <Ticker value={item.value} />
-              </p>
-              <p className="label mt-1">{item.label}</p>
+      <section
+        className="shell mt-[clamp(3rem,2rem+4vw,5.5rem)]"
+        aria-label="Index statistics"
+      >
+        <Reveal>
+          <div className="glass grid grid-cols-2 rounded-[var(--radius-xl)] sm:grid-cols-4">
+            {stats.map((item, i) => (
+              <div
+                key={item.label}
+                className={[
+                  "px-[clamp(1.25rem,1rem+1.4vw,2.25rem)] py-[clamp(1.25rem,1rem+1.2vw,2rem)]",
+                  i % 2 === 1 ? "border-l border-[var(--glass-rim)]" : "",
+                  i >= 2
+                    ? "border-t border-[var(--glass-rim)] sm:border-t-0"
+                    : "",
+                  i % 4 !== 0 ? "sm:border-l sm:border-[var(--glass-rim)]" : "",
+                ].join(" ")}
+              >
+                <p className="font-[family-name:var(--font-display)] text-h2 text-ink tabular-nums">
+                  <Ticker value={item.value} />
+                </p>
+                <p className="eyebrow mt-3">{item.label}</p>
+              </div>
+            ))}
+          </div>
+        </Reveal>
+      </section>
+
+      {/* ----------------------------------------------------- manifesto */}
+      <section className="shell mt-[clamp(4rem,2.5rem+5vw,8rem)]">
+        <Reveal>
+          <p className="eyebrow">Manifesto</p>
+        </Reveal>
+
+        <RevealGroup className="mt-8 grid gap-4 md:grid-cols-3">
+          {MANIFESTO.map((item, i) => (
+            <Reveal key={item.n} index={i}>
+              <article className="glass lift h-full rounded-[var(--radius-xl)] p-[clamp(1.5rem,1.2rem+1.2vw,2.25rem)]">
+                <p className="font-[family-name:var(--font-display)] text-h2 leading-none text-accent">
+                  {item.n}
+                </p>
+                <h2 className="mt-5 text-h3 text-ink">{item.title}</h2>
+                <p className="mt-3.5 text-small text-muted">{item.body}</p>
+              </article>
             </Reveal>
           ))}
         </RevealGroup>
       </section>
 
-      {/* ----------------------------------------------------- manifesto */}
-      <section className="rule-b">
-        <div className="shell grid-swiss py-[clamp(3rem,2rem+5vw,7rem)]">
-          <div className="col-span-12 lg:col-span-3">
-            <p className="label">manifesto</p>
+      {/* ------------------------------------------------- recently added */}
+      {strip.length > 0 ? (
+        <section className="shell mt-[clamp(4rem,2.5rem+5vw,8rem)]">
+          <div className="flex flex-wrap items-end justify-between gap-4">
+            <Reveal>
+              <p className="eyebrow">Recently logged</p>
+              <h2 className="mt-3 text-h2 text-ink">
+                Somewhere you haven&rsquo;t been
+              </h2>
+            </Reveal>
+            <Reveal index={1}>
+              <ActionLink href="/explore" tone="muted">
+                All {recent.length} spots
+              </ActionLink>
+            </Reveal>
           </div>
 
-          <RevealGroup className="col-span-12 mt-8 lg:col-span-9 lg:mt-0">
-            <div className="grid gap-[clamp(2rem,1.4rem+2.4vw,3.5rem)] md:grid-cols-3">
-              {MANIFESTO.map((item, i) => (
-                <Reveal key={item.n} index={i}>
-                  <article>
-                    <p className="font-mono text-micro text-accent tabular-nums">
-                      {item.n}
+          <RevealGroup className="mt-8 grid gap-4 md:grid-cols-3">
+            {strip.map((spot, i) => (
+              <Reveal key={spot.slug} index={i}>
+                <article className="glass lift sheen relative h-full rounded-[var(--radius-xl)] p-3.5">
+                  <div className="relative">
+                    <SpotPlate
+                      photo={spot.photos[0] ?? { src: null, alt: spot.name }}
+                      index={i}
+                      sizes="(min-width: 768px) 33vw, 100vw"
+                      className="[&>figcaption]:hidden"
+                    />
+                    <CategoryTag
+                      value={spot.category}
+                      className="absolute top-3 right-3"
+                    />
+                  </div>
+
+                  <div className="px-2 pt-5 pb-2">
+                    <h3 className="text-h3 text-ink">
+                      {/* The whole card is the hit area, without nesting
+                          the link around content that contains links. */}
+                      <Link
+                        href={`/spot/${spot.slug}`}
+                        className="press before:absolute before:inset-0 before:content-['']"
+                      >
+                        {spot.name}
+                      </Link>
+                    </h3>
+                    <p className="mt-1.5 text-small text-faint">
+                      {spot.region}, {spot.country}
                     </p>
-                    <h2 className="mt-3 text-h3 font-light text-ink lowercase">
-                      {item.title}
-                    </h2>
-                    <p className="mt-3 text-small text-muted">{item.body}</p>
-                  </article>
-                </Reveal>
-              ))}
-            </div>
+                    <p className="mt-3.5 text-small text-muted">
+                      {spot.summary}
+                    </p>
+                    <div className="mt-5">
+                      <DifficultyMeter value={spot.difficulty} />
+                    </div>
+                  </div>
+                </article>
+              </Reveal>
+            ))}
           </RevealGroup>
-        </div>
-      </section>
+        </section>
+      ) : null}
 
       {/* ----------------------------------------------------------- cta */}
-      <section>
-        <div className="shell grid-swiss py-[clamp(3rem,2rem+5vw,7rem)]">
-          <Reveal className="col-span-12 lg:col-span-8">
-            <h2 className="text-h2 font-light text-ink lowercase">
-              know somewhere that isn&rsquo;t on here?
+      <section className="shell mt-[clamp(4rem,2.5rem+5vw,8rem)]">
+        <Reveal>
+          <div className="glass sheen relative overflow-hidden rounded-[var(--radius-2xl)] px-[clamp(1.5rem,1rem+3vw,5rem)] py-[clamp(2.5rem,1.6rem+4vw,5rem)] text-center">
+            <p className="eyebrow">Contribute</p>
+            <h2 className="mx-auto mt-5 max-w-[20ch] text-h1 text-ink">
+              Know somewhere that{" "}
+              <span className="text-accent italic">isn&rsquo;t</span> on here?
             </h2>
-            <p className="mt-4 max-w-[44ch] text-body text-muted">
-              the index is only as good as what people are willing to give up.
-              no account needed — just coordinates, an honest difficulty rating,
+            <p className="mx-auto mt-6 max-w-[52ch] text-body text-muted">
+              The index is only as good as what people are willing to give up.
+              No account needed — just coordinates, an honest difficulty rating,
               and what to watch out for.
             </p>
-            <div className="mt-8">
-              <ActionLink href="/submit">submit a spot</ActionLink>
+            <div className="mt-9 flex justify-center">
+              <ButtonLink href="/submit" tone="ember" size="lg">
+                Submit a spot
+                <ArrowRight />
+              </ButtonLink>
             </div>
-          </Reveal>
-        </div>
+          </div>
+        </Reveal>
       </section>
     </>
   );

@@ -22,35 +22,35 @@ export const ACCESS_TYPES = ["open", "permit", "grey", "private"] as const;
 export type Access = (typeof ACCESS_TYPES)[number];
 
 export const CATEGORY_LABELS: Record<Category, string> = {
-  ruin: "ruin",
-  water: "water",
-  viewpoint: "viewpoint",
-  underground: "underground",
-  shore: "shore",
-  transit: "transit",
-  structure: "structure",
+  ruin: "Ruin",
+  water: "Water",
+  viewpoint: "Viewpoint",
+  underground: "Underground",
+  shore: "Shore",
+  transit: "Transit",
+  structure: "Structure",
 };
 
 export const DIFFICULTY_LABELS: Record<Difficulty, string> = {
-  easy: "easy",
-  moderate: "moderate",
-  hard: "hard",
-  serious: "serious",
+  easy: "Easy",
+  moderate: "Moderate",
+  hard: "Hard",
+  serious: "Serious",
 };
 
 export const ACCESS_LABELS: Record<Access, string> = {
-  open: "open access",
-  permit: "permission needed",
-  grey: "grey area",
-  private: "private land",
+  open: "Open access",
+  permit: "Permission needed",
+  grey: "Grey area",
+  private: "Private land",
 };
 
 /** Longer-form explanation shown next to the tag on a detail page. */
 export const ACCESS_NOTES: Record<Access, string> = {
-  open: "public land or a right of way. nothing to negotiate.",
-  permit: "someone owns it and will say yes if you ask. ask.",
-  grey: "unposted, unenforced, and not technically yours. your call.",
-  private: "posted private. listed for the record — we don't recommend it.",
+  open: "Public land or a right of way. Nothing to negotiate.",
+  permit: "Someone owns it and will say yes if you ask. Ask.",
+  grey: "Unposted, unenforced, and not technically yours. Your call.",
+  private: "Posted private. Listed for the record — we don't recommend it.",
 };
 
 export type CommunityNote = {

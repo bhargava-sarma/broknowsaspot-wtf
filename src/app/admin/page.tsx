@@ -2,7 +2,7 @@ import { ModerationRow } from "@/components/admin/moderation-row";
 import { NoteRow } from "@/components/admin/note-row";
 import { SignOut } from "@/components/admin/sign-out";
 import { PageHeader } from "@/components/layout/page-header";
-import { ActionLink } from "@/components/ui/action-link";
+import { ArrowRight, ButtonLink } from "@/components/ui/button";
 import {
   readQueue,
   readLog,
@@ -30,10 +30,30 @@ const PAST_TENSE: Record<string, string> = {
 
 function Notice({ title, body }: { title: string; body: string }) {
   return (
-    <section className="shell py-[clamp(2.5rem,1.8rem+4vw,5rem)]">
-      <h2 className="text-h3 font-light text-ink lowercase">{title}</h2>
-      <p className="mt-4 max-w-[46ch] text-body text-muted">{body}</p>
+    <section className="shell py-[clamp(2rem,1.4rem+3vw,4rem)]">
+      <div className="glass max-w-[46rem] rounded-[var(--radius-xl)] p-[clamp(1.5rem,1.2rem+1.4vw,2.25rem)]">
+        <h2 className="text-h3 text-ink">{title}</h2>
+        <p className="mt-4 max-w-[52ch] text-body text-muted">{body}</p>
+      </div>
     </section>
+  );
+}
+
+/** One section heading, so the queue and the log look like one thing. */
+function Heading({
+  children,
+  note,
+}: {
+  children: React.ReactNode;
+  note?: string;
+}) {
+  return (
+    <div className="mb-5">
+      <p className="eyebrow">{children}</p>
+      {note ? (
+        <p className="mt-3 max-w-[52ch] text-small text-muted">{note}</p>
+      ) : null}
+    </div>
   );
 }
 
@@ -43,10 +63,10 @@ export default async function AdminPage() {
   if (gate.state === "unconfigured") {
     return (
       <>
-        <PageHeader eyebrow="restricted" title="admin" />
+        <PageHeader eyebrow="Restricted" title="Moderation" />
         <Notice
-          title="not configured here"
-          body="this environment has no appwrite credentials, so there is no database to moderate."
+          title="Not configured here"
+          body="This environment has no Appwrite credentials, so there is no database to moderate."
         />
       </>
     );
@@ -55,11 +75,12 @@ export default async function AdminPage() {
   if (gate.state === "signed-out") {
     return (
       <>
-        <PageHeader eyebrow="restricted" title="admin" />
-        <section className="shell py-[clamp(2.5rem,1.8rem+4vw,5rem)]">
-          <ActionLink href="/admin/login" tone="accent">
-            sign in
-          </ActionLink>
+        <PageHeader eyebrow="Restricted" title="Moderation" />
+        <section className="shell py-[clamp(2rem,1.4rem+3vw,4rem)]">
+          <ButtonLink href="/admin/login" tone="ember">
+            Sign in
+            <ArrowRight />
+          </ButtonLink>
         </section>
       </>
     );
@@ -71,18 +92,18 @@ export default async function AdminPage() {
     // would loop and would misdescribe what happened.
     return (
       <>
-        <PageHeader eyebrow="restricted" title="admin" />
-        <section className="shell py-[clamp(2.5rem,1.8rem+4vw,5rem)]">
-          <h2 className="text-h3 font-light text-ink lowercase">
-            not an admin
-          </h2>
-          <p className="mt-4 max-w-[46ch] text-body text-muted">
-            you&rsquo;re signed in as {gate.email}, but that account has no
-            moderation rights. having an account and being a moderator are
-            separate things here.
-          </p>
-          <div className="mt-9">
-            <SignOut email={gate.email} />
+        <PageHeader eyebrow="Restricted" title="Moderation" />
+        <section className="shell py-[clamp(2rem,1.4rem+3vw,4rem)]">
+          <div className="glass max-w-[46rem] rounded-[var(--radius-xl)] p-[clamp(1.5rem,1.2rem+1.4vw,2.25rem)]">
+            <h2 className="text-h3 text-ink">Not an admin</h2>
+            <p className="mt-4 max-w-[52ch] text-body text-muted">
+              You&rsquo;re signed in as {gate.email}, but that account has no
+              moderation rights. Having an account and being a moderator are
+              separate things here.
+            </p>
+            <div className="mt-7">
+              <SignOut email={gate.email} />
+            </div>
           </div>
         </section>
       </>
@@ -101,8 +122,8 @@ export default async function AdminPage() {
   if (!queue.ok) {
     return (
       <>
-        <PageHeader eyebrow="moderation" title="admin" />
-        <Notice title="couldn't load the queue" body={queue.message} />
+        <PageHeader eyebrow="Moderation" title="The queue" />
+        <Notice title="Couldn't load the queue" body={queue.message} />
       </>
     );
   }
@@ -117,74 +138,74 @@ export default async function AdminPage() {
   return (
     <>
       <PageHeader
-        eyebrow="moderation"
-        title="admin"
-        lede="everything in the index, hidden entries included. hiding and removing are both reversible, and both leave a record."
+        eyebrow="Moderation"
+        title="The queue"
+        lede="Everything in the index, hidden entries included. Hiding and removing are both reversible, and both leave a record."
       >
         <SignOut email={gate.email} />
       </PageHeader>
 
       {/* ------------------------------------------------------ readout */}
-      <section className="rule-b">
-        <div className="shell grid grid-cols-2 gap-y-6 py-[clamp(1.5rem,1.2rem+1.2vw,2.25rem)] sm:grid-cols-3 lg:grid-cols-5">
+      <section className="shell">
+        {/* One tile per figure rather than one panel with dividers: the
+            divider bookkeeping across three breakpoints was the only
+            complicated thing on this page, and panes are the vocabulary
+            everywhere else anyway. */}
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
           {[
-            { label: "in the index", value: queue.entries.length },
+            { label: "In the index", value: queue.entries.length },
             {
-              label: "live",
+              label: "Live",
               value: queue.entries.filter((e) => e.state === "visible").length,
             },
             {
-              label: "hidden",
+              label: "Hidden",
               value: queue.entries.filter((e) => e.state === "hidden").length,
             },
             {
-              label: "removed",
+              label: "Removed",
               value: queue.entries.filter((e) => e.state === "removed").length,
             },
             {
-              label: "notes",
+              label: "Notes",
               value: notes.ok ? notes.entries.length : "—",
             },
           ].map((stat) => (
-            <div key={stat.label}>
-              <p className="label">{stat.label}</p>
-              <p className="mt-2 font-mono text-h3 text-ink">{stat.value}</p>
+            <div
+              key={stat.label}
+              className="glass rounded-[var(--radius-lg)] px-5 py-[clamp(1.1rem,0.9rem+0.8vw,1.6rem)]"
+            >
+              <p className="font-[family-name:var(--font-display)] text-h2 text-ink tabular-nums">
+                {stat.value}
+              </p>
+              <p className="eyebrow mt-2.5">{stat.label}</p>
             </div>
           ))}
         </div>
       </section>
 
       {/* ---------------------------------------------------- the queue */}
-      <section>
-        <div className="shell rule-b py-[clamp(1.5rem,1.2rem+1.2vw,2.25rem)]">
-          <p className="label flex items-center gap-3">
-            <span className="text-accent">{"///"}</span>
-            needs a decision
-          </p>
-        </div>
+      <section className="shell mt-[clamp(2rem,1.5rem+2vw,3.5rem)]">
+        <Heading>Needs a decision</Heading>
 
         {needsAttention.length > 0 ? (
-          <ul>
+          <ul className="grid gap-3">
             {needsAttention.map((entry) => (
               <ModerationRow key={entry.slug} entry={entry} />
             ))}
           </ul>
         ) : (
-          <div className="shell rule-b py-[clamp(2rem,1.5rem+2vw,3.5rem)]">
-            <p className="max-w-[46ch] text-body text-muted">
-              nothing reported and nothing hidden. every entry below is live.
-            </p>
-          </div>
+          <p className="glass max-w-[46rem] rounded-[var(--radius-lg)] p-6 text-body text-muted">
+            Nothing reported and nothing hidden. Every entry below is live.
+          </p>
         )}
       </section>
 
       {/* ----------------------------------------------------- the rest */}
       {quiet.length > 0 ? (
-        <section>
-          <div className="shell rule-b py-[clamp(1.5rem,1.2rem+1.2vw,2.25rem)]">
-            <p className="label">everything else</p>
-          </div>
-          <ul>
+        <section className="shell mt-[clamp(2rem,1.5rem+2vw,3.5rem)]">
+          <Heading>Everything else</Heading>
+          <ul className="grid gap-3">
             {quiet.map((entry) => (
               <ModerationRow key={entry.slug} entry={entry} />
             ))}
@@ -193,58 +214,53 @@ export default async function AdminPage() {
       ) : null}
 
       {/* ---------------------------------------------------- the notes */}
-      <section>
-        <div className="shell rule-b py-[clamp(1.5rem,1.2rem+1.2vw,2.25rem)]">
-          <p className="label">community notes</p>
-          <p className="mt-3 max-w-[46ch] text-small text-muted">
-            newest first, hidden ones included. notes can&rsquo;t be reported,
-            so this list is the only place they get read.
-          </p>
-        </div>
+      <section className="shell mt-[clamp(2rem,1.5rem+2vw,3.5rem)]">
+        <Heading note="Newest first, hidden ones included.">
+          Community notes
+        </Heading>
 
         {!notes.ok ? (
-          <div className="shell rule-b py-[clamp(2rem,1.5rem+2vw,3.5rem)]">
-            <p className="max-w-[46ch] text-body text-muted">{notes.message}</p>
-          </div>
+          <p className="glass max-w-[46rem] rounded-[var(--radius-lg)] p-6 text-body text-muted">
+            {notes.message}
+          </p>
         ) : notes.entries.length > 0 ? (
-          <ul>
+          <ul className="grid gap-3">
             {notes.entries.map((note) => (
               <NoteRow key={note.id} entry={note} />
             ))}
           </ul>
         ) : (
-          <div className="shell rule-b py-[clamp(2rem,1.5rem+2vw,3.5rem)]">
-            <p className="max-w-[46ch] text-body text-muted">
-              nobody has left a note yet.
-            </p>
-          </div>
+          <p className="glass max-w-[46rem] rounded-[var(--radius-lg)] p-6 text-body text-muted">
+            Nobody has left a note yet.
+          </p>
         )}
       </section>
 
       {/* ------------------------------------------------------ the log */}
-      <section className="pb-[clamp(4rem,3rem+6vw,9rem)]">
-        <div className="shell rule-b py-[clamp(1.5rem,1.2rem+1.2vw,2.25rem)]">
-          <p className="label">recent decisions</p>
-        </div>
+      <section className="shell mt-[clamp(2rem,1.5rem+2vw,3.5rem)]">
+        <Heading>Recent decisions</Heading>
 
         {!log.ok ? (
-          <div className="shell py-[clamp(2rem,1.5rem+2vw,3.5rem)]">
-            <p className="max-w-[46ch] text-body text-muted">{log.message}</p>
-          </div>
+          <p className="glass max-w-[46rem] rounded-[var(--radius-lg)] p-6 text-body text-muted">
+            {log.message}
+          </p>
         ) : log.entries.length > 0 ? (
-          <ul className="shell">
-            {log.entries.map((row) => (
+          <ul className="glass overflow-hidden rounded-[var(--radius-lg)]">
+            {log.entries.map((row, i) => (
               <li
                 key={row.id}
-                className="grid gap-x-[var(--gutter)] gap-y-1 border-b border-rule py-4 sm:grid-cols-12"
+                className={[
+                  "grid gap-x-5 gap-y-1 px-5 py-4 sm:grid-cols-12",
+                  i > 0 ? "border-t border-[var(--glass-rim)]" : "",
+                ].join(" ")}
               >
-                <p className="font-mono text-micro text-faint lowercase sm:col-span-3">
+                <p className="text-tiny text-faint tabular-nums sm:col-span-3">
                   {formatTimestamp(row.at)}
                 </p>
                 <p className="text-small text-ink sm:col-span-5">
-                  {row.actor ?? "someone"}{" "}
+                  {row.actor ?? "Someone"}{" "}
                   {PAST_TENSE[row.action] ?? row.action}{" "}
-                  <span className="font-mono text-tiny">{row.slug}</span>
+                  <span className="font-medium">{row.slug}</span>
                 </p>
                 <p className="text-small text-muted sm:col-span-4">
                   {row.reason ?? "—"}
@@ -253,12 +269,10 @@ export default async function AdminPage() {
             ))}
           </ul>
         ) : (
-          <div className="shell py-[clamp(2rem,1.5rem+2vw,3.5rem)]">
-            <p className="max-w-[46ch] text-body text-muted">
-              nothing yet. automatic hides don&rsquo;t appear here — this is a
-              record of decisions people made.
-            </p>
-          </div>
+          <p className="glass max-w-[46rem] rounded-[var(--radius-lg)] p-6 text-body text-muted">
+            Nothing yet. Automatic hides don&rsquo;t appear here — this is a
+            record of decisions people made.
+          </p>
         )}
       </section>
     </>

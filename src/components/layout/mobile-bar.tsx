@@ -9,7 +9,7 @@ import { isActivePath, NAV_ITEMS } from "@/lib/nav";
 import { cn } from "@/lib/utils/cn";
 
 /**
- * Small-screen navigation: a floating glass pill rather than a hamburger
+ * Small-screen navigation: a floating glass tray rather than a hamburger
  * and a slide-in drawer.
  *
  * Every destination stays one thumb-tap away, there is no open/closed
@@ -25,9 +25,9 @@ import { cn } from "@/lib/utils/cn";
  * - The gap keeps it off the home indicator and out of the way of the
  *   edge-swipe gestures that own the bottom of a modern phone screen.
  *
- * The active marker is one element shared across items, so it travels to
- * the tapped destination rather than blinking out in one place and in
- * again in another.
+ * The active key is one element shared across items, so it travels to the
+ * tapped destination rather than blinking out in one place and in again
+ * in another.
  */
 export function MobileBar() {
   const pathname = usePathname();
@@ -38,45 +38,53 @@ export function MobileBar() {
       aria-label="primary"
       className="fixed inset-x-0 bottom-0 z-50 px-3 pb-[calc(env(safe-area-inset-bottom)+0.6rem)] sm:hidden"
     >
-      <div className="glass glass-dense glass-rim glass-r-lg mx-auto max-w-md overflow-hidden">
-        <ul className="relative grid grid-cols-3">
+      <div className="glass-3 mx-auto max-w-md rounded-[var(--radius-lg)] p-2">
+        <ul className="relative grid grid-cols-3 gap-1">
           {NAV_ITEMS.map((item) => {
             const active = isActivePath(pathname, item.href);
             return (
-              <li key={item.href} className="relative">
+              <li key={item.href}>
                 <Link
                   href={item.href}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "press-pane relative flex h-[var(--bar-h)] flex-col items-center justify-center gap-0.5 font-mono lowercase",
-                    active ? "text-ink" : "text-faint",
+                    "press-pane relative flex flex-col items-center justify-center gap-1.5 rounded-[var(--radius-md)] py-2.5",
+                    active ? "text-paper" : "text-muted",
                   )}
                 >
                   {/* Behind the label, so the type never sits on a moving
-                      edge. Inset by a hair so it reads as a key on a
-                      device rather than as a filled tab. */}
+                      edge. A lit key rather than a filled tab. */}
                   {active ? (
                     <motion.span
                       aria-hidden="true"
-                      layoutId={reduce ? undefined : "mobile-nav-marker"}
+                      layoutId={reduce ? undefined : "mobile-nav-key"}
                       transition={springUI}
-                      className="glass-r-sm absolute inset-x-1 inset-y-1 block bg-ink/[0.055] dark:bg-ink/[0.07]"
+                      className="absolute inset-0 block rounded-[var(--radius-md)] bg-ink shadow-[inset_0_1px_0_var(--glass-specular)]"
                     />
                   ) : null}
 
-                  <span className="relative text-[0.5625rem] tracking-[0.16em] text-faint">
-                    {item.code}
+                  <svg
+                    width="19"
+                    height="19"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth={1.8}
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    aria-hidden="true"
+                    className="relative"
+                  >
+                    <path d={item.icon} />
+                  </svg>
+                  <span
+                    className={cn(
+                      "relative text-[0.6875rem] tracking-[0.01em]",
+                      active ? "font-semibold" : "font-medium",
+                    )}
+                  >
+                    {item.label}
                   </span>
-                  <span className="relative text-micro">{item.label}</span>
-
-                  {active ? (
-                    <motion.span
-                      aria-hidden="true"
-                      layoutId={reduce ? undefined : "mobile-nav-tick"}
-                      transition={springUI}
-                      className="absolute inset-x-[38%] top-1.5 block h-px bg-accent"
-                    />
-                  ) : null}
                 </Link>
               </li>
             );

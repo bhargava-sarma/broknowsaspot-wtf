@@ -19,11 +19,11 @@ export const REPORT_REASONS = [
 export type ReportReason = (typeof REPORT_REASONS)[number];
 
 export const REPORT_REASON_LABELS: Record<ReportReason, string> = {
-  dangerous: "unsafe or wrong in a way that could hurt someone",
-  illegal_access: "shouldn't be encouraging access here",
-  private_info: "exposes someone's identity or address",
-  inaccurate: "wrong, stale, or not there any more",
-  spam: "not a real entry",
+  dangerous: "Unsafe or wrong in a way that could hurt someone",
+  illegal_access: "Shouldn't be encouraging access here",
+  private_info: "Exposes someone's identity or address",
+  inaccurate: "Wrong, stale, or not there any more",
+  spam: "Not a real entry",
 };
 
 export function isReportReason(value: unknown): value is ReportReason {

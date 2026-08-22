@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { TurnstileWidget } from "@/components/security/turnstile-widget";
+import { ArrowRight, Button } from "@/components/ui/button";
 import { PhotoField, type AttachedPhoto } from "@/components/ui/photo-field";
 import {
   ANONYMOUS,
@@ -80,7 +81,7 @@ export function NoteForm({
         setState({
           kind: "failed",
           message:
-            payload?.message ?? "the server rejected that — check the fields.",
+            payload?.message ?? "The server rejected that — check the fields.",
         });
         return;
       }
@@ -93,51 +94,56 @@ export function NoteForm({
     } catch {
       setState({
         kind: "failed",
-        message: "couldn't reach the server. try again in a moment.",
+        message: "Couldn't reach the server. Try again in a moment.",
       });
     }
   }
 
+  // Same recess as the shared TextField; this form pre-dates it and
+  // carries its own state and validation, so it reuses the classes
+  // rather than the component.
   const control =
-    "w-full border-b bg-transparent pt-2 pb-2 text-small text-ink outline-none transition-colors duration-200 placeholder:text-faint";
-
-  function rule(error?: string) {
-    return error
-      ? "border-accent"
-      : "border-rule hover:border-muted focus:border-ink";
-  }
+    "w-full bg-transparent text-small text-ink outline-none placeholder:text-faint";
+  const well = "well mt-2.5 rounded-[var(--radius-md)] px-4 py-3";
 
   return (
-    <form onSubmit={submit} noValidate className="mt-10 max-w-[52ch]">
-      <p className="label">leave a note</p>
+    <form
+      onSubmit={submit}
+      noValidate
+      className="glass rounded-[var(--radius-xl)] p-[clamp(1.25rem,1rem+1.2vw,2rem)] lg:sticky lg:top-[calc(var(--bar-h)+1.5rem)]"
+    >
+      <p className="eyebrow">Been recently?</p>
+      <h3 className="mt-3 text-h3 text-ink">Leave a note</h3>
       <p className="mt-3 text-small text-muted">
-        went recently? say what it was actually like. access, conditions,
-        anything that has changed since the entry was written.
+        Say what it was actually like. Access, conditions, anything that has
+        changed since the entry was written.
       </p>
 
       <div className="mt-6">
-        <label htmlFor="note-body" className="label block">
-          what you found
+        <label htmlFor="note-body" className="eyebrow block">
+          What you found
         </label>
-        <textarea
-          id="note-body"
-          value={body}
-          rows={4}
-          maxLength={NOTE_LIMITS.body.max}
-          onChange={(event) => {
-            setBody(event.target.value);
-            setErrors((current) => ({ ...current, body: undefined }));
-          }}
-          aria-invalid={Boolean(errors.body)}
-          aria-describedby={errors.body ? "note-body-error" : undefined}
-          placeholder="the lower gate was chained in march — the fence line still works"
-          className={cn(control, rule(errors.body), "resize-y leading-relaxed")}
-        />
+        <div className={cn(well, errors.body && "border-accent")}>
+          <textarea
+            id="note-body"
+            value={body}
+            rows={4}
+            maxLength={NOTE_LIMITS.body.max}
+            onChange={(event) => {
+              setBody(event.target.value);
+              setErrors((current) => ({ ...current, body: undefined }));
+            }}
+            aria-invalid={Boolean(errors.body)}
+            aria-describedby={errors.body ? "note-body-error" : undefined}
+            placeholder="The lower gate was chained in March — the fence line still works"
+            className={cn(control, "resize-y leading-relaxed")}
+          />
+        </div>
         {errors.body ? (
           <p
             id="note-body-error"
             role="alert"
-            className="mt-1.5 font-mono text-micro text-accent lowercase"
+            className="mt-2 text-tiny font-medium text-accent"
           >
             {errors.body}
           </p>
@@ -146,51 +152,52 @@ export function NoteForm({
 
       <div className="mt-6 grid gap-[var(--gutter)] sm:grid-cols-2">
         <div>
-          <label htmlFor="note-author" className="label block">
-            name (optional)
+          <label htmlFor="note-author" className="eyebrow block">
+            Name (optional)
           </label>
-          <input
-            id="note-author"
-            type="text"
-            value={author}
-            maxLength={NOTE_LIMITS.author.max}
-            onChange={(event) => setAuthor(event.target.value)}
-            aria-invalid={Boolean(errors.author)}
-            placeholder={ANONYMOUS}
-            className={cn(control, rule(errors.author), "touch-target")}
-          />
+          <div className={cn(well, errors.author && "border-accent")}>
+            <input
+              id="note-author"
+              type="text"
+              value={author}
+              maxLength={NOTE_LIMITS.author.max}
+              onChange={(event) => setAuthor(event.target.value)}
+              aria-invalid={Boolean(errors.author)}
+              placeholder={ANONYMOUS}
+              className={cn(control, "block h-6")}
+            />
+          </div>
           {errors.author ? (
-            <p
-              role="alert"
-              className="mt-1.5 font-mono text-micro text-accent lowercase"
-            >
+            <p role="alert" className="mt-2 text-tiny font-medium text-accent">
               {errors.author}
             </p>
           ) : null}
         </div>
 
         <div>
-          <label htmlFor="note-date" className="label block">
-            when you were there
+          <label htmlFor="note-date" className="eyebrow block">
+            When you were there
           </label>
-          <input
-            id="note-date"
-            type="date"
-            value={notedOn}
-            max={today()}
-            onChange={(event) => {
-              setNotedOn(event.target.value);
-              setErrors((current) => ({ ...current, notedOn: undefined }));
-            }}
-            aria-invalid={Boolean(errors.notedOn)}
-            aria-describedby={errors.notedOn ? "note-date-error" : undefined}
-            className={cn(control, rule(errors.notedOn), "touch-target")}
-          />
+          <div className={cn(well, errors.notedOn && "border-accent")}>
+            <input
+              id="note-date"
+              type="date"
+              value={notedOn}
+              max={today()}
+              onChange={(event) => {
+                setNotedOn(event.target.value);
+                setErrors((current) => ({ ...current, notedOn: undefined }));
+              }}
+              aria-invalid={Boolean(errors.notedOn)}
+              aria-describedby={errors.notedOn ? "note-date-error" : undefined}
+              className={cn(control, "block h-6")}
+            />
+          </div>
           {errors.notedOn ? (
             <p
               id="note-date-error"
               role="alert"
-              className="mt-1.5 font-mono text-micro text-accent lowercase"
+              className="mt-2 text-tiny font-medium text-accent"
             >
               {errors.notedOn}
             </p>
@@ -200,12 +207,12 @@ export function NoteForm({
 
       <PhotoField
         className="mt-7"
-        label="photos (optional)"
+        label="Photos (optional)"
         max={2}
         photos={photos}
         onChange={setPhotos}
         turnstileToken={token ?? undefined}
-        hint="what it looks like now. location, timestamp and camera details are stripped in your browser before anything is uploaded."
+        hint="What it looks like now. Location, timestamp and camera details are stripped in your browser before anything is uploaded."
       />
 
       <div className="mt-6">
@@ -213,26 +220,20 @@ export function NoteForm({
       </div>
 
       {state.kind === "failed" ? (
-        <p
-          role="alert"
-          className="mt-5 font-mono text-micro text-accent lowercase"
-        >
+        <p role="alert" className="mt-5 text-tiny font-medium text-accent">
           {state.message}
         </p>
       ) : null}
 
-      <button
-        type="submit"
-        disabled={state.kind === "sending"}
-        className="press touch-target mt-7 inline-flex items-center gap-3 border-b border-rule-strong pb-2 font-mono text-tiny tracking-[0.04em] text-ink lowercase disabled:opacity-50"
-      >
-        {state.kind === "sending" ? "posting…" : "post the note"}
-        <span aria-hidden="true">→</span>
-      </button>
-
-      <p className="mt-5 font-mono text-micro text-faint lowercase">
-        no account. it goes live immediately.
-      </p>
+      <div className="mt-7 flex flex-wrap items-center gap-4">
+        <Button type="submit" tone="ember" disabled={state.kind === "sending"}>
+          {state.kind === "sending" ? "Posting…" : "Post the note"}
+          <ArrowRight />
+        </Button>
+        <p className="text-tiny text-faint">
+          No account. It goes live immediately.
+        </p>
+      </div>
     </form>
   );
 }

@@ -29,13 +29,8 @@ const nextConfig: NextConfig = {
     formats: ["image/avif", "image/webp"],
   },
 
-  // three.js ships untranspiled ESM in a few subpaths; keeping it in the
-  // server-compiled set avoids "Unexpected token 'export'" during RSC builds.
-  transpilePackages: ["three"],
-
   experimental: {
-    // Pull only the icon/helper modules we touch instead of the drei barrel.
-    optimizePackageImports: ["@react-three/drei", "framer-motion"],
+    optimizePackageImports: ["framer-motion"],
   },
 };
 

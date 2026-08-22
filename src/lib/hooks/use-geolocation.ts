@@ -58,12 +58,12 @@ const OPTIONS: PositionOptions = {
 
 export const GEO_MESSAGES: Record<GeoFailure, string> = {
   denied:
-    "location permission was declined. you can still set the pin by hand.",
-  unavailable: "your device couldn't get a fix. try again, or set it by hand.",
+    "Location permission was declined. You can still set the pin by hand.",
+  unavailable: "Your device couldn't get a fix. Try again, or set it by hand.",
   timeout:
-    "no answer from your browser — the permission prompt may still be open. try again, or set it by hand.",
-  insecure: "location needs a secure connection. set it by hand here.",
-  unsupported: "this browser can't share a location. set it by hand.",
+    "No answer from your browser — the permission prompt may still be open. Try again, or set it by hand.",
+  insecure: "Location needs a secure connection. Set it by hand here.",
+  unsupported: "This browser can't share a location. Set it by hand.",
 };
 
 type Options = {

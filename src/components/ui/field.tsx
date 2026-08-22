@@ -5,48 +5,24 @@ import { useId } from "react";
 import { cn } from "@/lib/utils/cn";
 
 /**
- * Form controls in the flat language: no boxes, no fills, no radius. A
- * field is a monospace label over a hairline, and the hairline is the only
- * thing that changes.
+ * Form controls as wells: cut INTO the surface rather than raised off it.
  *
- * Fields stay on the content plane rather than becoming glass. Glass is
- * for things floating *above* the page; a field is a place the reader is
- * writing into, and putting a translucent pane between them and their own
- * text is the wrong instinct however good it looks.
+ * That direction is deliberate. Everything else in the app floats — cards,
+ * nav, sheets — and if a field floated too, a form would read as a stack
+ * of panes with no hierarchy. A recessed control says "your text goes in
+ * here" without needing a border colour to say it, and it keeps the glass
+ * pane the form sits on as the only thing in front of the page.
  *
- * What the hairline does instead: a second rule sits on top of the
- * resting one, scaled to nothing from its left origin, and sweeps across
- * on focus. It reads like a level filling on a piece of hardware, and it
- * is one composited transform rather than a colour interpolation.
+ * The focus ring is on the wrapper (`.well:focus-within` in globals.css)
+ * rather than on the input, so the whole recess lights rather than a line
+ * under it — and there is no focus state to track in React.
  *
  * Errors are wired with aria-describedby and aria-invalid rather than
  * being colour-only, since the accent is the sole visual signal.
  */
 
 const controlBase =
-  "peer w-full border-b bg-transparent pt-2 pb-2 text-body text-ink outline-none transition-colors duration-200 placeholder:text-faint";
-
-function ruleClass(error?: string) {
-  return error
-    ? "border-accent"
-    : "border-rule focus:border-transparent hover:border-muted";
-}
-
-/**
- * The sweeping rule. Sits under the control and keys off `peer-focus`, so
- * there is no focus state to track in React and no re-render on focus.
- */
-function FocusRule({ error }: { error?: string }) {
-  return (
-    <span
-      aria-hidden="true"
-      className={cn(
-        "pointer-events-none absolute inset-x-0 bottom-0 block h-px origin-left scale-x-0 transition-transform duration-500 ease-[var(--ease-damped)] peer-focus:scale-x-100 motion-reduce:transition-none",
-        error ? "bg-accent" : "bg-ink",
-      )}
-    />
-  );
-}
+  "w-full bg-transparent text-body text-ink outline-none placeholder:text-faint";
 
 type BaseProps = {
   label: string;
@@ -54,6 +30,38 @@ type BaseProps = {
   hint?: string;
   className?: string;
 };
+
+/** Label, message and the shared wrapper — identical for every control. */
+function FieldShell({
+  id,
+  label,
+  error,
+  hint,
+  className,
+  children,
+}: BaseProps & { id: string; children: React.ReactNode }) {
+  return (
+    <div className={cn("min-w-0", className)}>
+      <label htmlFor={id} className="eyebrow block">
+        {label}
+      </label>
+      {children}
+      {error ? (
+        <p
+          id={`${id}-error`}
+          role="alert"
+          className="mt-2 text-tiny font-medium text-accent"
+        >
+          {error}
+        </p>
+      ) : hint ? (
+        <p id={`${id}-hint`} className="mt-2 text-tiny text-faint">
+          {hint}
+        </p>
+      ) : null}
+    </div>
+  );
+}
 
 type TextFieldProps = BaseProps & {
   value: string;
@@ -85,12 +93,19 @@ export function TextField({
   const describedBy = error ? `${id}-error` : hint ? `${id}-hint` : undefined;
 
   return (
-    <div className={cn("min-w-0", className)}>
-      <label htmlFor={id} className="label block">
-        {label}
-      </label>
-
-      <div className="relative">
+    <FieldShell
+      id={id}
+      label={label}
+      error={error}
+      hint={hint}
+      className={className}
+    >
+      <div
+        className={cn(
+          "well mt-2.5 rounded-[var(--radius-md)] px-4 py-3",
+          error && "border-accent",
+        )}
+      >
         {multiline ? (
           <textarea
             id={id}
@@ -102,11 +117,7 @@ export function TextField({
             placeholder={placeholder}
             aria-invalid={Boolean(error)}
             aria-describedby={describedBy}
-            className={cn(
-              controlBase,
-              ruleClass(error),
-              "resize-y leading-relaxed",
-            )}
+            className={cn(controlBase, "resize-y leading-relaxed")}
           />
         ) : (
           <input
@@ -120,29 +131,11 @@ export function TextField({
             placeholder={placeholder}
             aria-invalid={Boolean(error)}
             aria-describedby={describedBy}
-            className={cn(controlBase, ruleClass(error), "touch-target")}
+            className={cn(controlBase, "block h-6")}
           />
         )}
-        <FocusRule error={error} />
       </div>
-
-      {error ? (
-        <p
-          id={`${id}-error`}
-          role="alert"
-          className="mt-1.5 font-mono text-micro text-accent lowercase"
-        >
-          {error}
-        </p>
-      ) : hint ? (
-        <p
-          id={`${id}-hint`}
-          className="mt-1.5 font-mono text-micro text-faint lowercase"
-        >
-          {hint}
-        </p>
-      ) : null}
-    </div>
+    </FieldShell>
   );
 }
 
@@ -154,9 +147,12 @@ type ChoiceFieldProps<T extends string> = BaseProps & {
 };
 
 /**
- * Single-select rendered as a radio group of words rather than a <select>.
+ * Single-select rendered as a segmented control rather than a `<select>`.
  * Native selects can't be styled into this language, and with this few
  * options showing all of them is better than hiding them behind a popup.
+ *
+ * The chosen segment is a lit key sitting in the well — the same figure
+ * as the active tab in the mobile bar, so the two read as one idea.
  */
 export function ChoiceField<T extends string>({
   label,
@@ -172,13 +168,16 @@ export function ChoiceField<T extends string>({
 
   return (
     <fieldset className={cn("min-w-0", className)}>
-      <legend className="label">{label}</legend>
+      <legend className="eyebrow">{label}</legend>
 
       <div
         role="radiogroup"
         aria-invalid={Boolean(error)}
         aria-describedby={error ? `${id}-error` : undefined}
-        className="mt-2 flex flex-wrap gap-x-5 gap-y-1 border-b border-rule pb-2"
+        className={cn(
+          "well mt-2.5 flex flex-wrap gap-1 rounded-[var(--radius-md)] p-1.5",
+          error && "border-accent",
+        )}
       >
         {options.map((option) => {
           const active = option === value;
@@ -190,17 +189,13 @@ export function ChoiceField<T extends string>({
               aria-checked={active}
               onClick={() => onChange(option)}
               className={cn(
-                "press touch-target relative py-1 font-mono text-micro lowercase",
-                active ? "text-ink" : "text-faint",
+                "press touch-target flex-1 rounded-[var(--radius-xs)] px-3 py-2 text-tiny whitespace-nowrap",
+                active
+                  ? "bg-ink font-semibold text-paper shadow-[inset_0_1px_0_var(--glass-specular)]"
+                  : "font-medium text-muted hover:text-ink",
               )}
             >
               {labels[option]}
-              {active ? (
-                <span
-                  aria-hidden="true"
-                  className="absolute inset-x-0 bottom-0 block h-px bg-accent"
-                />
-              ) : null}
             </button>
           );
         })}
@@ -210,14 +205,12 @@ export function ChoiceField<T extends string>({
         <p
           id={`${id}-error`}
           role="alert"
-          className="mt-1.5 font-mono text-micro text-accent lowercase"
+          className="mt-2 text-tiny font-medium text-accent"
         >
           {error}
         </p>
       ) : hint ? (
-        <p className="mt-1.5 font-mono text-micro text-faint lowercase">
-          {hint}
-        </p>
+        <p className="mt-2 text-tiny text-faint">{hint}</p>
       ) : null}
     </fieldset>
   );

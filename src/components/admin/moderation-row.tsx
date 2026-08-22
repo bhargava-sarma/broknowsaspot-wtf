@@ -8,6 +8,7 @@ import type { QueueEntry } from "@/lib/admin/queue";
 import { ReportBreakdown } from "@/components/admin/report-breakdown";
 import { formatDate } from "@/lib/utils/date";
 import { cn } from "@/lib/utils/cn";
+import { Button } from "@/components/ui/button";
 
 /**
  * One entry in the queue, with its controls attached.
@@ -20,9 +21,9 @@ import { cn } from "@/lib/utils/cn";
  */
 
 const STATE_COPY: Record<QueueEntry["state"], string> = {
-  visible: "live",
-  hidden: "hidden",
-  removed: "removed",
+  visible: "Live",
+  hidden: "Hidden",
+  removed: "Removed",
 };
 
 /** Which verbs make sense from here. Restoring a live spot is a no-op. */
@@ -42,33 +43,35 @@ export function ModerationRow({ entry }: { entry: QueueEntry }) {
   const reported = entry.reportCount > 0;
 
   return (
-    <li className="rule-b">
-      <div className="shell grid-swiss py-[clamp(1.5rem,1.2rem+1.2vw,2.25rem)]">
+    <li className="glass rounded-[var(--radius-lg)]">
+      <div className="grid gap-x-6 gap-y-5 p-[clamp(1.25rem,1rem+1vw,1.75rem)] lg:grid-cols-12">
         {/* --------------------------------------------- what it is */}
-        <div className="col-span-12 lg:col-span-5">
-          <div className="flex items-baseline gap-3">
+        <div className="lg:col-span-5">
+          <div className="flex flex-wrap items-center gap-2">
             <span
               className={cn(
-                "font-mono text-micro tracking-[0.13em] lowercase",
-                entry.state === "visible" ? "text-faint" : "text-accent",
+                "inline-flex items-center gap-2 rounded-[var(--radius-xs)] px-2.5 py-1 text-[0.6875rem] font-semibold tracking-[0.14em] uppercase",
+                entry.state === "visible"
+                  ? "bg-ink/[0.07] text-muted"
+                  : "bg-accent/15 text-accent",
               )}
             >
               {STATE_COPY[entry.state]}
             </span>
             {entry.autoHidden ? (
-              <span className="font-mono text-micro tracking-[0.13em] text-faint lowercase">
-                automatic
+              <span className="rounded-[var(--radius-xs)] bg-ink/[0.07] px-2.5 py-1 text-[0.6875rem] font-semibold tracking-[0.14em] text-faint uppercase">
+                Automatic
               </span>
             ) : null}
           </div>
 
-          <h3 className="mt-2 text-h3 font-light text-ink lowercase">
-            <a href={`/spot/${entry.slug}`} className="tap">
+          <h3 className="mt-3 text-h3 text-ink">
+            <a href={`/spot/${entry.slug}`} className="press">
               {entry.name}
             </a>
           </h3>
 
-          <p className="mt-1 font-mono text-micro text-faint lowercase">
+          <p className="mt-1.5 text-tiny text-faint">
             {entry.region}, {entry.country} · logged {formatDate(entry.addedAt)}
           </p>
 
@@ -80,11 +83,11 @@ export function ModerationRow({ entry }: { entry: QueueEntry }) {
         </div>
 
         {/* ------------------------------------------------- reports */}
-        <div className="col-span-12 mt-5 lg:col-span-3 lg:mt-0">
-          <p className="label">reports</p>
+        <div className="lg:col-span-3">
+          <p className="eyebrow">Reports</p>
           <p
             className={cn(
-              "mt-2 font-mono text-lead",
+              "mt-2 font-[family-name:var(--font-display)] text-h3 tabular-nums",
               reported ? "text-accent" : "text-faint",
             )}
           >
@@ -95,41 +98,40 @@ export function ModerationRow({ entry }: { entry: QueueEntry }) {
         </div>
 
         {/* -------------------------------------------------- verbs */}
-        <div className="col-span-12 mt-6 lg:col-span-4 lg:mt-0">
+        <div className="lg:col-span-4">
           <form action={formAction}>
             <input type="hidden" name="slug" value={entry.slug} />
 
-            <label htmlFor={`reason-${entry.slug}`} className="label block">
-              note
+            <label htmlFor={`reason-${entry.slug}`} className="eyebrow block">
+              Note
             </label>
-            <input
-              id={`reason-${entry.slug}`}
-              name="reason"
-              type="text"
-              maxLength={500}
-              value={reason}
-              onChange={(event) => setReason(event.target.value)}
-              placeholder="why — goes in the record"
-              className="touch-target w-full border-b border-rule bg-transparent pt-2 pb-2 text-body text-ink transition-colors duration-200 outline-none placeholder:text-faint hover:border-muted focus:border-ink"
-            />
+            <div className="well mt-2.5 rounded-[var(--radius-md)] px-4 py-3">
+              <input
+                id={`reason-${entry.slug}`}
+                name="reason"
+                type="text"
+                maxLength={500}
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+                placeholder="Why — goes in the record"
+                className="block h-6 w-full bg-transparent text-small text-ink outline-none placeholder:text-faint"
+              />
+            </div>
 
-            <div className="mt-5 flex flex-wrap gap-x-8 gap-y-3">
+            <div className="mt-4 flex flex-wrap gap-2">
               {AVAILABLE[entry.state].map((verb) => (
-                <button
+                <Button
                   key={verb}
                   type="submit"
                   name="action"
                   value={verb}
                   disabled={pending}
-                  className={cn(
-                    "press touch-target border-b pb-1 font-mono text-tiny tracking-[0.04em] lowercase disabled:opacity-50",
-                    verb === "restore"
-                      ? "border-rule-strong text-ink"
-                      : "border-accent text-accent",
-                  )}
+                  tone={verb === "restore" ? "glass" : "ember"}
+                  size="sm"
+                  className="capitalize"
                 >
                   {verb}
-                </button>
+                </Button>
               ))}
             </div>
 
@@ -137,7 +139,7 @@ export function ModerationRow({ entry }: { entry: QueueEntry }) {
               <p
                 role="status"
                 className={cn(
-                  "mt-4 font-mono text-micro lowercase",
+                  "mt-4 text-tiny",
                   state.status === "ok" ? "text-faint" : "text-accent",
                 )}
               >

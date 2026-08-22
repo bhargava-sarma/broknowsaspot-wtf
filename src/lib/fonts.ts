@@ -1,27 +1,38 @@
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Instrument_Serif, Manrope } from "next/font/google";
 
 /**
- * Both faces are loaded as variable fonts (no `weight` array) so the whole
- * axis is available from a single file — that keeps the hairline 300 weight
- * and the 500 label weight on the same download.
+ * Two faces, one job each.
  *
- * next/font self-hosts these at build time: no request to Google at runtime,
- * no FOUC, and an auto-generated size-adjusted fallback so swapping in the
- * real face causes no layout shift.
+ * next/font self-hosts both at build time: no request to Google at
+ * runtime, no FOUC, and an auto-generated size-adjusted fallback so
+ * swapping in the real face causes no layout shift.
  */
 
-const fontMono = JetBrains_Mono({
+/**
+ * Display. Every title, and the italic that carries the gradient accent
+ * in the hero.
+ *
+ * Instrument Serif ships one weight — there is no axis to load, so the
+ * weight and style lists are explicit rather than omitted. Asking for a
+ * weight it does not have is a build error, which is the good kind.
+ */
+const fontDisplay = Instrument_Serif({
   subsets: ["latin"],
+  weight: ["400"],
+  style: ["normal", "italic"],
   display: "swap",
-  variable: "--font-jetbrains-mono",
-  // Chrome, labels, headings — the technical/industrial voice.
+  variable: "--font-instrument-serif",
 });
 
-const fontSans = Inter({
+/**
+ * Everything else. Loaded as a variable font (no `weight` array) so the
+ * whole axis comes from one file — the 300 used for lede paragraphs and
+ * the 600 used for labels are the same download.
+ */
+const fontSans = Manrope({
   subsets: ["latin"],
   display: "swap",
-  variable: "--font-inter",
-  // Long-form descriptions and community notes, where mono would tire.
+  variable: "--font-manrope",
 });
 
-export const fontVariables = `${fontMono.variable} ${fontSans.variable}`;
+export const fontVariables = `${fontDisplay.variable} ${fontSans.variable}`;

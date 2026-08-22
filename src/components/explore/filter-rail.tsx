@@ -24,9 +24,7 @@ import { cn } from "@/lib/utils/cn";
 /**
  * Faceted filters, in two shapes.
  *
- * **Desktop** gets the full rail, sticky under the header on the same
- * glass as the rest of the floating plane — the map scrolls under it and
- * the controls stay put.
+ * **Desktop** gets the full rail on a glass pane floating over the map.
  *
  * **Phones** get a one-line summary bar, with the facets themselves
  * living in a sheet behind a single control. The rail as-is costs about a
@@ -34,9 +32,9 @@ import { cn } from "@/lib/utils/cn";
  * the wrong third to spend. Collapsing it also removes the horizontal
  * scroll-inside-vertical-scroll that the wrapped version needed.
  *
- * An option is a word in both shapes, its state carried by ink weight
- * plus a one-pixel accent rule — the same idiom as the nav, so there is
- * nothing new to learn.
+ * A chosen option is a lit key — the same figure as the active tab in the
+ * mobile bar and the chosen segment in a form, so there is nothing new to
+ * learn anywhere in the app.
  */
 
 type ToggleProps = {
@@ -52,18 +50,13 @@ function FilterToggle({ label, active, onClick }: ToggleProps) {
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "press touch-target relative py-1.5 font-mono text-micro whitespace-nowrap lowercase",
-        active ? "text-ink" : "text-faint",
+        "press touch-target rounded-[var(--radius-xs)] px-3 py-1.5 text-tiny whitespace-nowrap transition-colors duration-[var(--dur-ui)] ease-[var(--ease-glass)]",
+        active
+          ? "bg-ink font-semibold text-paper shadow-[inset_0_1px_0_var(--glass-specular)]"
+          : "font-medium text-muted hover:bg-ink/[0.06] hover:text-ink",
       )}
     >
       {label}
-      <span
-        aria-hidden="true"
-        className={cn(
-          "absolute inset-x-0 bottom-0.5 block h-px origin-left bg-accent transition-transform duration-300 ease-[var(--ease-damped)] motion-reduce:transition-none",
-          active ? "scale-x-100" : "scale-x-0",
-        )}
-      />
     </button>
   );
 }
@@ -79,10 +72,10 @@ function Group({
 }) {
   return (
     <fieldset className="min-w-0">
-      <legend className="label mb-2">{legend}</legend>
+      <legend className="eyebrow mb-2.5">{legend}</legend>
       <div
         className={cn(
-          "flex gap-x-4 gap-y-1",
+          "flex gap-1",
           wrap
             ? "flex-wrap"
             : "overflow-x-auto pb-0.5 lg:flex-wrap lg:overflow-visible",
@@ -113,7 +106,7 @@ export function FilterRail({
   const active = activeFilterCount(filters);
 
   const categoryGroup = (wrap: boolean) => (
-    <Group legend="category" wrap={wrap}>
+    <Group legend="Category" wrap={wrap}>
       {CATEGORIES.map((value) => (
         <FilterToggle
           key={value}
@@ -131,7 +124,7 @@ export function FilterRail({
   );
 
   const difficultyGroup = (wrap: boolean) => (
-    <Group legend="difficulty" wrap={wrap}>
+    <Group legend="Difficulty" wrap={wrap}>
       {DIFFICULTIES.map((value) => (
         <FilterToggle
           key={value}
@@ -149,7 +142,7 @@ export function FilterRail({
   );
 
   const accessGroup = (wrap: boolean) => (
-    <Group legend="access" wrap={wrap}>
+    <Group legend="Access" wrap={wrap}>
       {ACCESS_TYPES.map((value) => (
         <FilterToggle
           key={value}
@@ -171,38 +164,47 @@ export function FilterRail({
       status={geo.status}
       onRequest={geo.request}
       onClear={geo.clear}
-      label="sort by what's near me"
-      caption="ranks the list by distance from you. worked out in your browser — your position is never sent to this site or anywhere else."
+      label="Sort by what's near me"
+      caption="Ranks the list by distance from you. Worked out in your browser — your position is never sent to this site or anywhere else."
     />
   );
 
   const count = (
-    <p className="font-mono text-micro text-faint lowercase tabular-nums">
-      <span className="text-ink">{resultCount}</span> / {totalCount} spots
+    <p className="text-tiny text-faint tabular-nums">
+      <span className="font-semibold text-ink">{resultCount}</span> /{" "}
+      {totalCount} spots
     </p>
   );
 
   return (
     <>
       {/* ------------------------------------------------- phones */}
-      <div className="shell flex items-center justify-between gap-4 py-3 sm:hidden">
+      <div className="flex items-center justify-between gap-4 px-3 py-2.5 sm:hidden">
         <button
           type="button"
           onClick={() => setSheetOpen(true)}
           aria-haspopup="dialog"
           aria-expanded={sheetOpen}
-          className="press-pane glass-chip glass-rim glass-r-sm touch-target inline-flex items-center gap-2 px-3 py-2 font-mono text-micro text-ink lowercase"
+          className="press-pane touch-target inline-flex items-center gap-2 rounded-[var(--radius-sm)] bg-ink/[0.06] px-3.5 py-2 text-tiny font-medium text-ink"
         >
-          filters
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            aria-hidden="true"
+          >
+            <path d="M4 6h16M7 12h10M10 18h4" />
+          </svg>
+          Filters
           {active > 0 ? (
-            <span className="inline-flex min-w-4 items-center justify-center bg-accent px-1 py-px font-mono text-[0.5625rem] text-accent-ink tabular-nums">
+            <span className="inline-flex min-w-[1.1rem] items-center justify-center rounded-full bg-accent px-1 text-[0.625rem] font-semibold text-accent-ink tabular-nums">
               {active}
             </span>
-          ) : (
-            <span aria-hidden="true" className="text-faint">
-              +
-            </span>
-          )}
+          ) : null}
         </button>
 
         {count}
@@ -211,7 +213,7 @@ export function FilterRail({
       <Sheet
         open={sheetOpen}
         onClose={() => setSheetOpen(false)}
-        title="filters"
+        title="Filters"
         footer={
           <div className="flex items-center justify-between gap-4">
             {count}
@@ -219,9 +221,9 @@ export function FilterRail({
               type="button"
               disabled={active === 0}
               onClick={() => onChange(EMPTY_FILTERS)}
-              className="press touch-target font-mono text-micro text-accent lowercase disabled:opacity-35"
+              className="press touch-target text-small font-semibold text-accent disabled:opacity-35"
             >
-              clear all
+              Clear all
             </button>
           </div>
         }
@@ -235,30 +237,30 @@ export function FilterRail({
       </Sheet>
 
       {/* ------------------------------------------------ desktop */}
-      <div className="shell hidden py-[clamp(1.25rem,1rem+1.2vw,2rem)] sm:block">
-        <div className="grid gap-[clamp(1.25rem,1rem+1.4vw,2rem)] sm:grid-cols-2 lg:grid-cols-12">
-          <div className="min-w-0 lg:col-span-4">{categoryGroup(false)}</div>
-          <div className="min-w-0 lg:col-span-3">{difficultyGroup(false)}</div>
-          <div className="min-w-0 lg:col-span-3">{accessGroup(false)}</div>
+      <div className="hidden p-[clamp(1rem,0.8rem+0.8vw,1.5rem)] sm:block">
+        <div className="flex flex-wrap items-start gap-x-[clamp(1.25rem,1rem+1.4vw,2.5rem)] gap-y-5">
+          <div className="min-w-0">{categoryGroup(true)}</div>
+          <div className="min-w-0">{difficultyGroup(true)}</div>
+          <div className="min-w-0">{accessGroup(true)}</div>
 
-          <div className="flex items-end justify-between gap-4 lg:col-span-2 lg:flex-col lg:items-end lg:justify-end">
+          <div className="ml-auto flex items-center gap-4 self-center">
             {count}
             {active > 0 ? (
               <button
                 type="button"
                 onClick={() => onChange(EMPTY_FILTERS)}
-                className="press touch-target font-mono text-micro text-accent lowercase"
+                className="press touch-target text-tiny font-semibold text-accent"
               >
-                clear ({active})
+                Clear ({active})
               </button>
             ) : null}
           </div>
+        </div>
 
-          {/* Its own row: the facets narrow the list, this reorders it,
-              and they are different enough to keep visually separate. */}
-          <div className="min-w-0 border-t border-rule pt-4 lg:col-span-12">
-            {nearMe}
-          </div>
+        {/* Its own row: the facets narrow the list, this reorders it,
+            and they are different enough to keep visually separate. */}
+        <div className="mt-5 min-w-0 border-t border-[var(--glass-rim)] pt-4">
+          {nearMe}
         </div>
       </div>
     </>

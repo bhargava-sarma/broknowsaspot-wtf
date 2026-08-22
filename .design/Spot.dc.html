@@ -1,0 +1,549 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <script>
+    /* The webfonts are attached from script rather than as a <link> in this
+       block. A stylesheet link here is awaited before the artboard compiles,
+       and a request that never resolves — offline, or a network that blocks
+       the font CDN — leaves the frame stuck on "Loading artboard…" with no
+       error path out. Appending it after the fact makes the fonts an
+       enhancement: they swap in when they arrive, and the fallback stack
+       renders the design either way. */
+    (function () {
+      var id = "aurora-webfonts";
+      if (document.getElementById(id)) return;
+      var link = document.createElement("link");
+      link.id = id;
+      link.rel = "stylesheet";
+      link.href = "https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700&display=swap";
+      document.head.appendChild(link);
+    })();
+  </script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #0a0912;
+      color: #f2eff5;
+      font-family: Manrope, "Helvetica Neue", system-ui, sans-serif;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+    a { color: #ffb489; text-decoration: none; }
+
+    .aurora { position: absolute; border-radius: 50%; filter: blur(90px); pointer-events: none; }
+    @keyframes drift-a {
+      0%,100% { transform: translate3d(0,0,0) scale(1); }
+      50%     { transform: translate3d(9%, -7%, 0) scale(1.18); }
+    }
+    @keyframes drift-b {
+      0%,100% { transform: translate3d(0,0,0) scale(1.1); }
+      50%     { transform: translate3d(-11%, 8%, 0) scale(0.92); }
+    }
+    @keyframes drift-c {
+      0%,100% { transform: translate3d(0,0,0) rotate(0deg) scale(1); }
+      50%     { transform: translate3d(6%, 10%, 0) rotate(8deg) scale(1.22); }
+    }
+
+    @keyframes rise {
+      from { opacity: 0; transform: translate3d(0, 30px, 0); filter: blur(10px); }
+      to   { opacity: 1; transform: none; filter: blur(0); }
+    }
+    .rise { animation: rise 1.15s cubic-bezier(0.16, 0.84, 0.28, 1) both; }
+
+    @keyframes floaty {
+      0%,100% { transform: translate3d(0,0,0) rotate(-0.3deg); }
+      50%     { transform: translate3d(0,-14px,0) rotate(0.3deg); }
+    }
+    @keyframes breathe { 0%,100% { opacity: 0.5; } 50% { opacity: 1; } }
+    @keyframes sweep { from { transform: translateX(-120%) skewX(-18deg); } to { transform: translateX(320%) skewX(-18deg); } }
+    @keyframes ping {
+      0%   { transform: scale(0.6); opacity: 0.85; }
+      100% { transform: scale(3.4); opacity: 0; }
+    }
+    /* the slow parallax of a photograph that will not sit still */
+    @keyframes pan-far  { 0%,100% { transform: translate3d(0,0,0) scale(1.06); } 50% { transform: translate3d(-14px, 4px, 0) scale(1.10); } }
+    @keyframes pan-near { 0%,100% { transform: translate3d(0,0,0) scale(1.04); } 50% { transform: translate3d(22px, -6px, 0) scale(1.08); } }
+    @keyframes fill-bar { from { width: 0; } }
+
+    .glass {
+      position: relative;
+      background: linear-gradient(158deg, rgba(255,255,255,0.11), rgba(255,255,255,0.035) 46%, rgba(255,255,255,0.06));
+      backdrop-filter: blur(28px) saturate(190%);
+      border: 1px solid rgba(255,255,255,0.13);
+      box-shadow:
+        inset 0 1px 0 rgba(255,255,255,0.34),
+        inset 0 -1px 0 rgba(0,0,0,0.22),
+        0 28px 70px -26px rgba(0,0,0,0.85);
+      overflow: hidden;
+    }
+    .glass::before {
+      content: "";
+      position: absolute; inset: 0; pointer-events: none;
+      background: radial-gradient(120% 70% at 8% -10%, rgba(255,255,255,0.20), transparent 58%);
+    }
+    .sheen::after {
+      content: "";
+      position: absolute; top: 0; bottom: 0; width: 34%;
+      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.16), transparent);
+      transform: translateX(-120%) skewX(-18deg);
+      pointer-events: none;
+    }
+    .sheen:hover::after { animation: sweep 1.05s cubic-bezier(0.3, 0, 0.2, 1); }
+    .lift { transition: transform 620ms cubic-bezier(0.16,0.84,0.28,1), box-shadow 620ms cubic-bezier(0.16,0.84,0.28,1); }
+    .lift:hover { transform: translateY(-7px); box-shadow: inset 0 1px 0 rgba(255,255,255,0.42), 0 40px 90px -28px rgba(0,0,0,0.95); }
+
+    .eyebrow { font-size: 12px; font-weight: 600; letter-spacing: 0.24em; text-transform: uppercase; color: #b6aecb; }
+    .serif { font-family: "Instrument Serif", Georgia, serif; font-weight: 400; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 9px 15px; border-radius: 13px;
+      background: rgba(255,255,255,0.07);
+      border: 1px solid rgba(255,255,255,0.12);
+      font-size: 13px; font-weight: 500; color: #d8d2e6;
+      transition: background 380ms ease, border-color 380ms ease, transform 380ms cubic-bezier(0.16,0.84,0.28,1);
+    }
+    .chip:hover { background: rgba(255,255,255,0.13); border-color: rgba(255,255,255,0.24); transform: translateY(-2px); }
+  </style>
+</helmet>
+
+<div style="--ember: {{accent}}; --aur: {{aurora}}; position: relative; min-height: 3500px; overflow: hidden;">
+
+  <!-- ============================== ground -->
+  <div style="position: absolute; inset: 0; overflow: hidden; pointer-events: none;">
+    <div class="aurora" style="width: 1000px; height: 800px; left: -240px; top: -260px; background: radial-gradient(circle, rgba(96,214,255,0.5), transparent 68%); opacity: var(--aur); animation: drift-a 54s ease-in-out infinite;"></div>
+    <div class="aurora" style="width: 980px; height: 780px; right: -220px; top: 120px; background: radial-gradient(circle, var(--ember), transparent 66%); opacity: calc(var(--aur) * 0.6); animation: drift-c 71s ease-in-out infinite;"></div>
+    <div class="aurora" style="width: 1100px; height: 860px; left: -160px; top: 1180px; background: radial-gradient(circle, rgba(168,110,255,0.46), transparent 70%); opacity: calc(var(--aur) * 0.85); animation: drift-b 63s ease-in-out infinite;"></div>
+    <div class="aurora" style="width: 900px; height: 720px; right: -180px; top: 2160px; background: radial-gradient(circle, rgba(120,190,255,0.4), transparent 70%); opacity: calc(var(--aur) * 0.8); animation: drift-a 77s ease-in-out infinite;"></div>
+    <div class="aurora" style="width: 1020px; height: 800px; left: -200px; top: 2820px; background: radial-gradient(circle, var(--ember), transparent 68%); opacity: calc(var(--aur) * 0.5); animation: drift-c 68s ease-in-out infinite;"></div>
+    <svg width="100%" height="3500" style="position: absolute; inset: 0; opacity: 0.45;" aria-hidden="true">
+      <g fill="#ffffff">
+        <circle cx="210" cy="130" r="1" opacity="0.7"/><circle cx="520" cy="70" r="0.8" opacity="0.5"/>
+        <circle cx="900" cy="210" r="1.2" opacity="0.55"/><circle cx="1240" cy="140" r="0.9" opacity="0.5"/>
+        <circle cx="1380" cy="380" r="1" opacity="0.45"/><circle cx="330" cy="520" r="0.8" opacity="0.4"/>
+        <circle cx="1060" cy="600" r="1.1" opacity="0.45"/><circle cx="150" cy="800" r="0.9" opacity="0.4"/>
+      </g>
+    </svg>
+  </div>
+
+  <!-- ============================== nav -->
+  <div class="rise" style="position: relative; z-index: 20; padding: 26px 48px 0;">
+    <div class="glass" style="border-radius: 22px; display: flex; align-items: center; justify-content: space-between; padding: 12px 14px 12px 22px;">
+      <div style="display: flex; align-items: center; gap: 11px;">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--ember)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/>
+        </svg>
+        <span style="font-size: 16px; font-weight: 600; letter-spacing: -0.01em;">broknowsaspot</span>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <a href="#" style="padding: 9px 16px; border-radius: 13px; font-size: 14px; font-weight: 500; color: #b6aecb;">Index</a>
+        <a href="#" style="padding: 9px 16px; border-radius: 13px; font-size: 14px; font-weight: 500; color: #f2eff5; background: rgba(255,255,255,0.10);">Explore</a>
+        <a href="#" style="padding: 9px 16px; border-radius: 13px; font-size: 14px; font-weight: 500; color: #b6aecb;">Submit</a>
+        <div style="width: 1px; height: 22px; background: rgba(255,255,255,0.14); margin: 0 6px;"></div>
+        <a href="#" class="sheen" style="position: relative; overflow: hidden; padding: 10px 20px; border-radius: 13px; font-size: 14px; font-weight: 600; color: #1a0d06; background: linear-gradient(180deg, #ffc39b, var(--ember)); box-shadow: 0 8px 24px -8px var(--ember), inset 0 1px 0 rgba(255,255,255,0.6);">Add a spot</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================== hero -->
+  <div style="position: relative; z-index: 10; padding: 54px 48px 0;">
+    <a href="#" class="rise" style="animation-delay: 0.06s; display: inline-flex; align-items: center; gap: 9px; font-size: 13.5px; font-weight: 500; color: #9d95b5;">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H6M11 18l-6-6 6-6"/></svg>
+      Back to the map
+    </a>
+
+    <div style="margin-top: 26px; display: grid; grid-template-columns: 1fr 620px; gap: 56px; align-items: center;">
+      <div>
+        <div class="rise eyebrow" style="animation-delay: 0.12s; display: flex; align-items: center; gap: 12px;">
+          <span style="width: 7px; height: 7px; border-radius: 50%; background: #6ee7a8; box-shadow: 0 0 14px #6ee7a8; animation: breathe 3.4s ease-in-out infinite;"></span>
+          {{spot.category}} · {{spot.region}}
+        </div>
+
+        <h1 class="rise serif" style="animation-delay: 0.18s; margin: 22px 0 0; font-size: 92px; line-height: 0.94; letter-spacing: -0.035em;">
+          {{spot.name}}
+        </h1>
+
+        <p class="rise" style="animation-delay: 0.26s; margin: 28px 0 0; max-width: 42ch; font-size: 19px; line-height: 1.62; font-weight: 300; color: #c3bcd4; text-wrap: pretty;">
+          {{spot.tagline}}
+        </p>
+
+        <div class="rise" style="animation-delay: 0.34s; margin-top: 32px; display: flex; flex-wrap: wrap; gap: 10px;">
+          <sc-for list="{{spot.chips}}" as="c" hint-placeholder-count="4">
+            <div class="chip">
+              <span style="width: 7px; height: 7px; border-radius: 50%; background: {{c.dot}};"></span>
+              <span style="color: #9d95b5;">{{c.label}}</span>
+              <span style="font-weight: 600; color: #f2eff5;">{{c.value}}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <!-- the photograph, layered so it breathes -->
+      <div class="rise" style="animation-delay: 0.42s;">
+        <div class="glass sheen" style="border-radius: 38px; padding: 16px; animation: floaty 13s ease-in-out infinite;">
+          <div style="position: relative; border-radius: 26px; overflow: hidden; height: 400px; background: #0d0b18;">
+            <svg viewBox="0 0 588 400" preserveAspectRatio="none" style="position: absolute; inset: -3%; width: 106%; height: 106%; animation: pan-far 26s ease-in-out infinite;">
+              <defs>
+                <linearGradient id="skyg" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stop-color="#4a3070"/><stop offset="55%" stop-color="#2a1e48"/><stop offset="100%" stop-color="#120f22"/>
+                </linearGradient>
+              </defs>
+              <rect width="588" height="400" fill="url(#skyg)"/>
+              <circle cx="452" cy="88" r="34" fill="#ffe7d4" opacity="0.92"/>
+              <circle cx="440" cy="80" r="34" fill="#3a2a5e" opacity="0.9"/>
+              <path d="M0 262 L92 186 L166 234 L258 148 L352 218 L438 168 L520 232 L588 196 L588 400 L0 400 Z" fill="#100d20" opacity="0.9"/>
+            </svg>
+            <svg viewBox="0 0 588 400" preserveAspectRatio="none" style="position: absolute; inset: -2%; width: 104%; height: 104%; animation: pan-near 26s ease-in-out infinite;">
+              <path d="M0 300 L118 246 L212 288 L316 224 L418 276 L512 240 L588 272 L588 400 L0 400 Z" fill="#07060f"/>
+              <g stroke="#8e7fd0" stroke-width="0.8" fill="none" opacity="0.3">
+                <path d="M0 316 Q150 288 300 312 T588 296"/>
+                <path d="M0 336 Q150 310 300 332 T588 318"/>
+                <path d="M0 356 Q150 334 300 352 T588 342"/>
+              </g>
+            </svg>
+            <!-- grain, so the glass has something to refract -->
+            <div style="position: absolute; inset: 0; opacity: 0.16; background-image: radial-gradient(rgba(255,255,255,0.5) 0.5px, transparent 0.5px); background-size: 3px 3px;"></div>
+
+            <div style="position: absolute; left: 16px; bottom: 16px; display: flex; gap: 8px;">
+              <sc-for list="{{spot.badges}}" as="b" hint-placeholder-count="2">
+                <div style="display: inline-flex; align-items: center; gap: 7px; padding: 8px 14px; border-radius: 12px; background: rgba(10,9,18,0.55); backdrop-filter: blur(14px); border: 1px solid rgba(255,255,255,0.14); font-size: 12px; font-weight: 600; letter-spacing: 0.04em;">
+                  <span style="width: 6px; height: 6px; border-radius: 50%; background: {{b.dot}};"></span>{{b.label}}
+                </div>
+              </sc-for>
+            </div>
+            <div style="position: absolute; right: 16px; bottom: 16px; padding: 8px 13px; border-radius: 12px; background: rgba(10,9,18,0.55); backdrop-filter: blur(14px); border: 1px solid rgba(255,255,255,0.14); font-size: 12px; font-weight: 500; color: #b6aecb; font-variant-numeric: tabular-nums;">1 / {{spot.photoCount}}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================== action rail -->
+  <div class="rise" style="animation-delay: 0.5s; position: relative; z-index: 12; margin: 52px 48px 0;">
+    <div class="glass" style="border-radius: 24px; padding: 14px 18px; display: flex; align-items: center; justify-content: space-between;">
+      <div style="display: flex; align-items: center; gap: 22px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ember)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.2 2"/></svg>
+          <span style="font-size: 13.5px; color: #b6aecb;">Last confirmed</span>
+          <span style="font-size: 13.5px; font-weight: 600;">{{spot.confirmed}}</span>
+        </div>
+        <div style="width: 1px; height: 20px; background: rgba(255,255,255,0.13);"></div>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#b6aecb" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>
+          <span style="font-size: 13.5px; font-variant-numeric: tabular-nums; color: #d8d2e6;">{{spot.coords}}</span>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 9px;">
+        <button class="chip">Copy coordinates</button>
+        <button class="chip">Share</button>
+        <button class="chip">Report</button>
+        <a href="#" class="sheen" style="position: relative; overflow: hidden; display: inline-flex; align-items: center; gap: 10px; padding: 11px 20px; border-radius: 13px; font-size: 14px; font-weight: 600; color: #1a0d06; background: linear-gradient(180deg, #ffc39b, var(--ember)); box-shadow: 0 10px 26px -10px var(--ember), inset 0 1px 0 rgba(255,255,255,0.6);">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11l18-8-8 18-2-8-8-2z"/></svg>
+          Directions
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================== body -->
+  <div style="position: relative; z-index: 10; margin: 64px 48px 0; display: grid; grid-template-columns: 1fr 420px; gap: 44px; align-items: start;">
+
+    <!-- write-up -->
+    <div>
+      <div class="eyebrow">The write-up</div>
+      <p class="serif" style="margin: 20px 0 0; font-size: 30px; line-height: 1.42; letter-spacing: -0.012em; color: #efeaf5; text-wrap: pretty;">{{spot.lede}}</p>
+      <p style="margin: 24px 0 0; font-size: 16px; line-height: 1.75; color: #b6aecb; text-wrap: pretty;">{{spot.body}}</p>
+
+      <div style="margin-top: 46px;" class="eyebrow">Getting there</div>
+      <div style="margin-top: 22px; display: flex; flex-direction: column; gap: 2px;">
+        <sc-for list="{{spot.steps}}" as="s" hint-placeholder-count="4">
+          <div style="display: grid; grid-template-columns: 54px 1fr; gap: 20px; padding: 20px 0; border-top: 1px solid rgba(255,255,255,0.08);">
+            <div class="serif" style="font-size: 30px; line-height: 1; color: var(--ember); opacity: 0.85;">{{s.n}}</div>
+            <div>
+              <div style="font-size: 16px; font-weight: 600; letter-spacing: -0.005em;">{{s.title}}</div>
+              <p style="margin: 8px 0 0; font-size: 14.5px; line-height: 1.68; color: #a89fc0;">{{s.body}}</p>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <!-- facts rail -->
+    <div style="display: flex; flex-direction: column; gap: 20px;">
+      <div class="glass" style="border-radius: 28px; padding: 26px;">
+        <div class="eyebrow">What it costs you</div>
+        <div style="margin-top: 22px; display: flex; flex-direction: column; gap: 20px;">
+          <sc-for list="{{spot.meters}}" as="m" hint-placeholder-count="3">
+            <div>
+              <div style="display: flex; align-items: baseline; justify-content: space-between;">
+                <span style="font-size: 14px; color: #b6aecb;">{{m.label}}</span>
+                <span style="font-size: 14px; font-weight: 600; color: {{m.color}};">{{m.value}}</span>
+              </div>
+              <div style="margin-top: 9px; height: 5px; border-radius: 99px; background: rgba(255,255,255,0.1); overflow: hidden;">
+                <div style="height: 100%; width: {{m.pct}}; border-radius: 99px; background: linear-gradient(90deg, {{m.color}}, {{m.color2}}); animation: fill-bar 1.4s cubic-bezier(0.16,0.84,0.28,1) both; animation-delay: {{m.delay}};"></div>
+              </div>
+            </div>
+          </sc-for>
+        </div>
+
+        <div style="margin-top: 26px; padding-top: 22px; border-top: 1px solid rgba(255,255,255,0.09); display: grid; grid-template-columns: 1fr 1fr; gap: 18px 14px;">
+          <sc-for list="{{spot.facts}}" as="f" hint-placeholder-count="4">
+            <div>
+              <div style="font-size: 11.5px; font-weight: 600; letter-spacing: 0.16em; text-transform: uppercase; color: #8b83a6;">{{f.label}}</div>
+              <div style="margin-top: 7px; font-size: 15px; font-weight: 500;">{{f.value}}</div>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+
+      <!-- mini map -->
+      <div class="glass sheen lift" style="border-radius: 28px; padding: 14px;">
+        <div style="position: relative; border-radius: 18px; overflow: hidden; height: 216px; background: #0c0a16;">
+          <svg viewBox="0 0 392 216" style="position: absolute; inset: 0; width: 100%; height: 100%;">
+            <defs>
+              <pattern id="gridm" width="26" height="26" patternUnits="userSpaceOnUse">
+                <path d="M26 0H0V26" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/>
+              </pattern>
+            </defs>
+            <rect width="392" height="216" fill="#0c0a16"/>
+            <rect width="392" height="216" fill="url(#gridm)"/>
+            <path d="M-10 150 C60 128, 110 168, 176 146 S300 108, 402 138 L402 226 L-10 226 Z" fill="#151129"/>
+            <path d="M-10 176 C70 158, 128 190, 200 172 S320 142, 402 166 L402 226 L-10 226 Z" fill="#1c1636"/>
+            <g stroke="rgba(140,120,220,0.28)" stroke-width="1" fill="none">
+              <path d="M-10 132 C60 112, 118 150, 186 128 S300 92, 402 120"/>
+              <path d="M-10 194 C74 176, 136 208, 208 190 S324 160, 402 184"/>
+            </g>
+            <path d="M40 60 C110 46, 150 96, 214 78 S320 40, 380 66" stroke="rgba(255,255,255,0.10)" stroke-width="1.4" fill="none" stroke-dasharray="4 6"/>
+          </svg>
+          <div style="position: absolute; left: 50%; top: 46%; transform: translate(-50%,-50%);">
+            <span style="position: absolute; left: 50%; top: 50%; width: 18px; height: 18px; margin: -9px 0 0 -9px; border-radius: 50%; background: var(--ember); opacity: 0.5; animation: ping 2.6s cubic-bezier(0,0,0.2,1) infinite;"></span>
+            <span style="position: relative; display: block; width: 14px; height: 14px; border-radius: 50%; background: var(--ember); border: 2.5px solid #0a0912; box-shadow: 0 0 20px var(--ember);"></span>
+          </div>
+          <div style="position: absolute; left: 12px; bottom: 12px; padding: 7px 12px; border-radius: 11px; background: rgba(10,9,18,0.6); backdrop-filter: blur(14px); border: 1px solid rgba(255,255,255,0.13); font-size: 11.5px; font-weight: 500; color: #c3bcd4;">Approach from the north col</div>
+        </div>
+      </div>
+
+      <div class="glass" style="border-radius: 24px; padding: 20px 22px; display: flex; gap: 14px; align-items: flex-start;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#ffd166" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex: none; margin-top: 1px;"><path d="M12 9v5"/><path d="M12 17.5v.01"/><path d="M10.3 3.9 1.9 18a2 2 0 0 0 1.7 3h16.8a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>
+        <div>
+          <div style="font-size: 14px; font-weight: 600; color: #ffd166;">{{spot.warnTitle}}</div>
+          <p style="margin: 7px 0 0; font-size: 13.5px; line-height: 1.62; color: #b6aecb;">{{spot.warnBody}}</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================== photo strip -->
+  <div style="position: relative; z-index: 10; margin: 78px 0 0; padding: 0 48px;">
+    <div style="display: flex; align-items: baseline; justify-content: space-between;">
+      <h2 class="serif" style="margin: 0; font-size: 40px; letter-spacing: -0.02em;">From people who went</h2>
+      <a href="#" style="font-size: 14px; font-weight: 500; color: #b6aecb;">All {{spot.photoCount}} photos</a>
+    </div>
+    <div style="margin-top: 26px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px;">
+      <sc-for list="{{spot.photos}}" as="p" hint-placeholder-count="4">
+        <div class="glass sheen lift" style="border-radius: 24px; padding: 10px;">
+          <div style="position: relative; border-radius: 16px; overflow: hidden; height: 190px;">
+            <svg viewBox="0 0 300 190" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%;">
+              <rect width="300" height="190" fill="{{p.sky}}"/>
+              <circle cx="{{p.sunX}}" cy="46" r="20" fill="#ffe7d4" opacity="0.35"/>
+              <path d="{{p.ridge}}" fill="#0b0916" opacity="0.9"/>
+              <path d="{{p.ridge2}}" fill="#06050d"/>
+            </svg>
+            <div style="position: absolute; inset: 0; opacity: 0.14; background-image: radial-gradient(rgba(255,255,255,0.5) 0.5px, transparent 0.5px); background-size: 3px 3px;"></div>
+          </div>
+          <div style="padding: 12px 6px 4px; display: flex; align-items: center; justify-content: space-between;">
+            <span style="font-size: 12.5px; color: #9d95b5;">{{p.by}}</span>
+            <span style="font-size: 12.5px; color: #6f6889; font-variant-numeric: tabular-nums;">{{p.when}}</span>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- ============================== notes -->
+  <div style="position: relative; z-index: 10; margin: 86px 0 0; padding: 0 48px;">
+    <div style="display: grid; grid-template-columns: 1fr 420px; gap: 44px; align-items: start;">
+      <div>
+        <div style="display: flex; align-items: baseline; gap: 16px;">
+          <h2 class="serif" style="margin: 0; font-size: 40px; letter-spacing: -0.02em;">Field notes</h2>
+          <span style="font-size: 14px; color: #8b83a6;">{{spot.noteCount}} from the last two years</span>
+        </div>
+
+        <div style="margin-top: 30px; position: relative;">
+          <!-- the thread -->
+          <div style="position: absolute; left: 21px; top: 12px; bottom: 12px; width: 1px; background: linear-gradient(180deg, rgba(255,255,255,0.22), rgba(255,255,255,0.04));"></div>
+          <div style="display: flex; flex-direction: column; gap: 18px;">
+            <sc-for list="{{spot.notes}}" as="n" hint-placeholder-count="3">
+              <div style="display: grid; grid-template-columns: 44px 1fr; gap: 18px; align-items: start;">
+                <div style="position: relative; z-index: 2; width: 44px; height: 44px; border-radius: 15px; background: {{n.avatar}}; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 700; color: #0d0a16; box-shadow: 0 8px 22px -8px rgba(0,0,0,0.9), inset 0 1px 0 rgba(255,255,255,0.5);">{{n.initial}}</div>
+                <div class="glass lift" style="border-radius: 22px; padding: 20px 22px;">
+                  <div style="display: flex; align-items: center; justify-content: space-between; gap: 14px;">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                      <span style="font-size: 14.5px; font-weight: 600;">{{n.who}}</span>
+                      <span style="padding: 4px 9px; border-radius: 8px; background: {{n.tagBg}}; font-size: 11px; font-weight: 600; letter-spacing: 0.06em; color: {{n.tagColor}};">{{n.tag}}</span>
+                    </div>
+                    <span style="font-size: 12.5px; color: #6f6889; font-variant-numeric: tabular-nums;">{{n.when}}</span>
+                  </div>
+                  <p style="margin: 12px 0 0; font-size: 15px; line-height: 1.68; color: #c3bcd4; text-wrap: pretty;">{{n.body}}</p>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+
+      <!-- composer -->
+      <div class="glass" style="border-radius: 28px; padding: 26px;">
+        <div class="eyebrow">Been recently?</div>
+        <h3 class="serif" style="margin: 14px 0 0; font-size: 28px; letter-spacing: -0.015em;">Leave a note</h3>
+        <p style="margin: 10px 0 0; font-size: 14px; line-height: 1.62; color: #a89fc0;">Conditions, access, what changed. No account, no name required.</p>
+
+        <div style="margin-top: 20px; border-radius: 18px; background: rgba(0,0,0,0.28); border: 1px solid rgba(255,255,255,0.1); padding: 16px; min-height: 104px;">
+          <span style="font-size: 14.5px; color: #6f6889;">The gate on the east track is chained now, but the stile beside it is still open…</span>
+        </div>
+
+        <div style="margin-top: 16px; display: flex; align-items: center; gap: 10px;">
+          <button class="chip" style="flex: 1; justify-content: center;">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="15" rx="3"/><circle cx="12" cy="12.5" r="3.3"/></svg>
+            Add photo
+          </button>
+          <button class="sheen" style="position: relative; overflow: hidden; flex: 1; padding: 12px 18px; border: none; border-radius: 13px; font-family: inherit; font-size: 14px; font-weight: 600; color: #1a0d06; background: linear-gradient(180deg, #ffc39b, var(--ember)); box-shadow: 0 10px 26px -10px var(--ember), inset 0 1px 0 rgba(255,255,255,0.6);">Post note</button>
+        </div>
+
+        <div style="margin-top: 16px; display: flex; gap: 9px; align-items: flex-start;">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#6ee7a8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex: none; margin-top: 2px;"><path d="M12 22s8-4 8-10V5.5L12 2 4 5.5V12c0 6 8 10 8 10z"/></svg>
+          <span style="font-size: 12.5px; line-height: 1.55; color: #8b83a6;">Photo location data is stripped in your browser before upload.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================== nearby -->
+  <div style="position: relative; z-index: 10; margin: 92px 0 0; padding: 0 48px;">
+    <h2 class="serif" style="margin: 0; font-size: 40px; letter-spacing: -0.02em;">Within an hour of here</h2>
+    <div style="margin-top: 26px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px;">
+      <sc-for list="{{spot.nearby}}" as="p" hint-placeholder-count="3">
+        <div class="glass sheen lift" style="border-radius: 28px; padding: 14px;">
+          <div style="position: relative; border-radius: 19px; overflow: hidden; height: 168px;">
+            <svg viewBox="0 0 420 168" preserveAspectRatio="none" style="position: absolute; inset: 0; width: 100%; height: 100%;">
+              <rect width="420" height="168" fill="{{p.sky}}"/>
+              <path d="{{p.ridge}}" fill="#0a0814" opacity="0.92"/>
+              <path d="{{p.ridge2}}" fill="#06050d"/>
+            </svg>
+            <div style="position: absolute; right: 12px; top: 12px; padding: 6px 11px; border-radius: 10px; background: rgba(10,9,18,0.6); backdrop-filter: blur(12px); border: 1px solid rgba(255,255,255,0.13); font-size: 11px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: #d8d2e6;">{{p.cat}}</div>
+          </div>
+          <div style="padding: 18px 8px 8px;">
+            <div style="display: flex; align-items: baseline; justify-content: space-between; gap: 12px;">
+              <div class="serif" style="font-size: 25px; letter-spacing: -0.012em;">{{p.name}}</div>
+              <div style="font-size: 13px; font-weight: 600; color: #b6aecb; font-variant-numeric: tabular-nums;">{{p.dist}}</div>
+            </div>
+            <div style="margin-top: 5px; font-size: 13px; color: #9d95b5;">{{p.where}}</div>
+          </div>
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- ============================== footer -->
+  <div style="position: relative; z-index: 10; margin: 96px 0 0; padding: 34px 48px 44px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; align-items: center; justify-content: space-between;">
+    <div style="display: flex; align-items: center; gap: 11px;">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="var(--ember)" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/>
+      </svg>
+      <span style="font-size: 13.5px; color: #8b83a6;">broknowsaspot.app — go quietly, leave it as you found it.</span>
+    </div>
+    <div style="display: flex; gap: 22px; font-size: 13.5px; color: #8b83a6;">
+      <a href="#" style="color: #8b83a6;">Guidelines</a>
+      <a href="#" style="color: #8b83a6;">Privacy</a>
+      <a href="#" style="color: #8b83a6;">Report a spot</a>
+    </div>
+  </div>
+</div>
+</x-dc>
+
+<script data-dc-script data-props='{
+  "accent": {"editor": "color", "default": "#ff7a45", "options": ["#ff7a45", "#ff4d6d", "#4dd0ff", "#b06bff"], "section": "Theme"},
+  "aurora": {"editor": "range", "default": 0.6, "min": 0, "max": 1, "step": 0.05, "section": "Theme"},
+  "$preview": {"width": 1440, "height": 3500}
+}'>
+class Component extends DCLogic {
+  renderVals() {
+    const ember = this.props.accent ?? "#ff7a45";
+    return {
+      accent: ember,
+      aurora: this.props.aurora ?? 0.6,
+      spot: {
+        name: "Gjipe cove",
+        category: "Shore",
+        region: "Vlorë, Albania",
+        tagline: "A canyon walks you down to a beach with no road to it. Forty minutes on foot from the last place a car can stop, and then nothing but limestone and water.",
+        coords: "40.1642° N, 19.6708° E",
+        confirmed: "11 days ago",
+        photoCount: "23",
+        noteCount: "9 notes",
+        chips: [
+          { label: "Walk-in", value: "40 min", dot: "#6ee7a8" },
+          { label: "Access", value: "Open", dot: "#6ee7a8" },
+          { label: "Difficulty", value: "Moderate", dot: "#ffd166" },
+          { label: "Best", value: "May – Oct", dot: "#4dd0ff" },
+        ],
+        badges: [
+          { label: "Open access", dot: "#6ee7a8" },
+          { label: "No road", dot: "#ffd166" },
+        ],
+        lede: "The canyon does the work. You park where the track gives up, walk into a dry riverbed, and the walls close over you until the only thing ahead is a rectangle of sea.",
+        body: "There is a bunker at the top of the descent, which is how you know you have found the right gully — Albania has forty thousand of them and this one has a footpath worn past its firing slit. The path is loose scree for the first ten minutes and then packed dirt the rest of the way. In August there will be a dozen tents at the bottom and someone selling cold beer out of a cooler; in October there will be nobody, and the last hour of light comes down the canyon wall like it is being poured.",
+        steps: [
+          { n: "01", title: "Drive to the trailhead above Dhërmi", body: "The turning is unsigned and comes 400 m after the second hairpin past the monastery. A saloon car will make it in dry weather; after rain, park at the tarmac and add fifteen minutes." },
+          { n: "02", title: "Find the bunker", body: "Concrete dome on the seaward side of the flat. The path starts immediately behind it — if you are walking on loose white scree within two minutes, you are on it." },
+          { n: "03", title: "Down the gully, 40 minutes", body: "One scramble of about two metres roughly halfway down, polished smooth and easier facing in. Everything else is walking. Carry water; there is none at the bottom." },
+          { n: "04", title: "Come out before dark", body: "The scramble is genuinely unpleasant by headtorch and the canyon holds shadow long before the sea does. Turn round when you have two hours of light left." },
+        ],
+        meters: [
+          { label: "Difficulty", value: "Moderate", pct: "58%", color: "#ffd166", color2: "#ff9f43", delay: "0.15s" },
+          { label: "Walk-in", value: "40 min · 1.9 km", pct: "42%", color: "#6ee7a8", color2: "#4dd0ff", delay: "0.3s" },
+          { label: "Exposure", value: "Low", pct: "22%", color: "#4dd0ff", color2: "#7aa8ff", delay: "0.45s" },
+        ],
+        facts: [
+          { label: "Category", value: "Shore" },
+          { label: "Access", value: "Open, no permit" },
+          { label: "Best window", value: "May – October" },
+          { label: "Water", value: "Carry your own" },
+        ],
+        warnTitle: "Tide and swell matter here",
+        warnBody: "The beach narrows to nothing at the north end on a big swell, and the return scramble is the only way out. Check the forecast before you commit to the descent.",
+        photos: [
+          { by: "anonymous", when: "Jun 2025", sky: "#2b1f45", sunX: "232", ridge: "M0 108 L64 72 L112 100 L168 60 L228 96 L272 70 L300 88 L300 190 L0 190 Z", ridge2: "M0 134 L76 106 L134 130 L200 100 L262 124 L300 110 L300 190 L0 190 Z" },
+          { by: "anonymous", when: "Sep 2025", sky: "#1e2748", sunX: "70",  ridge: "M0 96 L58 66 L120 94 L170 54 L232 90 L278 64 L300 82 L300 190 L0 190 Z", ridge2: "M0 128 L68 100 L140 126 L206 96 L266 120 L300 106 L300 190 L0 190 Z" },
+          { by: "anonymous", when: "Sep 2025", sky: "#3a2140", sunX: "180", ridge: "M0 116 L70 80 L126 110 L184 68 L238 104 L280 78 L300 96 L300 190 L0 190 Z", ridge2: "M0 142 L82 114 L148 138 L212 108 L270 132 L300 120 L300 190 L0 190 Z" },
+          { by: "anonymous", when: "Apr 2026", sky: "#232f4e", sunX: "256", ridge: "M0 102 L62 70 L118 98 L176 58 L234 94 L276 68 L300 86 L300 190 L0 190 Z", ridge2: "M0 130 L72 102 L138 128 L204 98 L264 122 L300 108 L300 190 L0 190 Z" },
+        ],
+        notes: [
+          { who: "Went last week", initial: "W", when: "11 days ago", tag: "STILL OPEN", tagBg: "rgba(110,231,168,0.14)", tagColor: "#6ee7a8", avatar: "linear-gradient(150deg, #6ee7a8, #4dd0ff)",
+            body: "Path is in good shape. Someone has run a knotted rope down the scramble — it looks new and it held my weight, but I would not trust it in a year. Two tents at the bottom, otherwise empty." },
+          { who: "Autumn descent", initial: "A", when: "4 months ago", tag: "CONDITIONS", tagBg: "rgba(255,209,102,0.14)", tagColor: "#ffd166", avatar: "linear-gradient(150deg, #ffd166, #ff9f43)",
+            body: "Went down at 16:00 in late October and lost the light before I got back to the bunker. The scramble in the dark was the worst twenty minutes of the trip. Start earlier than you think you need to." },
+          { who: "First time here", initial: "F", when: "9 months ago", tag: "ACCESS", tagBg: "rgba(77,208,255,0.14)", tagColor: "#4dd0ff", avatar: "linear-gradient(150deg, #a86eff, #4dd0ff)",
+            body: "Missed the turning twice. It really is unsigned — the only marker is a rusted blue barrel about ten metres in on the left. Once you see the barrel you are fine." },
+        ],
+        nearby: [
+          { name: "Dhërmi sea caves", where: "Vlorë", cat: "Water", dist: "9 km",
+            sky: "#241b3d", ridge: "M0 104 L88 66 L152 98 L232 54 L316 92 L380 68 L420 86 L420 168 L0 168 Z", ridge2: "M0 128 L104 98 L190 124 L286 92 L368 118 L420 104 L420 168 L0 168 Z" },
+          { name: "Llogara pass bunker", where: "Vlorë", cat: "Ruin", dist: "26 km",
+            sky: "#1d2440", ridge: "M0 112 L70 80 L140 108 L214 68 L300 104 L372 78 L420 96 L420 168 L0 168 Z", ridge2: "M0 134 L92 108 L178 132 L268 102 L356 126 L420 112 L420 168 L0 168 Z" },
+          { name: "Vlorë ridge line", where: "Albania", cat: "Viewpoint", dist: "54 km",
+            sky: "#33203a", ridge: "M0 98 L96 58 L164 92 L246 48 L330 88 L392 62 L420 80 L420 168 L0 168 Z", ridge2: "M0 124 L110 92 L196 118 L292 84 L372 112 L420 98 L420 168 L0 168 Z" },
+        ],
+      },
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+{
+  "pages": [
+    { "id": "screens", "name": "Screens" },
+    { "id": "system", "name": "The material" }
+  ],
+  "artboards": [
+    { "file": "Main.dc.html",     "page": "screens", "x": 0,    "y": 0,    "w": 1440, "h": 3200, "title": "Home" },
+    { "file": "Mobile.dc.html",   "page": "screens", "x": 1560, "y": 0,    "w": 390,  "h": 2120, "title": "Mobile — explore" },
+    { "file": "Explore.dc.html",  "page": "screens", "x": 2070, "y": 0,    "w": 1440, "h": 900,  "title": "Explore" },
+    { "file": "Spot.dc.html",     "page": "screens", "x": 2070, "y": 1140, "w": 1440, "h": 3500, "title": "Spot detail" },
+    { "file": "Submit.dc.html",   "page": "screens", "x": 3630, "y": 0,    "w": 1440, "h": 2260, "title": "Submit a spot" },
+    { "file": "Material.dc.html", "page": "system",  "x": 0,    "y": 0,    "w": 1240, "h": 3240, "title": "Aurora — material and motion" }
+  ],
+  "annotations": [
+    {
+      "id": "direction",
+      "page": "screens",
+      "x": 0,
+      "y": -210,
+      "w": 460,
+      "text": "AURORA — warm firelight against a cold sky. Midnight ground, slow aurora behind everything, one glass material in three depths. The mono type, hairline boxes and lowercase labels of the old build are gone."
+    },
+    {
+      "id": "mobile-note",
+      "page": "screens",
+      "x": 1560,
+      "y": -210,
+      "w": 390,
+      "text": "Mobile drops blur one step (20px, not 28) and answers touch with a press-scale instead of a hover lift. Chrome floats: nav pill on top, tab bar at the bottom."
+    },
+    {
+      "id": "system-note",
+      "page": "system",
+      "x": 0,
+      "y": -180,
+      "w": 520,
+      "text": "The rules the five screens are built from — palette, the three glass depths, edge anatomy, the type ramp and the two motion speeds. Change the accent swatch here and every artboard follows."
+    }
+  ],
+  "launch": { "view": "canvas", "page": "screens" }
+}
