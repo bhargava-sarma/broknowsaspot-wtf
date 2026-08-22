@@ -23,7 +23,7 @@ export function MobileBar() {
   return (
     <nav
       aria-label="primary"
-      className="rule-t fixed inset-x-0 bottom-0 z-50 bg-paper pb-[env(safe-area-inset-bottom)] sm:hidden"
+      className="fixed inset-x-0 bottom-0 z-50 bg-paper pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_3px_rgba(0,0,0,0.06)] sm:hidden"
     >
       <ul className="grid grid-cols-3">
         {NAV_ITEMS.map((item, index) => {

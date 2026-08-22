@@ -53,7 +53,7 @@ export function ExploreView({ spots }: { spots: Spot[] }) {
 
   return (
     <>
-      <div className="rule-b">
+      <div>
         <FilterRail
           filters={filters}
           onChange={handleFilters}
@@ -66,7 +66,7 @@ export function ExploreView({ spots }: { spots: Spot[] }) {
         {/* Map first in the DOM on small screens so it isn't buried under
             the whole list; the grid reorders it on desktop. */}
         <div className="order-1 lg:order-2 lg:col-span-7">
-          <div className="rule-b h-[58vh] min-h-[320px] lg:sticky lg:top-[var(--bar-h)] lg:h-[calc(100dvh-var(--bar-h))] lg:border-b-0 lg:border-l lg:border-rule">
+          <div className="h-[58vh] min-h-[320px] lg:sticky lg:top-[var(--bar-h)] lg:h-[calc(100dvh-var(--bar-h))]">
             {mounted ? (
               <SpotMap
                 spots={visible}
@@ -96,7 +96,7 @@ export function ExploreView({ spots }: { spots: Spot[] }) {
               </div>
             </div>
           ) : (
-            <ul ref={listRef} className="border-t border-rule lg:border-t-0">
+            <ul ref={listRef}>
               {visible.map((spot) => (
                 <SpotRow
                   key={spot.slug}
@@ -112,3 +112,4 @@ export function ExploreView({ spots }: { spots: Spot[] }) {
     </>
   );
 }
+

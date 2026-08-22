@@ -151,7 +151,7 @@ export function SubmitForm() {
             <span className="text-accent">{"///"}</span>
             received
           </p>
-          <h2 className="mt-6 text-h2 font-light text-ink lowercase">
+          <h2 className="mt-6 text-h2 font-bold text-ink lowercase">
             {status.name} is on the map
           </h2>
           <p className="mt-5 max-w-[46ch] text-body text-muted">
@@ -159,28 +159,19 @@ export function SubmitForm() {
             to be wrong or unsafe, anyone can report it and enough reports take
             it down again.
           </p>
-          <div className="mt-10 flex flex-wrap gap-x-10 gap-y-4">
-            <Link
-              href={status.url}
-              className="tap touch-target inline-flex items-center gap-3 border-b border-accent pb-2 font-mono text-tiny tracking-[0.04em] text-accent lowercase"
-            >
-              see the entry
-              <span aria-hidden="true">→</span>
+          <div className="mt-10 flex flex-wrap gap-x-4 gap-y-4">
+            <Link href={status.url} className="btn-pill bg-accent text-accent-ink">
+              see the entry →
             </Link>
             <button
               type="button"
               onClick={() => setStatus({ kind: "idle" })}
-              className="tap touch-target inline-flex items-center gap-3 border-b border-rule-strong pb-2 font-mono text-tiny tracking-[0.04em] text-ink lowercase"
+              className="btn-pill bg-ink text-accent-ink"
             >
-              add another
-              <span aria-hidden="true">→</span>
+              add another →
             </button>
-            <Link
-              href="/explore"
-              className="tap touch-target inline-flex items-center gap-3 border-b border-rule pb-2 font-mono text-tiny tracking-[0.04em] text-muted lowercase"
-            >
-              back to the map
-              <span aria-hidden="true">→</span>
+            <Link href="/explore" className="btn-pill bg-paper-raised text-ink border border-rule">
+              back to the map →
             </Link>
           </div>
         </div>
@@ -371,10 +362,9 @@ export function SubmitForm() {
           <button
             type="submit"
             disabled={status.kind === "submitting"}
-            className="tap touch-target inline-flex items-center gap-3 border-b border-rule-strong pb-2 font-mono text-tiny tracking-[0.04em] text-ink lowercase disabled:opacity-50"
+            className="btn-pill bg-accent text-accent-ink disabled:opacity-50"
           >
-            {status.kind === "submitting" ? "sending…" : "submit the spot"}
-            <span aria-hidden="true">→</span>
+            {status.kind === "submitting" ? "sending…" : "submit the spot"} →
           </button>
 
           <p className="mt-5 max-w-[46ch] font-mono text-micro text-faint lowercase">

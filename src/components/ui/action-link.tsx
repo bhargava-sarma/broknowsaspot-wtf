@@ -11,11 +11,11 @@ type ActionLinkProps = {
 };
 
 /**
- * The site's only call-to-action idiom.
+ * The site's call-to-action idiom.
  *
- * Borderless by definition: a monospace label, a hairline underneath, and
- * a mark that steps right on hover. No fill, no radius, no shadow — the
- * rule *is* the button.
+ * Pill-shaped filled button: a solid background, rounded capsule shape, and
+ * a mark that steps right on hover. Mirrors the heavy rounded button aesthetic
+ * of the phone mockup reference.
  */
 export function ActionLink({
   href,
@@ -25,16 +25,16 @@ export function ActionLink({
 }: ActionLinkProps) {
   const toneClass =
     tone === "accent"
-      ? "text-accent border-accent"
+      ? "bg-accent text-accent-ink"
       : tone === "muted"
-        ? "text-muted border-rule"
-        : "text-ink border-rule-strong";
+        ? "bg-paper-raised text-ink border border-rule"
+        : "bg-ink text-accent-ink";
 
   return (
     <Link
       href={href}
       className={cn(
-        "group tap touch-target inline-flex items-center gap-3 border-b pb-2 font-mono text-tiny tracking-[0.04em] lowercase",
+        "btn-pill touch-target",
         toneClass,
         className,
       )}

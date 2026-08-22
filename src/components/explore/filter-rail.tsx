@@ -35,17 +35,13 @@ function FilterToggle({ label, active, onClick }: ToggleProps) {
       onClick={onClick}
       aria-pressed={active}
       className={cn(
-        "tap touch-target relative py-1.5 font-mono text-micro whitespace-nowrap lowercase",
-        active ? "text-ink" : "text-faint",
+        "tap touch-target relative rounded-full px-3 py-1 font-mono text-micro whitespace-nowrap lowercase transition-colors",
+        active
+          ? "bg-accent text-accent-ink"
+          : "text-faint hover:text-ink hover:bg-paper-raised",
       )}
     >
       {label}
-      {active ? (
-        <span
-          aria-hidden="true"
-          className="absolute inset-x-0 bottom-0.5 block h-px bg-accent"
-        />
-      ) : null}
     </button>
   );
 }

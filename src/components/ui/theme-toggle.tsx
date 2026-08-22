@@ -31,7 +31,7 @@ export function ThemeToggle({ className }: { className?: string }) {
       aria-label="toggle light and dark theme"
       title="toggle light and dark theme"
       className={cn(
-        "tap touch-target relative -mx-1 inline-flex items-center gap-1.5 px-1 py-2 font-mono text-micro lowercase select-none",
+        "tap touch-target relative inline-flex items-center gap-1.5 rounded-full border border-rule px-3 py-1.5 font-mono text-micro lowercase select-none",
         className,
       )}
     >
@@ -43,14 +43,6 @@ export function ThemeToggle({ className }: { className?: string }) {
       </span>
       <span className="text-faint transition-opacity duration-200 dark:text-ink">
         dk
-      </span>
-
-      {/* Position marker. The accent earns its keep here: one 1px rule. */}
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-1 bottom-1 block h-px"
-      >
-        <span className="block h-px w-[38%] bg-accent transition-transform duration-300 ease-[var(--ease-damped)] motion-reduce:transition-none dark:translate-x-[162%]" />
       </span>
     </motion.button>
   );

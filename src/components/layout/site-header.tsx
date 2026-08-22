@@ -19,11 +19,11 @@ export function SiteHeader() {
   const pathname = usePathname();
 
   return (
-    <header className="rule-b sticky top-0 z-50 bg-paper">
+    <header className="sticky top-0 z-50 bg-paper shadow-sm">
       <div className="shell flex h-[var(--bar-h)] items-center justify-between gap-[var(--gutter)]">
         <Link
           href="/"
-          className="tap font-mono text-tiny tracking-[0.02em] text-ink lowercase"
+          className="tap font-display text-small font-bold tracking-tight text-ink lowercase"
         >
           {SITE_NAME}
           <span className="text-accent">{SITE_TLD}</span>
@@ -32,7 +32,7 @@ export function SiteHeader() {
         <div className="flex items-center gap-[calc(var(--gutter)*0.85)]">
           {/* Inline nav is desktop-only; small screens get the bottom bar. */}
           <nav aria-label="primary" className="hidden sm:block">
-            <ul className="flex items-center gap-[calc(var(--gutter)*0.85)]">
+            <ul className="flex items-center gap-1">
               {NAV_ITEMS.map((item) => {
                 const active = isActivePath(pathname, item.href);
                 return (
@@ -41,17 +41,13 @@ export function SiteHeader() {
                       href={item.href}
                       aria-current={active ? "page" : undefined}
                       className={cn(
-                        "tap relative block py-2 font-mono text-micro lowercase",
-                        active ? "text-ink" : "text-faint",
+                        "tap relative block rounded-full px-3 py-1.5 font-mono text-micro lowercase transition-colors",
+                        active
+                          ? "bg-accent text-accent-ink"
+                          : "text-faint hover:text-ink",
                       )}
                     >
                       {item.label}
-                      {active ? (
-                        <span
-                          aria-hidden="true"
-                          className="absolute inset-x-0 bottom-1 block h-px bg-accent"
-                        />
-                      ) : null}
                     </Link>
                   </li>
                 );

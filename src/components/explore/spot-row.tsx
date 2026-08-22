@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 
 import {
   AccessTag,
@@ -28,14 +29,14 @@ export function SpotRow({ spot, selected, onSelect }: SpotRowProps) {
     <li
       id={`spot-${spot.slug}`}
       className={cn(
-        "relative border-b border-rule",
+        "relative",
         selected && "bg-paper-raised",
       )}
     >
       {selected ? (
         <span
           aria-hidden="true"
-          className="absolute inset-y-0 left-0 block w-px bg-accent"
+          className="absolute inset-y-0 left-0 block w-0.5 rounded-r bg-accent"
         />
       ) : null}
 
@@ -47,7 +48,7 @@ export function SpotRow({ spot, selected, onSelect }: SpotRowProps) {
           className="tap block w-full text-left"
         >
           <div className="flex items-baseline justify-between gap-4">
-            <h3 className="text-h3 font-light text-ink lowercase">
+            <h3 className="text-h3 font-bold text-ink lowercase">
               {spot.name}
             </h3>
             <span className="shrink-0 font-mono text-micro text-faint lowercase tabular-nums">
@@ -73,18 +74,14 @@ export function SpotRow({ spot, selected, onSelect }: SpotRowProps) {
         <div className="mt-4">
           <Link
             href={`/spot/${spot.slug}`}
-            className="group tap touch-target inline-flex items-center gap-2 font-mono text-micro text-ink lowercase"
+            className="btn-pill bg-paper-raised text-ink border border-rule inline-flex items-center gap-2"
           >
             open entry
-            <span
-              aria-hidden="true"
-              className="inline-block transition-transform duration-300 ease-[var(--ease-damped)] group-hover:translate-x-1 motion-reduce:transition-none"
-            >
-              →
-            </span>
+            <ArrowRight size={14} aria-hidden="true" />
           </Link>
         </div>
       </div>
     </li>
   );
 }
+

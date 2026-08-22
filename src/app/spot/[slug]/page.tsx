@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
+import { CalendarDays, Compass, Footprints, MapPin } from "lucide-react";
 
 import { Reveal, RevealGroup } from "@/components/motion/reveal";
 import { ReportControl } from "@/components/spot/report-control";
@@ -61,14 +62,14 @@ export default async function SpotPage({
   return (
     <article>
       {/* --------------------------------------------------------- head */}
-      <header className="rule-b">
+      <header>
         <div className="shell grid-swiss py-[clamp(2rem,1.4rem+3vw,4.5rem)]">
           <div className="col-span-12 lg:col-span-8">
             <p className="label flex items-center gap-3">
               <span className="text-accent">{"///"}</span>
               {spot.region} / {spot.country}
             </p>
-            <h1 className="mt-5 text-h1 font-light lowercase">{spot.name}</h1>
+            <h1 className="mt-5 text-h1 font-bold lowercase">{spot.name}</h1>
             <p className="mt-5 max-w-[46ch] text-lead font-light text-muted">
               {spot.summary}
             </p>
@@ -83,37 +84,61 @@ export default async function SpotPage({
       </header>
 
       {/* ------------------------------------------------------ readout */}
-      <section className="rule-b" aria-label="key figures">
-        <div className="shell grid grid-cols-2 sm:grid-cols-4">
-          {[
-            {
-              label: "walk in",
-              value: spot.walkInKm > 0 ? `${spot.walkInKm}km` : "by boat",
-            },
-            { label: "latitude", value: spot.lat.toFixed(4) },
-            { label: "longitude", value: spot.lng.toFixed(4) },
-            { label: "logged", value: formatDate(spot.addedAt) },
-          ].map((item, i) => (
-            <div
-              key={item.label}
-              className={[
-                "py-[clamp(1rem,0.9rem+1vw,1.75rem)]",
-                i % 2 === 1 ? "border-l border-rule pl-[var(--gutter)]" : "",
-                i >= 2 ? "border-t border-rule sm:border-t-0" : "",
-                i % 4 !== 0 ? "sm:border-l sm:pl-[var(--gutter)]" : "",
-              ].join(" ")}
-            >
-              <p className="font-mono text-h3 font-light text-ink tabular-nums">
-                {item.value}
-              </p>
-              <p className="label mt-1">{item.label}</p>
-            </div>
-          ))}
+      <section aria-label="key figures">
+        <div className="shell py-[clamp(1rem,0.8rem+1.2vw,1.75rem)]">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+            {[
+              {
+                label: "walk in",
+                value: spot.walkInKm > 0 ? `${spot.walkInKm}km` : "by boat",
+                Icon: Footprints,
+                iconBg: "bg-emerald-100",
+                iconColor: "text-emerald-600",
+              },
+              {
+                label: "latitude",
+                value: spot.lat.toFixed(4),
+                Icon: MapPin,
+                iconBg: "bg-rose-100",
+                iconColor: "text-rose-500",
+              },
+              {
+                label: "longitude",
+                value: spot.lng.toFixed(4),
+                Icon: Compass,
+                iconBg: "bg-indigo-100",
+                iconColor: "text-indigo-500",
+              },
+              {
+                label: "logged",
+                value: formatDate(spot.addedAt),
+                Icon: CalendarDays,
+                iconBg: "bg-amber-100",
+                iconColor: "text-amber-600",
+              },
+            ].map((item) => (
+              <div key={item.label} className="stat-card">
+                <div className={`stat-icon ${item.iconBg}`}>
+                  <item.Icon
+                    size={18}
+                    className={item.iconColor}
+                    aria-hidden="true"
+                  />
+                </div>
+                <div>
+                  <p className="font-display text-h3 font-bold leading-none text-ink tabular-nums">
+                    {item.value}
+                  </p>
+                  <p className="label mt-1">{item.label}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
       {/* ------------------------------------------------------- plates */}
-      <section className="rule-b">
+      <section>
         <div className="shell py-[clamp(2rem,1.4rem+2.4vw,3.5rem)]">
           <p className="label">plates</p>
           <RevealGroup className="mt-6">
@@ -129,7 +154,7 @@ export default async function SpotPage({
       </section>
 
       {/* --------------------------------------------------- the write-up */}
-      <section className="rule-b">
+      <section>
         <div className="shell grid-swiss py-[clamp(2.5rem,1.8rem+3vw,5rem)]">
           <div className="col-span-12 lg:col-span-3">
             <p className="label">the write-up</p>
@@ -166,7 +191,7 @@ export default async function SpotPage({
       </section>
 
       {/* -------------------------------------------------------- notes */}
-      <section className="rule-b">
+      <section>
         <div className="shell grid-swiss py-[clamp(2.5rem,1.8rem+3vw,5rem)]">
           <div className="col-span-12 lg:col-span-3">
             <p className="label">community notes</p>

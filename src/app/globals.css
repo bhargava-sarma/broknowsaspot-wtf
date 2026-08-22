@@ -28,8 +28,8 @@
   --tone-faint: #6e6c64; /* meta + labels            4.65:1         */
   --tone-rule: #c9c7bf; /* hairline                 1.50:1         */
   --tone-rule-strong: #12120f; /* emphatic hairline                       */
-  --tone-accent: #b23f18; /* burnt orange             5.14:1         */
-  --tone-accent-ink: #f2f1ed; /* text on accent fill      5.14:1         */
+  --tone-accent: #eb6568; /* coral red                               */
+  --tone-accent-ink: #ffffff; /* text on accent fill                     */
 }
 
 [data-theme="dark"] {
@@ -42,8 +42,8 @@
   --tone-faint: #817f76; /*                          4.84:1         */
   --tone-rule: #33322e; /*                          1.52:1         */
   --tone-rule-strong: #eceae4;
-  --tone-accent: #f0723c; /* lifted + desaturated for dark  6.65:1   */
-  --tone-accent-ink: #0d0d0c; /*                          6.65:1         */
+  --tone-accent: #f07375; /* coral red, lightened for dark           */
+  --tone-accent-ink: #0d0d0c; /*                                         */
 }
 
 /* ------------------------------------------------------------------ *
@@ -71,6 +71,9 @@
     monospace;
   --font-sans:
     var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    sans-serif;
+  --font-display:
+    var(--font-space-grotesk), ui-sans-serif, system-ui, -apple-system,
     sans-serif;
 
   /* -- fluid type scale ------------------------------------------ *
@@ -160,15 +163,15 @@
     padding-bottom: env(safe-area-inset-bottom);
   }
 
-  /* Headings and chrome are monospace; long-form prose is the sans. */
+  /* Headings use the heavy display font; long-form prose is the sans. */
   h1,
   h2,
   h3,
   h4,
   h5,
   h6 {
-    font-family: var(--font-mono);
-    font-weight: 400;
+    font-family: var(--font-display);
+    font-weight: 700;
     text-wrap: balance;
   }
 
@@ -310,6 +313,63 @@
   }
   .tap:active {
     opacity: 0.55;
+  }
+
+  /* ---- stat card ------------------------------------------------ */
+  /* Used in the readout section: white card with rounded corners +    */
+  /* subtle shadow, matching the phone mockup's card-based layout.     */
+  .stat-card {
+    background-color: white;
+    border-radius: 1rem;
+    padding: clamp(1rem, 0.8rem + 0.8vw, 1.25rem);
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    box-shadow: 0 1px 3px 0 rgba(0,0,0,0.06), 0 4px 12px 0 rgba(0,0,0,0.04);
+  }
+  [data-theme="dark"] .stat-card {
+    background-color: var(--tone-paper-raised);
+    box-shadow: 0 1px 3px 0 rgba(0,0,0,0.3), 0 4px 12px 0 rgba(0,0,0,0.2);
+  }
+
+  /* ---- stat card icon square ------------------------------------ */
+  .stat-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 0.625rem;
+    flex-shrink: 0;
+    font-size: 1.1rem;
+  }
+
+  /* ---- pill button ---------------------------------------------- */
+  /* Solid filled rounded-pill CTA, matching the app mockup buttons.  */
+  .btn-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.65rem 1.4rem;
+    border-radius: 9999px;
+    font-family: var(--font-display);
+    font-size: var(--text-small);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    transition:
+      opacity 160ms var(--ease-damped),
+      transform 160ms var(--ease-damped);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .btn-pill:active {
+    transform: scale(0.97);
+    opacity: 0.9;
+  }
+  @media (hover: hover) {
+    .btn-pill:hover {
+      opacity: 0.85;
+    }
   }
 
   /* Monospace label / eyebrow / tag. */

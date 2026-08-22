@@ -1,4 +1,4 @@
-import { Inter, JetBrains_Mono } from "next/font/google";
+import { Inter, JetBrains_Mono, Space_Grotesk } from "next/font/google";
 
 /**
  * Both faces are loaded as variable fonts (no `weight` array) so the whole
@@ -24,4 +24,15 @@ export const fontSans = Inter({
   // Long-form descriptions and community notes, where mono would tire.
 });
 
-export const fontVariables = `${fontMono.variable} ${fontSans.variable}`;
+/**
+ * Display font for large headings and hero numbers.
+ * Heavy geometric sans-serif matching the bold app aesthetic.
+ */
+export const fontDisplay = Space_Grotesk({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-space-grotesk",
+  weight: ["300", "400", "500", "600", "700"],
+});
+
+export const fontVariables = `${fontMono.variable} ${fontSans.variable} ${fontDisplay.variable}`;

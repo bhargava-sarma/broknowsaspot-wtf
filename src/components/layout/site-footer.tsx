@@ -9,7 +9,7 @@ import { SITE_NAME, SITE_TLD } from "@/lib/site";
  */
 export function SiteFooter() {
   return (
-    <footer className="rule-t mt-[clamp(3.5rem,2rem+6vw,8rem)]">
+    <footer className="mt-[clamp(3.5rem,2rem+6vw,8rem)]">
       <div className="shell grid-swiss py-[clamp(2rem,1.4rem+2.4vw,3.5rem)]">
         <div className="col-span-12 sm:col-span-6 lg:col-span-5">
           <p className="font-mono text-tiny text-ink lowercase">

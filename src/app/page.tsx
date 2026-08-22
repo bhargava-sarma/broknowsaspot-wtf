@@ -1,3 +1,5 @@
+﻿import { Footprints, Globe, MapPin, ShoppingBag } from "lucide-react";
+
 import { HeroContours } from "@/components/hero/hero-contours";
 import { HeroVisual } from "@/components/hero/hero-visual";
 import { Reveal, RevealGroup } from "@/components/motion/reveal";
@@ -22,17 +24,41 @@ const MANIFESTO = [
 ];
 
 const READOUT = [
-  { label: "spots logged", value: "128" },
-  { label: "countries", value: "24" },
-  { label: "median walk-in", value: "2.4km" },
-  { label: "gift shops", value: "0" },
+  {
+    label: "spots logged",
+    value: "128",
+    Icon: MapPin,
+    iconBg: "bg-rose-100",
+    iconColor: "text-rose-500",
+  },
+  {
+    label: "countries",
+    value: "24",
+    Icon: Globe,
+    iconBg: "bg-indigo-100",
+    iconColor: "text-indigo-500",
+  },
+  {
+    label: "median walk-in",
+    value: "2.4km",
+    Icon: Footprints,
+    iconBg: "bg-emerald-100",
+    iconColor: "text-emerald-600",
+  },
+  {
+    label: "gift shops",
+    value: "0",
+    Icon: ShoppingBag,
+    iconBg: "bg-amber-100",
+    iconColor: "text-amber-600",
+  },
 ];
 
 export default function HomePage() {
   return (
     <>
       {/* ---------------------------------------------------------- hero */}
-      <section className="rule-b relative overflow-hidden">
+      <section className="relative overflow-hidden">
         {/* Sits behind the type, bleeding off the right edge. Resolves to
             the WebGL field on capable desktops, the SVG contours elsewhere. */}
         <HeroVisual className="absolute top-1/2 -right-[18%] hidden h-[132%] w-[62%] -translate-y-1/2 opacity-90 sm:block" />
@@ -48,7 +74,7 @@ export default function HomePage() {
               </Reveal>
 
               <Reveal>
-                <h1 className="mt-[clamp(1.5rem,1rem+2vw,3rem)] text-mega font-light lowercase">
+                <h1 className="mt-[clamp(1.5rem,1rem+2vw,3rem)] text-mega font-bold lowercase leading-[0.88] tracking-[-0.045em]">
                   bro knows
                   <br />a spot
                 </h1>
@@ -63,7 +89,7 @@ export default function HomePage() {
               </Reveal>
 
               <Reveal>
-                <div className="mt-[clamp(2rem,1.4rem+2.4vw,3.5rem)] flex flex-wrap items-center gap-x-[clamp(1.5rem,1rem+2vw,3rem)] gap-y-4">
+                <div className="mt-[clamp(2rem,1.4rem+2.4vw,3.5rem)] flex flex-wrap items-center gap-x-4 gap-y-4">
                   <ActionLink href="/explore" tone="accent">
                     open the map
                   </ActionLink>
@@ -83,30 +109,32 @@ export default function HomePage() {
       </section>
 
       {/* ------------------------------------------------------- readout */}
-      <section className="rule-b" aria-label="index statistics">
-        <div className="shell grid grid-cols-2 sm:grid-cols-4">
-          {READOUT.map((item, i) => (
-            <div
-              key={item.label}
-              className={[
-                "py-[clamp(1.25rem,1rem+1.2vw,2rem)]",
-                // Hairline column dividers that reset per row on mobile.
-                i % 2 === 1 ? "border-l border-rule pl-[var(--gutter)]" : "",
-                i >= 2 ? "border-t border-rule sm:border-t-0" : "",
-                i % 4 !== 0 ? "sm:border-l sm:pl-[var(--gutter)]" : "",
-              ].join(" ")}
-            >
-              <p className="font-mono text-h3 font-light text-ink tabular-nums">
-                {item.value}
-              </p>
-              <p className="label mt-1">{item.label}</p>
-            </div>
-          ))}
+      <section aria-label="index statistics">
+        <div className="shell py-[clamp(1.5rem,1rem+2vw,3rem)]">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+            {READOUT.map((item) => (
+              <div key={item.label} className="stat-card">
+                <div className={`stat-icon ${item.iconBg}`}>
+                  <item.Icon
+                    size={18}
+                    className={item.iconColor}
+                    aria-hidden="true"
+                  />
+                </div>
+                <div>
+                  <p className="font-display text-h3 font-bold leading-none text-ink tabular-nums">
+                    {item.value}
+                  </p>
+                  <p className="label mt-1">{item.label}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </section>
 
       {/* ----------------------------------------------------- manifesto */}
-      <section className="rule-b">
+      <section>
         <div className="shell grid-swiss py-[clamp(3rem,2rem+5vw,7rem)]">
           <div className="col-span-12 lg:col-span-3">
             <p className="label">manifesto</p>
@@ -120,7 +148,7 @@ export default function HomePage() {
                     <p className="font-mono text-micro text-accent tabular-nums">
                       {item.n}
                     </p>
-                    <h2 className="mt-3 text-h3 font-light text-ink lowercase">
+                    <h2 className="mt-3 text-h3 font-bold text-ink lowercase">
                       {item.title}
                     </h2>
                     <p className="mt-3 text-small text-muted">{item.body}</p>
@@ -136,8 +164,8 @@ export default function HomePage() {
       <section>
         <div className="shell grid-swiss py-[clamp(3rem,2rem+5vw,7rem)]">
           <Reveal standalone className="col-span-12 lg:col-span-8">
-            <h2 className="text-h2 font-light text-ink lowercase">
-              know somewhere that isn&rsquo;t on here?
+            <h2 className="text-h2 font-bold text-ink lowercase">
+              know somewhere that isn't on here?
             </h2>
             <p className="mt-4 max-w-[44ch] text-body text-muted">
               the index is only as good as what people are willing to give up.
