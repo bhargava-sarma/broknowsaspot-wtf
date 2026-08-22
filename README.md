@@ -3,7 +3,7 @@
 a crowdsourced guide to hidden, offbeat, and adventurous spots — for people who
 don't stick to the tourist path.
 
-Live at **<https://broknowsaspot.app>**.
+Live at **<https://broknowsaspot.app>**. Visit Now!
 
 ## stack
 
