@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { TurnstileWidget } from "@/components/security/turnstile-widget";
+import { PhotoField, type AttachedPhoto } from "@/components/ui/photo-field";
 import {
   ANONYMOUS,
   NOTE_LIMITS,
@@ -43,6 +44,7 @@ export function NoteForm({
   const [errors, setErrors] = useState<NoteFieldErrors>({});
   const [state, setState] = useState<State>({ kind: "idle" });
   const [token, setToken] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<AttachedPhoto[]>([]);
 
   async function submit(event: React.FormEvent) {
     event.preventDefault();
@@ -63,7 +65,13 @@ export function NoteForm({
       const response = await fetch(`/api/spots/${slug}/notes`, {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ ...result.draft, turnstileToken: token }),
+        body: JSON.stringify({
+          ...result.draft,
+          turnstileToken: token,
+          photoIds: photos
+            .filter((photo) => photo.status === "ready" && photo.id)
+            .map((photo) => photo.id),
+        }),
       });
       const payload = await response.json();
 
@@ -190,6 +198,16 @@ export function NoteForm({
         </div>
       </div>
 
+      <PhotoField
+        className="mt-7"
+        label="photos (optional)"
+        max={2}
+        photos={photos}
+        onChange={setPhotos}
+        turnstileToken={token ?? undefined}
+        hint="what it looks like now. location, timestamp and camera details are stripped in your browser before anything is uploaded."
+      />
+
       <div className="mt-6">
         <TurnstileWidget onToken={setToken} />
       </div>
@@ -206,7 +224,7 @@ export function NoteForm({
       <button
         type="submit"
         disabled={state.kind === "sending"}
-        className="tap touch-target mt-7 inline-flex items-center gap-3 border-b border-rule-strong pb-2 font-mono text-tiny tracking-[0.04em] text-ink lowercase disabled:opacity-50"
+        className="press touch-target mt-7 inline-flex items-center gap-3 border-b border-rule-strong pb-2 font-mono text-tiny tracking-[0.04em] text-ink lowercase disabled:opacity-50"
       >
         {state.kind === "sending" ? "posting…" : "post the note"}
         <span aria-hidden="true">→</span>

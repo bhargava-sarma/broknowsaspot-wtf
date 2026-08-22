@@ -12,24 +12,23 @@
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
     "check:contrast": "node scripts/check-contrast.mjs",
-    "check": "npm run typecheck && npm run lint && npm run check:contrast && npm run format:check",
-    "seed:sql": "tsx scripts/generate-seed-sql.mjs",
-    "db:test": "supabase/tests/run.sh",
+    "check": "npm run typecheck && npm run lint && npm run check:contrast && npm run check:borders && npm run format:check",
     "appwrite:provision": "tsx scripts/appwrite-provision.mts",
     "appwrite:seed": "tsx scripts/appwrite-seed.mts",
     "appwrite:verify": "tsx scripts/appwrite-verify.mts",
     "appwrite:setup": "npm run appwrite:provision && npm run appwrite:seed && npm run appwrite:verify",
-    "appwrite:migrate": "tsx scripts/appwrite-migrate.mts"
+    "appwrite:admin": "tsx scripts/appwrite-admin.mts",
+    "check:borders": "tsx scripts/check-borders.mts"
   },
   "dependencies": {
+    "@maplibre/maplibre-gl-leaflet": "^0.1.4",
     "@react-three/drei": "^10.7.8",
     "@react-three/fiber": "^9.7.0",
-    "@supabase/ssr": "^0.12.4",
-    "@supabase/supabase-js": "^2.112.3",
     "appwrite": "^26.2.0",
     "framer-motion": "^13.1.0",
     "leaflet": "^1.9.4",
     "lucide-react": "^1.33.0",
+    "maplibre-gl": "^6.4.1",
     "next": "^16.3.1",
     "node-appwrite": "^28.0.0",
     "react": "^19.2.0",
@@ -39,6 +38,7 @@
     "three": "^0.185.1"
   },
   "devDependencies": {
+    "@maplibre/maplibre-gl-style-spec": "^26.2.1",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/leaflet": "^1.9.22",
     "@types/node": "^26.2.0",

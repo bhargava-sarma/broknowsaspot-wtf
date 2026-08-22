@@ -10,9 +10,10 @@ export type NoteValidationResult =
   { ok: true; draft: NoteDraft } | { ok: false; errors: NoteFieldErrors };
 
 /**
- * Mirrors the CHECK constraints on `spot_notes`. If these drift, Postgres
- * rejects the insert and the visitor gets a 500 for something the form
- * should have caught — so treat the schema as the source of truth.
+ * Mirrors the column sizes declared for `notes` in the Appwrite schema.
+ * If the two drift, the database rejects the insert and the visitor gets
+ * a 500 for something the form should have caught — so treat the schema
+ * as the source of truth and follow it here.
  */
 export const NOTE_LIMITS = {
   author: { min: 0, max: 40 },
@@ -25,7 +26,7 @@ export const NOTE_MAX_AGE_YEARS = 5;
 
 export const ANONYMOUS = "anonymous";
 
-/** Today in the same YYYY-MM-DD shape the date input and Postgres use. */
+/** Today in the same YYYY-MM-DD shape the date input uses. */
 export function today(): string {
   return new Date().toISOString().slice(0, 10);
 }

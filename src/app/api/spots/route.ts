@@ -1,13 +1,14 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 
+import { createSpot } from "@/lib/appwrite/write";
+import { toStoredPhotos } from "@/lib/photos/ids";
+import { isAppwriteWriteEnabled } from "@/lib/appwrite/server";
 import { listSpots } from "@/lib/data/spots-repo";
 import { checkSubmissionRate } from "@/lib/security/rate-limit";
 import { requestKey } from "@/lib/security/request-key";
-import { verifyTurnstile } from "@/lib/security/turnstile";
+import { checkHuman } from "@/lib/security/human-check";
 import { validateDraft } from "@/lib/spots/validate";
-import { getAdminSupabase, isWriteEnabled } from "@/lib/supabase/admin";
-import * as writes from "@/lib/data/writes";
 
 /**
  * GET — the index as JSON, through the same repository the pages use, so
@@ -17,22 +18,26 @@ import * as writes from "@/lib/data/writes";
  * decision; nothing waits in a queue.
  *
  * The order of the checks below is the whole security model, and it is
- * cheapest-first on purpose: reject bots before spending a database round
- * trip on them, and reject malformed payloads before spending a Cloudflare
- * round trip.
+ * cheapest-first on purpose: reject a malformed payload before spending a
+ * Cloudflare round trip on it, and reject a bot before spending a
+ * database one.
  */
 
 export const revalidate = 300;
 
 export async function GET() {
   const spots = await listSpots();
+  if (spots === null) {
+    return NextResponse.json(
+      { ok: false, message: "the index is unavailable right now." },
+      { status: 503 },
+    );
+  }
   return NextResponse.json({ spots, total: spots.length });
 }
 
 export async function POST(request: Request) {
-  if (
-    !(writes.useAppwriteWrites ? writes.isAppwriteWritable : isWriteEnabled)
-  ) {
+  if (!isAppwriteWriteEnabled) {
     return NextResponse.json(
       { ok: false, message: "submissions aren't available right now." },
       { status: 503 },
@@ -59,86 +64,31 @@ export async function POST(request: Request) {
     );
   }
 
-  // 2. Bot check.
-  const token = (payload as { turnstileToken?: unknown }).turnstileToken;
-  const turnstile = await verifyTurnstile(request, token);
-  if (!turnstile.ok) {
-    return NextResponse.json(
-      { ok: false, message: turnstile.message },
-      { status: turnstile.status },
-    );
-  }
-
-  // 3. Identity for rate limiting. Without a key we cannot rate limit at
-  //    all, so the write is refused rather than left unmetered.
+  // 2. Identity for rate limiting, and for binding the human check to
+  //    this caller. Without a key there is no way to meter this, so the
+  //    write is refused rather than left unmetered.
   const submitterKey = requestKey(request);
-
-  // Appwrite path. Same guards in the same order; only the storage
-  // changes. The Supabase branch below goes away at cutover.
-  if (writes.useAppwriteWrites) {
-    if (!submitterKey) {
-      return NextResponse.json(
-        { ok: false, message: "submissions aren't available right now." },
-        { status: 503 },
-      );
-    }
-
-    const rate = await writes.checkSubmissionRate(submitterKey);
-    if (!rate.allowed) {
-      return NextResponse.json(
-        {
-          ok: false,
-          message: `that's enough for now — try again in about ${rate.retryAfterMinutes} minutes.`,
-        },
-        {
-          status: 429,
-          headers: { "retry-after": String(rate.retryAfterMinutes * 60) },
-        },
-      );
-    }
-
-    try {
-      const created = await writes.createSpot(result.draft, submitterKey);
-      if (!created.ok) {
-        console.error("[spots] submission failed", created.reason);
-        return NextResponse.json(
-          { ok: false, message: "couldn't save that. try again in a moment." },
-          { status: 500 },
-        );
-      }
-
-      // The new spot would otherwise wait out the five-minute ISR window
-      // before appearing, which reads as the submission having failed.
-      revalidatePath("/explore");
-      revalidatePath(`/spot/${created.value.slug}`);
-
-      return NextResponse.json(
-        {
-          ok: true,
-          slug: created.value.slug,
-          url: `/spot/${created.value.slug}`,
-        },
-        { status: 201 },
-      );
-    } catch (thrown) {
-      console.error("[spots] submission threw", thrown);
-      return NextResponse.json(
-        { ok: false, message: "couldn't save that. try again in a moment." },
-        { status: 500 },
-      );
-    }
-  }
-
-  const supabase = getAdminSupabase();
-  if (!submitterKey || !supabase) {
+  if (!submitterKey) {
     return NextResponse.json(
       { ok: false, message: "submissions aren't available right now." },
       { status: 503 },
     );
   }
 
+  // 3. Bot check — a fresh Turnstile token, or the ticket issued when one
+  //    was last redeemed. Photos upload as separate requests, and a token
+  //    is single-use, so the submission cannot rely on holding one.
+  const token = (payload as { turnstileToken?: unknown }).turnstileToken;
+  const human = await checkHuman(request, token, submitterKey);
+  if (!human.ok) {
+    return NextResponse.json(
+      { ok: false, message: human.message },
+      { status: human.status },
+    );
+  }
+
   // 4. Rate limit.
-  const rate = await checkSubmissionRate(supabase, submitterKey);
+  const rate = await checkSubmissionRate(submitterKey);
   if (!rate.allowed) {
     return NextResponse.json(
       {
@@ -153,56 +103,36 @@ export async function POST(request: Request) {
   }
 
   try {
-    // Slug is generated in the database so the uniqueness check and the
-    // insert are one step; a read-then-write here would race.
-    const { data: slugData, error: slugError } = await supabase.rpc(
-      "unique_slug",
-      { input: result.draft.name },
+    const created = await createSpot(
+      result.draft,
+      submitterKey,
+      toStoredPhotos((payload as { photoIds?: unknown }).photoIds, 3),
     );
-    if (slugError) throw slugError;
+    if (!created.ok) {
+      console.error("[spots] submission failed", created.reason);
+      return NextResponse.json(
+        { ok: false, message: "couldn't save that. try again in a moment." },
+        { status: 500 },
+      );
+    }
 
-    const slug = String(slugData);
-    const draft = result.draft;
-
-    const { data, error } = await supabase
-      .from("spots")
-      .insert({
-        slug,
-        name: draft.name,
-        region: draft.region,
-        country: draft.country,
-        lat: draft.lat,
-        lng: draft.lng,
-        category: draft.category,
-        difficulty: draft.difficulty,
-        access: draft.access,
-        summary: draft.summary,
-        description: draft.description,
-        watch_out: draft.watchOut,
-      })
-      .select("id, slug")
-      .single();
-
-    if (error) throw error;
-
-    // Audit trail and the rate limiter's source of truth. Linked to the
-    // spot so that if one key turns out to be a spammer, everything it
-    // submitted can be found in one query.
-    await supabase
-      .from("submission_log")
-      .insert({ submitter_key: submitterKey, spot_id: data.id });
-
-    // The new spot would otherwise wait out the five-minute ISR window
-    // before appearing, which reads as the submission having failed.
+    // The new spot would otherwise wait out the five-minute revalidate
+    // window before appearing, which reads as the submission having
+    // failed.
+    revalidatePath("/");
     revalidatePath("/explore");
-    revalidatePath(`/spot/${data.slug}`);
+    revalidatePath(`/spot/${created.value.slug}`);
 
     return NextResponse.json(
-      { ok: true, slug: data.slug, url: `/spot/${data.slug}` },
+      {
+        ok: true,
+        slug: created.value.slug,
+        url: `/spot/${created.value.slug}`,
+      },
       { status: 201 },
     );
   } catch (thrown) {
-    console.error("[spots] submission failed", thrown);
+    console.error("[spots] submission threw", thrown);
     return NextResponse.json(
       { ok: false, message: "couldn't save that. try again in a moment." },
       { status: 500 },

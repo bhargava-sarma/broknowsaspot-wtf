@@ -7,7 +7,9 @@ import { FilterRail } from "@/components/explore/filter-rail";
 import { SpotRow } from "@/components/explore/spot-row";
 import { MapPlaceholder } from "@/components/map/map-placeholder";
 import { ActionLink } from "@/components/ui/action-link";
+import { useGeolocation } from "@/lib/hooks/use-geolocation";
 import { useMounted } from "@/lib/hooks/use-mounted";
+import { distanceKm } from "@/lib/spots/distance";
 import {
   EMPTY_FILTERS,
   filterSpots,
@@ -33,7 +35,40 @@ export function ExploreView({ spots }: { spots: Spot[] }) {
   // useMounted for why the static export needs this.
   const mounted = useMounted();
 
-  const visible = useMemo(() => filterSpots(spots, filters), [spots, filters]);
+  /**
+   * "Near me", done entirely on the device.
+   *
+   * The position is never sent anywhere — not to this app's server, not
+   * to Appwrite, not in a query string. Every spot's coordinates are
+   * already in the page, so the browser can rank them itself, and the
+   * one thing that would have to leave the device to do it on a server
+   * is precisely the thing worth keeping off the wire.
+   */
+  // The nonce is set when a fix arrives, so the map flies there once —
+  // and again on a repeat press, even though the coordinates are the same.
+  const [focus, setFocus] = useState<{
+    lat: number;
+    lng: number;
+    at: number;
+  } | null>(null);
+
+  const geo = useGeolocation({
+    onFound: (lat, lng) => setFocus({ lat, lng, at: Date.now() }),
+  });
+  const here = geo.status.state === "found" ? geo.status : null;
+
+  const visible = useMemo(() => {
+    const matched = filterSpots(spots, filters);
+    if (!here) return matched;
+
+    return matched
+      .map((spot) => ({
+        spot,
+        km: distanceKm(here.lat, here.lng, spot.lat, spot.lng),
+      }))
+      .sort((a, b) => a.km - b.km)
+      .map(({ spot }) => spot);
+  }, [spots, filters, here]);
 
   // Selecting from the map should bring the matching row into view; doing
   // it here rather than in an effect keeps it tied to the interaction
@@ -59,6 +94,16 @@ export function ExploreView({ spots }: { spots: Spot[] }) {
           onChange={handleFilters}
           resultCount={visible.length}
           totalCount={spots.length}
+          geo={{
+            ...geo,
+            // Forgetting the location drops the marker and the fly-to as
+            // well as the sort, so nothing lingers pointing at where the
+            // reader was.
+            clear: () => {
+              setFocus(null);
+              geo.clear();
+            },
+          }}
         />
       </div>
 
@@ -72,6 +117,7 @@ export function ExploreView({ spots }: { spots: Spot[] }) {
                 spots={visible}
                 selectedSlug={selected}
                 onSelect={handleSelect}
+                here={here ? focus : null}
               />
             ) : (
               <MapPlaceholder />
@@ -82,16 +128,24 @@ export function ExploreView({ spots }: { spots: Spot[] }) {
         <div className="order-2 lg:order-1 lg:col-span-5">
           {visible.length === 0 ? (
             <div className="shell py-[clamp(3rem,2rem+4vw,6rem)]">
+              {/* An empty index and an over-tight filter look identical
+                  from here and are not the same problem. Telling someone
+                  to loosen a filter when there is nothing to filter reads
+                  as a broken page, and the honest version of an empty
+                  index is an invitation. */}
               <p className="text-lead font-light text-ink lowercase">
-                nothing matches that.
+                {spots.length === 0
+                  ? "nothing here yet."
+                  : "nothing matches that."}
               </p>
               <p className="mt-3 max-w-[38ch] text-small text-muted">
-                the index is still small. loosen a filter, or add the place you
-                were looking for.
+                {spots.length === 0
+                  ? "the index is empty. it fills up one spot at a time, and nobody has gone first."
+                  : "the index is still small. loosen a filter, or add the place you were looking for."}
               </p>
               <div className="mt-8">
                 <ActionLink href="/submit" tone="accent">
-                  add a spot
+                  {spots.length === 0 ? "add the first spot" : "add a spot"}
                 </ActionLink>
               </div>
             </div>
@@ -103,6 +157,11 @@ export function ExploreView({ spots }: { spots: Spot[] }) {
                   spot={spot}
                   selected={spot.slug === selected}
                   onSelect={handleSelect}
+                  distanceKm={
+                    here
+                      ? distanceKm(here.lat, here.lng, spot.lat, spot.lng)
+                      : null
+                  }
                 />
               ))}
             </ul>

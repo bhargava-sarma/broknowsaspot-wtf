@@ -1,20 +1,22 @@
 import "server-only";
 
-import { ID, Query, TablesDB } from "node-appwrite";
+import { ID, type Models, Query, TablesDB } from "node-appwrite";
 
 import { adminSessionClient } from "@/lib/appwrite/auth";
-import { spotPermissions } from "@/lib/appwrite/permissions";
+import { notePermissions, spotPermissions } from "@/lib/appwrite/permissions";
 import { DATABASE_ID, TABLES } from "@/lib/appwrite/schema";
+import type { ReportDetail, ReportReason } from "@/lib/spots/reports";
 import { adminTables } from "@/lib/appwrite/server";
 
 /**
  * The moderation queue and the actions on it.
  *
- * Reads go through the *signed-in admin's* session, not the API key. That
- * is deliberate and it is the closest thing here to what RLS gave us: a
- * hidden row carries read("team:admins"), so Appwrite decides per row
- * whether this person sees it. If the membership check in readAdminGate
- * were somehow wrong, the queue would come back empty rather than full.
+ * Reads go through the *signed-in admin's* session, not the API key, so
+ * that the database is the thing deciding: a hidden row carries
+ * read("team:admins"), and Appwrite works out per row whether this person
+ * sees it. If the membership check in readAdminGate were somehow wrong,
+ * the queue would come back empty rather than full — the failure lands on
+ * the safe side without our code having to be right twice.
  *
  * Writes go through the API key, because no row grants update to anyone —
  * and every one of them runs inside a transaction that moves the data and
@@ -45,6 +47,8 @@ export type NoteEntry = {
   body: string;
   notedOn: string;
   hidden: boolean;
+  /** Why it was reported. Never who by. */
+  reports: ReportDetail[];
 };
 
 type Row = Record<string, unknown> & { $id: string; $createdAt: string };
@@ -53,6 +57,55 @@ function stateOf(row: Row): QueueState {
   if (row.removedAt) return "removed";
   if (row.hiddenAt) return "hidden";
   return "visible";
+}
+
+/**
+ * Reports for the spots in the queue, read as the signed-in admin.
+ *
+ * The count on the spot row says *how many*, which is enough to sort by
+ * and nothing else. A moderator deciding whether to restore something
+ * needs to know it was reported as "unsafe" rather than "spam" — those
+ * are opposite decisions, and until now the screen showed the same
+ * number for both.
+ *
+ * Read through the session rather than the API key, like everything else
+ * on this surface: the reports table grants read to the admins team, so
+ * Appwrite refuses this outright for anyone else instead of trusting a
+ * check in our code.
+ */
+export async function readReports(
+  secret: string,
+  spotIds: string[],
+): Promise<Map<string, ReportDetail[]>> {
+  const byId = new Map<string, ReportDetail[]>();
+  if (spotIds.length === 0) return byId;
+
+  const client = adminSessionClient(secret);
+  if (!client) return byId;
+
+  const { rows } = await new TablesDB(client).listRows({
+    databaseId: DATABASE_ID,
+    tableId: TABLES.reports,
+    // Only the spots actually on screen, newest first.
+    queries: [
+      Query.equal("spotId", spotIds),
+      Query.orderDesc("$createdAt"),
+      Query.limit(500),
+    ],
+  });
+
+  for (const row of rows as unknown as Row[]) {
+    const spotId = String(row.spotId);
+    const list = byId.get(spotId) ?? [];
+    list.push({
+      reason: row.reason as ReportReason,
+      detail: (row.detail as string | null) || null,
+      at: row.$createdAt,
+    });
+    byId.set(spotId, list);
+  }
+
+  return byId;
 }
 
 export async function readQueue(secret: string): Promise<QueueEntry[]> {
@@ -96,18 +149,40 @@ export async function readNoteQueue(secret: string): Promise<NoteEntry[]> {
   if (!client) return [];
   const tables = new TablesDB(client);
 
-  const [{ rows: noteRows }, { rows: spotRows }] = await Promise.all([
-    tables.listRows({
-      databaseId: DATABASE_ID,
-      tableId: TABLES.notes,
-      queries: [Query.orderDesc("$createdAt"), Query.limit(200)],
-    }),
-    tables.listRows({
-      databaseId: DATABASE_ID,
-      tableId: TABLES.spots,
-      queries: [Query.limit(500)],
-    }),
-  ]);
+  const [{ rows: noteRows }, { rows: spotRows }, { rows: reportRows }] =
+    await Promise.all([
+      tables.listRows({
+        databaseId: DATABASE_ID,
+        tableId: TABLES.notes,
+        queries: [Query.orderDesc("$createdAt"), Query.limit(200)],
+      }),
+      tables.listRows({
+        databaseId: DATABASE_ID,
+        tableId: TABLES.spots,
+        queries: [Query.limit(500)],
+      }),
+      // Unfiltered: a note carries no denormalised count to pre-filter
+      // on, and the whole table is small enough that one read beats a
+      // second round trip per note.
+      tables.listRows({
+        databaseId: DATABASE_ID,
+        tableId: TABLES.noteReports,
+        queries: [Query.orderDesc("$createdAt"), Query.limit(500)],
+      }),
+    ]);
+
+  const reportsByNote = new Map<string, ReportDetail[]>();
+  for (const row of reportRows as unknown as Row[]) {
+    const noteId = String(row.noteId);
+    const list = reportsByNote.get(noteId) ?? [];
+    // reporterKey stops here, as it does everywhere else.
+    list.push({
+      reason: row.reason as ReportReason,
+      detail: (row.detail as string | null) || null,
+      at: row.$createdAt,
+    });
+    reportsByNote.set(noteId, list);
+  }
 
   const spots = new Map(
     (spotRows as unknown as Row[]).map((row) => [
@@ -116,19 +191,28 @@ export async function readNoteQueue(secret: string): Promise<NoteEntry[]> {
     ]),
   );
 
-  return (noteRows as unknown as Row[]).map((row) => {
-    const parent = spots.get(String(row.spotId));
-    return {
-      id: row.$id,
-      spotId: String(row.spotId),
-      spotSlug: parent?.slug ?? "—",
-      spotName: parent?.name ?? "unknown spot",
-      author: String(row.author ?? "anonymous"),
-      body: String(row.body ?? ""),
-      notedOn: String(row.notedOn ?? "").slice(0, 10),
-      hidden: Boolean(row.hiddenAt),
-    };
-  });
+  return (noteRows as unknown as Row[])
+    .map((row) => {
+      const parent = spots.get(String(row.spotId));
+      return {
+        reports: reportsByNote.get(row.$id) ?? [],
+        id: row.$id,
+        spotId: String(row.spotId),
+        spotSlug: parent?.slug ?? "—",
+        spotName: parent?.name ?? "unknown spot",
+        author: String(row.author ?? "anonymous"),
+        body: String(row.body ?? ""),
+        notedOn: String(row.notedOn ?? "").slice(0, 10),
+        hidden: Boolean(row.hiddenAt),
+      };
+    })
+    .sort((a, b) => {
+      // Reported notes first, then the rest newest-first as before. A
+      // note nobody has objected to needs no decision; the list exists
+      // for the ones that do.
+      const weight = (note: NoteEntry) => (note.reports.length > 0 ? 1 : 0);
+      return weight(b) - weight(a) || b.reports.length - a.reports.length;
+    });
 }
 
 export type LogEntry = {
@@ -185,9 +269,9 @@ export type ModerationAction = "hide" | "restore" | "remove";
  *
  * One transaction covers the timestamps, the row's permissions, every
  * note's permissions and the audit row. Splitting any of it apart leaves
- * an entry whose data and enforcement disagree — the failure this whole
- * design has to defend against, and the one Postgres made impossible for
- * free.
+ * an entry whose data and enforcement disagree, which is the single
+ * failure this design has to defend against: a spot marked hidden that
+ * the public can still read.
  *
  * `restore` clears both timestamps. A moderator thinks in terms of "put
  * it back", not "which of the two is set", and leaving one would silently
@@ -237,27 +321,28 @@ export async function moderateSpot(
     queries: [Query.equal("spotId", spot.$id), Query.limit(500)],
   });
 
-  return runTransaction(tables, [
-    {
-      action: "update",
+  return runTransaction(tables, (transactionId) => [
+    tables.updateRow<Models.DefaultRow>({
       databaseId: DATABASE_ID,
       tableId: TABLES.spots,
       rowId: spot.$id,
       data,
       permissions: spotPermissions(visible),
-    },
+      transactionId,
+    }),
     // Cascade. An ACL cannot say "public while the parent is visible", so
     // a restored spot's own hidden notes must stay hidden while the rest
     // come back with it.
-    ...(noteRows as unknown as Row[]).map((note) => ({
-      action: "update",
-      databaseId: DATABASE_ID,
-      tableId: TABLES.notes,
-      rowId: note.$id,
-      permissions: spotPermissions(visible && !note.hiddenAt),
-    })),
-    {
-      action: "create",
+    ...(noteRows as unknown as Row[]).map((note) =>
+      tables.updateRow<Models.DefaultRow>({
+        databaseId: DATABASE_ID,
+        tableId: TABLES.notes,
+        rowId: String(note.$id),
+        permissions: notePermissions(!note.hiddenAt, visible),
+        transactionId,
+      }),
+    ),
+    tables.createRow<Models.DefaultRow>({
       databaseId: DATABASE_ID,
       tableId: TABLES.moderationLog,
       rowId: ID.unique(),
@@ -268,7 +353,8 @@ export async function moderateSpot(
         actorId: actor.id,
         actorEmail: actor.email,
       },
-    },
+      transactionId,
+    }),
   ]);
 }
 
@@ -310,19 +396,18 @@ export async function moderateNote(
   const parentVisible = !parent.hiddenAt && !parent.removedAt;
   const noteVisible = action === "restore";
 
-  const result = await runTransaction(tables, [
-    {
-      action: "update",
+  const result = await runTransaction(tables, (transactionId) => [
+    tables.updateRow<Models.DefaultRow>({
       databaseId: DATABASE_ID,
       tableId: TABLES.notes,
       rowId: noteId,
       data: { hiddenAt: noteVisible ? null : new Date().toISOString() },
       // Restoring a note on a hidden spot must not make it public. The
       // parent decides the ceiling.
-      permissions: spotPermissions(noteVisible && parentVisible),
-    },
-    {
-      action: "create",
+      permissions: notePermissions(noteVisible, parentVisible),
+      transactionId,
+    }),
+    tables.createRow<Models.DefaultRow>({
       databaseId: DATABASE_ID,
       tableId: TABLES.moderationLog,
       rowId: ID.unique(),
@@ -334,25 +419,44 @@ export async function moderateNote(
         actorId: actor.id,
         actorEmail: actor.email,
       },
-    },
+      transactionId,
+    }),
   ]);
 
   if (!result.ok) return result;
   return { ok: true, slug: String(parent.slug) };
 }
 
+/**
+ * Runs staged writes atomically.
+ *
+ * The writes are made with `updateRow` / `createRow` carrying a
+ * `transactionId`, rather than with `createOperations` and hand-built
+ * operation objects. That distinction is the whole reason moderation was
+ * failing with "could not apply that":
+ *
+ * **`createOperations` cannot set permissions.** Its operations are typed
+ * in the SDK as a bare `object[]`, so TypeScript accepted a `permissions`
+ * field that the API does not define — and the note-cascade operations,
+ * which changed *only* permissions, ended up with no `data` at all and
+ * were rejected outright. Nothing in the type system could have caught
+ * it, and the local Appwrite stub happily accepted both, so it only ever
+ * failed against the real service.
+ *
+ * `updateRow` and `createRow` both take `permissions` *and* a
+ * `transactionId`, so this keeps the atomicity the security model depends
+ * on — the timestamp and the ACL still land together or not at all — and
+ * gets it from a typed call.
+ */
 async function runTransaction(
   tables: ReturnType<typeof adminTables>,
-  operations: object[],
+  stage: (transactionId: string) => Promise<unknown>[],
 ): Promise<{ ok: true } | { ok: false; reason: string }> {
   if (!tables) return { ok: false, reason: "no database connection" };
 
   const transaction = (await tables.createTransaction({})) as { $id: string };
   try {
-    await tables.createOperations({
-      transactionId: transaction.$id,
-      operations,
-    });
+    await Promise.all(stage(transaction.$id));
     await tables.updateTransaction({
       transactionId: transaction.$id,
       commit: true,
@@ -362,7 +466,14 @@ async function runTransaction(
     await tables
       .updateTransaction({ transactionId: transaction.$id, rollback: true })
       .catch(() => {});
+    // The admin surface is trusted and small, so the real reason is worth
+    // more there than a tidy sentence. Anything that reaches a visitor is
+    // still generic.
+    const detail =
+      (error as { type?: string }).type ||
+      (error as { message?: string }).message ||
+      "unknown";
     console.error("[moderate] transaction failed", error);
-    return { ok: false, reason: "could not apply that" };
+    return { ok: false, reason: `could not apply that — ${detail}` };
   }
 }

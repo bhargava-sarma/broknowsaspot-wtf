@@ -4,6 +4,7 @@ import { useActionState, useState } from "react";
 
 import { IDLE } from "@/lib/admin/action-state";
 import { moderateNoteAction } from "@/lib/admin/actions";
+import { ReportBreakdown } from "@/components/admin/report-breakdown";
 import type { NoteEntry } from "@/lib/admin/queue";
 import { formatDate } from "@/lib/utils/date";
 import { cn } from "@/lib/utils/cn";
@@ -48,6 +49,10 @@ export function NoteRow({ entry }: { entry: NoteEntry }) {
           <p className="mt-3 max-w-[68ch] text-small text-muted">
             {entry.body}
           </p>
+
+          {entry.reports.length > 0 ? (
+            <ReportBreakdown reports={entry.reports} />
+          ) : null}
         </div>
 
         <div className="col-span-12 mt-5 lg:col-span-4 lg:mt-0">
@@ -76,7 +81,7 @@ export function NoteRow({ entry }: { entry: NoteEntry }) {
                 value={entry.hidden ? "restore" : "hide"}
                 disabled={pending}
                 className={cn(
-                  "tap touch-target border-b pb-1 font-mono text-tiny tracking-[0.04em] lowercase disabled:opacity-50",
+                  "press touch-target border-b pb-1 font-mono text-tiny tracking-[0.04em] lowercase disabled:opacity-50",
                   entry.hidden
                     ? "border-rule-strong text-ink"
                     : "border-accent text-accent",

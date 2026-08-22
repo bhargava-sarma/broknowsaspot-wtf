@@ -1,8 +1,10 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 
 import { NoteForm } from "@/components/spot/note-form";
+import { ReportControl } from "@/components/spot/report-control";
 import type { CommunityNote } from "@/lib/types/spot";
 import { formatDate } from "@/lib/utils/date";
 
@@ -52,6 +54,35 @@ export function SpotNotes({
               <p className="mt-3 max-w-[60ch] text-small text-muted">
                 {note.body}
               </p>
+
+              {note.photos && note.photos.length > 0 ? (
+                <ul className="mt-4 flex flex-wrap gap-[var(--gutter)]">
+                  {note.photos.map((src) => (
+                    <li
+                      key={src}
+                      className="relative aspect-[4/3] w-40 overflow-hidden bg-paper-raised sm:w-56"
+                    >
+                      <Image
+                        src={src}
+                        alt={`photo attached by ${note.author}`}
+                        fill
+                        sizes="(min-width: 640px) 14rem, 10rem"
+                        className="object-cover"
+                      />
+                    </li>
+                  ))}
+                </ul>
+              ) : null}
+
+              {/* Quiet, and last. A note is somebody's account of going
+                  somewhere; the way to disagree with one is to leave your
+                  own, and reporting is for the cases where that will not
+                  do. Prominence here would invite the opposite. */}
+              <ReportControl
+                endpoint={`/api/notes/${note.id}/report`}
+                label="report this note"
+                className="mt-4"
+              />
             </li>
           ))}
         </ul>

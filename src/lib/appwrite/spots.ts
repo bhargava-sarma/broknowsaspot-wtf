@@ -2,6 +2,7 @@ import "server-only";
 
 import { Query } from "node-appwrite";
 
+import { photoUrl } from "@/lib/appwrite/photos";
 import { DATABASE_ID, TABLES } from "@/lib/appwrite/schema";
 import { guestTables } from "@/lib/appwrite/server";
 import type { CommunityNote, Spot } from "@/lib/types/spot";
@@ -14,9 +15,10 @@ import type { CommunityNote, Spot } from "@/lib/types/spot";
  * removed entries are not filtered out by a `where` clause we could get
  * wrong; Appwrite never hands them over in the first place.
  *
- * That is the piece of the Supabase design worth keeping. RLS meant a bug
- * in the query leaked nothing. Reading as a guest preserves the same
- * property, and it is why `spotPermissions()` has to be right.
+ * The property worth naming: a bug in a query here leaks nothing, because
+ * the query is not what enforces visibility. It also means
+ * `spotPermissions()` has to be right — the permissions written onto each
+ * row are the whole of the enforcement.
  */
 
 type SpotRow = Record<string, unknown> & {
@@ -28,12 +30,28 @@ type SpotRow = Record<string, unknown> & {
 type NoteRow = Record<string, unknown> & { $id: string; spotId: string };
 
 function toNote(row: NoteRow): CommunityNote {
+  // Stored as ids rather than URLs, so an endpoint or project move is a
+  // config change rather than a migration. Resolved on read.
+  let photos: string[] = [];
+  try {
+    const ids = row.photos ? JSON.parse(String(row.photos)) : [];
+    if (Array.isArray(ids)) {
+      photos = ids
+        .filter((id): id is string => typeof id === "string")
+        .map(photoUrl);
+    }
+  } catch {
+    // A malformed blob should cost the pictures, not the note.
+    photos = [];
+  }
+
   return {
     id: row.$id,
     author: String(row.author ?? "anonymous"),
     // The column is a datetime; the UI only ever renders the date part.
     date: String(row.notedOn ?? "").slice(0, 10),
     body: String(row.body ?? ""),
+    photos,
   };
 }
 

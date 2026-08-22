@@ -1,10 +1,11 @@
 /**
  * Stand up the Appwrite schema. Idempotent — safe to re-run.
  *
- * This is the equivalent of supabase/migrations, and it exists as a
- * script rather than a pile of dashboard clicks for the same reason the
- * SQL did: a schema you cannot recreate from the repository is a schema
- * that drifts, and there is no `pg_dump` to fall back on here.
+ * This exists as a script rather than a pile of dashboard clicks because
+ * a schema you cannot recreate from the repository is a schema that
+ * drifts, and Appwrite offers nothing to dump the live one back out. The
+ * declaration in `src/lib/appwrite/schema.ts` is the only description of
+ * this database that exists.
  *
  *   APPWRITE_ENDPOINT=https://fra.cloud.appwrite.io/v1 \
  *   APPWRITE_PROJECT_ID=... \
@@ -17,10 +18,21 @@
  * than sleeping and hoping.
  */
 
-import { Client, TablesDB, Teams } from "node-appwrite";
+import {
+  Client,
+  Compression,
+  Permission,
+  Role,
+  Storage,
+  TablesDB,
+  Teams,
+} from "node-appwrite";
 import {
   ADMIN_TEAM_ID,
   DATABASE_ID,
+  PHOTO_BUCKET_ID,
+  PHOTO_EXTENSIONS,
+  PHOTO_MAX_BYTES,
   SCHEMA,
   type TableSpec,
 } from "@/lib/appwrite/schema";
@@ -37,7 +49,9 @@ if (!endpoint || !projectId || !apiKey) {
       "APPWRITE_API_KEY.\n\n" +
       "the api key needs these scopes: databases.read, databases.write,\n" +
       "tables.read, tables.write, collections.read, collections.write,\n" +
-      "documents.read, documents.write, teams.read, teams.write",
+      "documents.read, documents.write, teams.read, teams.write\n\n" +
+      "add users.read and users.write too if the same key will run\n" +
+      "appwrite:admin, which is the only script that touches accounts.",
   );
   process.exit(1);
 }
@@ -49,6 +63,7 @@ const client = new Client()
 
 const db = new TablesDB(client);
 const teams = new Teams(client);
+const storage = new Storage(client);
 
 /** Appwrite answers 409 for "already exists", which is success here. */
 function isConflict(error: unknown): boolean {
@@ -57,6 +72,26 @@ function isConflict(error: unknown): boolean {
 
 function isMissing(error: unknown): boolean {
   return (error as { code?: number })?.code === 404;
+}
+
+/**
+ * Waits for a dropped index to actually disappear.
+ *
+ * Deleting is asynchronous like everything else here, and creating the
+ * replacement while the old one is still `deleting` conflicts — which
+ * `step` would report as "(exists)", leaving the wrong index in place and
+ * the run looking successful.
+ */
+async function waitForIndexGone(tableId: string, key: string): Promise<void> {
+  for (let attempt = 0; attempt < 40; attempt += 1) {
+    const { indexes } = (await db.listIndexes({
+      databaseId: DATABASE_ID,
+      tableId,
+    })) as { indexes: Array<{ key: string }> };
+    if (!indexes.some((index) => index.key === key)) return;
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  throw new Error(`index ${key} on ${tableId} did not finish deleting`);
 }
 
 async function step<T>(label: string, run: () => Promise<T>): Promise<void> {
@@ -375,7 +410,66 @@ async function provisionTable(table: TableSpec): Promise<void> {
   await waitForColumns(table.id);
   console.log(" — available");
 
+  // What is actually on the table, so an index whose definition moved can
+  // be told from one that is simply already there.
+  //
+  // Creating an index that exists returns a conflict, which `step` reports
+  // as "(exists)" and moves past — correct when the definition matches and
+  // silently wrong when it does not. An index widened by a column would
+  // keep its old, narrower constraint with nothing anywhere to say so,
+  // which for a *unique* index means a duplicate the schema forbids is
+  // still accepted. That is the kind of drift this whole script exists to
+  // prevent, so a changed definition is dropped and rebuilt.
+  let liveIndexes: Map<string, { columns: string[]; type: string }>;
+  try {
+    const { indexes } = (await db.listIndexes({
+      databaseId: DATABASE_ID,
+      tableId: table.id,
+    })) as {
+      indexes: Array<{
+        key: string;
+        type: string;
+        attributes?: string[];
+        columns?: string[];
+      }>;
+    };
+    liveIndexes = new Map(
+      indexes.map((index) => [
+        index.key,
+        {
+          // The field is `attributes` on older responses and `columns` on
+          // newer ones; neither is guaranteed, so both are read.
+          columns: index.columns ?? index.attributes ?? [],
+          type: String(index.type),
+        },
+      ]),
+    );
+  } catch {
+    // A table too new to list indexes on has none to reconcile.
+    liveIndexes = new Map();
+  }
+
   for (const index of table.indexes) {
+    const existing = liveIndexes.get(index.key);
+    if (existing) {
+      const sameColumns =
+        existing.columns.length === index.columns.length &&
+        existing.columns.every((column, i) => column === index.columns[i]);
+      if (!sameColumns || existing.type !== index.type) {
+        console.log(
+          `  ~ index ${index.key} changed ` +
+            `(${existing.type} [${existing.columns.join(", ")}] → ` +
+            `${index.type} [${index.columns.join(", ")}]) — rebuilding`,
+        );
+        await db.deleteIndex({
+          databaseId: DATABASE_ID,
+          tableId: table.id,
+          key: index.key,
+        });
+        await waitForIndexGone(table.id, index.key);
+      }
+    }
+
     // A spatial index refuses a nullable column, which is why `location`
     // is required. If this fails with column_index_invalid, the column's
     // `required` is the thing to look at, not the index.
@@ -403,6 +497,29 @@ async function main(): Promise<void> {
   for (const table of SCHEMA) {
     await provisionTable(table);
   }
+
+  console.log("\nstorage");
+  // Public read because a published photo is public. No write grant to
+  // anyone: uploads run through a route handler on the API key, which is
+  // what keeps Turnstile, the rate limiter and the type check on the
+  // only path in.
+  await step(`bucket "${PHOTO_BUCKET_ID}"`, () =>
+    storage.createBucket({
+      bucketId: PHOTO_BUCKET_ID,
+      name: "spot photos",
+      permissions: [Permission.read(Role.any())],
+      fileSecurity: false,
+      enabled: true,
+      maximumFileSize: PHOTO_MAX_BYTES,
+      allowedFileExtensions: [...PHOTO_EXTENSIONS],
+      compression: Compression.None,
+      // Encryption and antivirus are Appwrite-side extras that change
+      // nothing about what a visitor can fetch; the meaningful control
+      // here is that nothing but the API key can write.
+      encryption: false,
+      antivirus: false,
+    }),
+  );
 
   console.log("\nteams");
   // Replaces `public.admins`. Membership is the moderation gate, and it

@@ -3,30 +3,21 @@
 import "leaflet/dist/leaflet.css";
 
 import L from "leaflet";
-import { useEffect } from "react";
-import {
-  MapContainer,
-  Marker,
-  TileLayer,
-  useMap,
-  useMapEvents,
-} from "react-leaflet";
+import { useEffect, useRef } from "react";
+import { MapContainer, Marker, useMap, useMapEvents } from "react-leaflet";
 
+import { BasemapLayer } from "@/components/map/basemap-layer";
+import { INDIA_VIEW, LOCATED_ZOOM } from "@/lib/map/tiles";
 import { useTheme } from "@/lib/theme/theme-provider";
 
 /**
  * Coordinate picker for the submission form.
  *
- * Shares the tile setup and marker styling with the explore map, so a
- * submitted pin looks exactly like a logged one. Tap and click both set the
+ * Shares the tile setup, the opening view and the marker styling with the
+ * explore map, so a submitted pin looks exactly like a logged one. Tap and click both set the
  * position — Leaflet's `click` event fires for touch taps too, so there is
  * no separate touch path to maintain.
  */
-
-const TILE_URL = {
-  light: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
-  dark: "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-} as const;
 
 const pinIcon = L.divIcon({
   className: "bkas-marker",
@@ -51,6 +42,33 @@ function ClickToSet({
 }
 
 /** Re-centres when coordinates are typed into the number fields instead. */
+/**
+ * Flies to a position the reader explicitly asked to go to.
+ *
+ * Separate from SyncView because the two are different intentions.
+ * SyncView follows the pin without fighting a reader who has panned
+ * away, and deliberately will not zoom in on them. Pressing "use my
+ * location" *is* a request to be taken somewhere, so this one moves the
+ * view outright — and `focus.at` is a nonce rather than the coordinates,
+ * so pressing it again after panning away brings you back.
+ */
+function FocusView({
+  focus,
+}: {
+  focus: { lat: number; lng: number; at: number } | null;
+}) {
+  const map = useMap();
+  const last = useRef(0);
+
+  useEffect(() => {
+    if (!focus || focus.at === last.current) return;
+    last.current = focus.at;
+    map.flyTo([focus.lat, focus.lng], LOCATED_ZOOM.pin, { duration: 0.9 });
+  }, [focus, map]);
+
+  return null;
+}
+
 function SyncView({ lat, lng }: { lat: number | null; lng: number | null }) {
   const map = useMap();
 
@@ -79,12 +97,15 @@ type LocationPickerProps = {
   lat: number | null;
   lng: number | null;
   onPick: (lat: number, lng: number) => void;
+  /** A place to fly to, with a nonce so repeat presses still move. */
+  focus?: { lat: number; lng: number; at: number } | null;
 };
 
 export default function LocationPicker({
   lat,
   lng,
   onPick,
+  focus = null,
 }: LocationPickerProps) {
   const { theme } = useTheme();
   const placed = lat !== null && lng !== null;
@@ -92,15 +113,18 @@ export default function LocationPicker({
   return (
     <MapContainer
       className="h-full w-full bg-paper-raised"
-      center={placed ? [lat, lng] : [30, 5]}
-      zoom={placed ? 6 : 2}
+      // An unplaced picker opens on India; once a pin exists the map
+      // follows it, wherever the spot turns out to be.
+      center={placed ? [lat, lng] : INDIA_VIEW.center}
+      zoom={placed ? 6 : INDIA_VIEW.zoom}
       minZoom={2}
       scrollWheelZoom
       zoomControl={false}
     >
-      <TileLayer key={theme} url={TILE_URL[theme]} maxZoom={19} detectRetina />
+      <BasemapLayer theme={theme} />
       <ClickToSet onPick={onPick} />
       <SyncView lat={lat} lng={lng} />
+      <FocusView focus={focus} />
       {placed ? <Marker position={[lat, lng]} icon={pinIcon} /> : null}
     </MapContainer>
   );

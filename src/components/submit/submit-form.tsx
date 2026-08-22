@@ -7,6 +7,9 @@ import { useCallback, useState } from "react";
 import { MapPlaceholder } from "@/components/map/map-placeholder";
 import { TurnstileWidget } from "@/components/security/turnstile-widget";
 import { ChoiceField, TextField } from "@/components/ui/field";
+import { LocateButton } from "@/components/ui/locate-button";
+import { PhotoField, type AttachedPhoto } from "@/components/ui/photo-field";
+import { useGeolocation } from "@/lib/hooks/use-geolocation";
 import { useMounted } from "@/lib/hooks/use-mounted";
 import { type FieldErrors, validateDraft } from "@/lib/spots/validate";
 import {
@@ -65,6 +68,7 @@ export function SubmitForm() {
   const [errors, setErrors] = useState<FieldErrors>({});
   const [status, setStatus] = useState<Status>({ kind: "idle" });
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<AttachedPhoto[]>([]);
   // Keeps the hydration render identical to the prerendered HTML; see
   // useMounted for why this is needed.
   const mounted = useMounted();
@@ -82,6 +86,28 @@ export function SubmitForm() {
     },
     [],
   );
+
+  // Where the map should fly to, if anywhere. The nonce means pressing
+  // the button again after panning away brings the view back.
+  const [focus, setFocus] = useState<{
+    lat: number;
+    lng: number;
+    at: number;
+  } | null>(null);
+
+  // Moves the pin, and nothing else. The coordinate is not transmitted
+  // here — it goes out with the rest of the form, when submitted.
+  const geo = useGeolocation({
+    onFound: (lat, lng) => {
+      const rounded = {
+        lat: Number(lat.toFixed(5)),
+        lng: Number(lng.toFixed(5)),
+      };
+      set("lat", rounded.lat);
+      set("lng", rounded.lng);
+      setFocus({ ...rounded, at: Date.now() });
+    },
+  });
 
   const handleSubmit = useCallback(
     async (event: React.FormEvent) => {
@@ -110,7 +136,16 @@ export function SubmitForm() {
         const response = await fetch("/api/spots", {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify({ ...result.draft, turnstileToken }),
+          body: JSON.stringify({
+            ...result.draft,
+            turnstileToken,
+            // Only the ones that finished uploading. A photo still in
+            // flight, or one that failed, is simply not attached rather
+            // than blocking the submission it belongs to.
+            photoIds: photos
+              .filter((photo) => photo.status === "ready" && photo.id)
+              .map((photo) => photo.id),
+          }),
         });
         const payload = await response.json();
 
@@ -140,7 +175,7 @@ export function SubmitForm() {
         });
       }
     },
-    [form, turnstileToken],
+    [form, turnstileToken, photos],
   );
 
   if (status.kind === "sent") {
@@ -230,6 +265,28 @@ export function SubmitForm() {
           <hr className="border-0 border-t border-rule" />
         </div>
 
+        {/* ---------------------------------------------------- photos */}
+        <div className="lg:col-span-3">
+          <p className="label">photos</p>
+          <p className="mt-3 max-w-[30ch] text-small text-muted">
+            optional, and worth more than the write-up. what it actually looks
+            like when you get there.
+          </p>
+        </div>
+        <div className="lg:col-span-8">
+          <PhotoField
+            label="attach"
+            max={3}
+            photos={photos}
+            onChange={setPhotos}
+            turnstileToken={turnstileToken ?? undefined}
+          />
+        </div>
+
+        <div className="lg:col-span-12">
+          <hr className="border-0 border-t border-rule" />
+        </div>
+
         {/* --------------------------------------------------- tagging */}
         <div className="lg:col-span-3">
           <p className="label">tagging</p>
@@ -275,6 +332,22 @@ export function SubmitForm() {
           <p className="mt-3 max-w-[30ch] text-small text-muted">
             tap the map, or type coordinates. the pin is what gets logged.
           </p>
+
+          {/*
+            Off until pressed, and it only *moves the pin* — it does not
+            submit anything. The caption is deliberately blunt about the
+            consequence: this is the one place on the site where a
+            coordinate becomes public, and "use my location" is an easy
+            way to publish where you are standing without meaning to.
+          */}
+          <LocateButton
+            className="mt-5"
+            status={geo.status}
+            onRequest={geo.request}
+            onClear={geo.clear}
+            label="use my location"
+            caption="moves the pin to where you are. nothing is sent until you submit — and the pin is published, so drop it on the spot rather than on your doorstep."
+          />
         </div>
         <div className="lg:col-span-8">
           <div className="h-[46vh] min-h-[280px] border border-rule">
@@ -282,6 +355,7 @@ export function SubmitForm() {
               <LocationPicker
                 lat={form.lat}
                 lng={form.lng}
+                focus={focus}
                 onPick={(lat, lng) => {
                   set("lat", lat);
                   set("lng", lng);

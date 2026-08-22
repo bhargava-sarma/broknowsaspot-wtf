@@ -1,27 +1,29 @@
 import "server-only";
 
-import { Client, TablesDB, Teams } from "node-appwrite";
+import { Client, TablesDB } from "node-appwrite";
 
 /**
- * Server-side Appwrite clients.
+ * Every Appwrite client the server makes, and the only place any of them
+ * is constructed.
  *
  * `import "server-only"` is the build-time guard: if any client component
  * ever pulls this in, the build fails rather than shipping an API key to
- * the browser. The Supabase service-role module carried the same line for
- * the same reason, and it is the cheapest insurance in the codebase.
+ * the browser. It is the cheapest insurance in the codebase.
  *
- * Two clients, deliberately:
+ * Two levels of access, deliberately:
  *
- *   adminClient() — full access via the API key. Every write in the app
- *   goes through it, because no row grants create/update/delete to
- *   anyone. It bypasses row permissions entirely, which is exactly the
- *   role Supabase's service key played.
+ *   guestTables() — endpoint and project only, no key. Sees precisely
+ *   what a browser would. Public reads use it *on purpose*: if the
+ *   server-side filter is ever wrong, Appwrite still refuses, and "the
+ *   database independently refuses" stays true rather than degrading to
+ *   "our code remembers to filter".
  *
- *   guestClient() — endpoint and project only. Sees precisely what a
- *   browser would. Public reads use it *on purpose*: if the server-side
- *   filter is ever wrong, Appwrite still refuses, and "the database
- *   independently refuses" stays true rather than becoming "our code
- *   remembers to filter".
+ *   adminTables() / keyedClient() — full access via the API key,
+ *   bypassing row permissions entirely. Every write goes through it,
+ *   because no row grants create/update/delete to anyone.
+ *
+ *   sessionClient() — acts as one signed-in user. Row permissions apply,
+ *   so what comes back is exactly what that account may see.
  */
 
 const endpoint = process.env.APPWRITE_ENDPOINT;
@@ -34,10 +36,9 @@ const endpoint = process.env.APPWRITE_ENDPOINT;
  * scripts, with no error that says so — so both are accepted everywhere
  * and setting either is enough.
  *
- * It is not a secret. It identifies the project the way a Supabase URL
- * did, and a browser would hold it in any app that talked to Appwrite
- * directly. This one does not, but the NEXT_PUBLIC_ prefix is still
- * correct rather than merely tolerated.
+ * It is not a secret. It identifies the project, and a browser would hold
+ * it in any app that talked to Appwrite directly. This one does not, but
+ * the NEXT_PUBLIC_ prefix is still correct rather than merely tolerated.
  */
 const projectId =
   process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID ??
@@ -58,15 +59,31 @@ export function guestTables(): TablesDB | null {
   return client ? new TablesDB(client) : null;
 }
 
-/** Full access. Never reachable from a client component. */
-export function adminTables(): TablesDB | null {
+/**
+ * A client carrying the API key, for the services that have no dedicated
+ * helper here — `Account` and `Teams` in the auth path. Never reachable
+ * from a client component.
+ */
+export function keyedClient(): Client | null {
   const client = base();
   if (!client || !apiKey) return null;
-  return new TablesDB(client.setKey(apiKey));
+  return client.setKey(apiKey);
 }
 
-export function adminTeams(): Teams | null {
+/** Full access to table data. Never reachable from a client component. */
+export function adminTables(): TablesDB | null {
+  const client = keyedClient();
+  return client ? new TablesDB(client) : null;
+}
+
+/**
+ * A client acting as one signed-in user, from their session secret.
+ *
+ * Reads through it are governed by row permissions, so an admin's session
+ * sees hidden rows and a guest client does not — which is the whole point
+ * of using it for the moderation queue instead of the API key.
+ */
+export function sessionClient(secret: string): Client | null {
   const client = base();
-  if (!client || !apiKey) return null;
-  return new Teams(client.setKey(apiKey));
+  return client ? client.setSession(secret) : null;
 }

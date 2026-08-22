@@ -2,38 +2,35 @@
  * The Appwrite schema, declared once.
  *
  * Both the provisioning script and the verifier read this file, so they
- * cannot disagree about what the schema is supposed to be. That mattered
- * on Supabase too — `verify.sql` parsed the real catalogue rather than a
- * copy of the migration — and it matters more here, because Appwrite has
- * no `\d spots` to fall back on.
+ * cannot disagree about what the schema is supposed to be. There is no
+ * `\d spots` to fall back on with Appwrite, which makes a single
+ * declaration the only way to have one answer.
  *
- * ------------------------------------------------------------------
- * How authorisation works here, and how it differs from what it replaces
- * ------------------------------------------------------------------
- *
- * Supabase enforced visibility with a policy that read the row:
- *
- *     using (hidden_at is null and removed_at is null)
+ * ----------------------------------------
+ * How authorisation works here
+ * ----------------------------------------
  *
  * Appwrite permissions are access-control lists, not predicates over the
  * row's data. There is no way to say "readable by anyone *while*
- * hidden_at is null". So visibility is carried in two places:
+ * hiddenAt is null", so visibility ends up carried in two places:
  *
  *   - `hiddenAt` / `removedAt` — the data, and the audit trail
  *   - the row's own `$permissions` — the enforcement
  *
- * Those two can drift, which the Postgres version made structurally
- * impossible. Three things keep them together:
+ * Two copies of one fact can drift. Three things keep them together:
  *
  *   1. Only one code path writes either of them, and it writes both.
  *   2. It does so inside a transaction, so a partial write rolls back.
- *   3. `scripts/appwrite-verify.mjs` asserts the invariant directly —
+ *   3. `scripts/appwrite-verify.mts` asserts the invariant directly —
  *      every row's permissions must match its hiddenAt/removedAt state.
  *
  * Check 3 is the one that matters. Treat a failure there as a security
  * finding, not a cosmetic mismatch: a row whose data says hidden and
  * whose ACL says `any` is publicly readable.
  */
+
+import { REPORT_REASONS } from "@/lib/spots/reports";
+import { ACCESS_TYPES, CATEGORIES, DIFFICULTIES } from "@/lib/types/spot";
 
 export const DATABASE_ID = "broknowsaspot";
 
@@ -43,8 +40,36 @@ export const TABLES = {
   reports: "reports",
   submissionLog: "submission_log",
   noteLog: "note_log",
+  noteReports: "note_reports",
+  photoLog: "photo_log",
   moderationLog: "moderation_log",
 } as const;
+
+/**
+ * Where uploaded photos live.
+ *
+ * A bucket rather than a column: files are not rows, and Appwrite's
+ * Storage handles the transfer, range requests and caching that a base64
+ * blob in a text column would make us reimplement badly.
+ *
+ * Read is public because a published photo is public. **Write is granted
+ * to nobody**, exactly as with every table here — uploads go through a
+ * route handler on the API key, which is what keeps Turnstile, the rate
+ * limiter and the type/size checks on the only path in.
+ */
+export const PHOTO_BUCKET_ID = "spot_photos";
+
+/**
+ * Ceiling for a stored file.
+ *
+ * The client re-encodes to a 2000px JPEG before uploading, which lands
+ * well under this; the limit is here to stop anything that skipped that
+ * path, not to constrain honest uploads.
+ */
+export const PHOTO_MAX_BYTES = 6 * 1024 * 1024;
+
+/** What Storage will accept, as file extensions. */
+export const PHOTO_EXTENSIONS = ["jpg", "jpeg"] as const;
 
 /** The team whose members may moderate. Replaces `public.admins`. */
 export const ADMIN_TEAM_ID = "admins";
@@ -64,34 +89,30 @@ export const ADMIN_READ = `read("team:${ADMIN_TEAM_ID}")`;
 /**
  * Report count at which a spot auto-hides.
  *
- * On Supabase this lived inside a trigger function and was unreachable
- * from the client by construction. Here it is a constant in server-only
- * code — `src/lib/appwrite/*` is imported exclusively by route handlers
- * and scripts, never by a client component. Publishing "10 reports takes
- * an entry down" is an instruction manual for brigading, so keep it that
- * way: if this ever needs to be read in the browser, the answer is no.
+ * This is a constant in server-only code — `src/lib/appwrite/*` is
+ * imported exclusively by route handlers and scripts, never by a client
+ * component — and it has to stay there. Publishing "10 reports takes an
+ * entry down" is an instruction manual for brigading, so if this ever
+ * needs to be read in the browser, the answer is no.
  */
 export const REPORT_THRESHOLD = 10;
 
-export const CATEGORIES = [
-  "ruin",
-  "water",
-  "viewpoint",
-  "underground",
-  "shore",
-  "transit",
-  "structure",
-] as const;
-
-export const DIFFICULTIES = ["easy", "moderate", "hard", "serious"] as const;
-export const ACCESS_TYPES = ["open", "permit", "grey", "private"] as const;
-export const REPORT_REASONS = [
-  "dangerous",
-  "private",
-  "wrong",
-  "gone",
-  "spam",
-] as const;
+/**
+ * The value sets the enum columns are built from.
+ *
+ * Imported, never redeclared. They were duplicated here once, and
+ * `REPORT_REASONS` drifted: this file said
+ * `dangerous, private, wrong, gone, spam` while the form sent
+ * `dangerous, illegal_access, private_info, inaccurate, spam`. Only two
+ * of five overlapped, so three of the report reasons were rejected by the
+ * column as invalid enum values — a 500 on report, for the whole life of
+ * the feature, with the two that happened to match working fine and
+ * hiding it.
+ *
+ * The trap is that a copy looks harmless until someone edits one side.
+ * Nothing here declares a value set any more; the schema follows the
+ * app's, which is the one the UI and the validators already use.
+ */
 export const MODERATION_ACTIONS = ["hide", "restore", "remove"] as const;
 
 type Column =
@@ -150,9 +171,14 @@ export const SCHEMA: TableSpec[] = [
   {
     id: TABLES.spots,
     name: "spots",
-    // No table-level grant. Visibility is decided per row: a live spot
-    // carries read(any), a hidden or removed one carries only
-    // read(team:admins). Writes never come from a client at all.
+    // No table-level grant, and in particular no write grant to anyone:
+    // submissions, reports and moderation all run through route handlers
+    // on the server API key, and granting `create` to `users` or `any`
+    // would let a browser write straight past Turnstile, the rate
+    // limiter and the validator in one step.
+    //
+    // Read visibility is decided per row instead: a live spot carries
+    // read(any), a hidden or removed one carries only read(team:admins).
     permissions: [],
     rowSecurity: true,
     columns: [
@@ -167,15 +193,14 @@ export const SCHEMA: TableSpec[] = [
       { name: "lng", kind: "float", required: true, min: -180, max: 180 },
 
       // Derived from lat/lng and written by the same code that writes
-      // them. Postgres generated this column and rejected any attempt to
-      // set it directly; Appwrite has no generated columns, so the
-      // verifier checks the two agree instead.
+      // them. Appwrite has no generated columns, so nothing stops the
+      // three from disagreeing except that one path writes all three —
+      // and the verifier checks they still agree.
       //
       // Required, and not merely as a nicety: Appwrite refuses a spatial
-      // index on a nullable column, and without the index every geo query
-      // degrades to a full scan. It also matches what Postgres did — the
-      // generated column sat over two NOT NULL fields, so it was never
-      // null there either.
+      // index on a nullable column, and without the index every geo
+      // query degrades to a full scan. lat/lng are both required too, so
+      // there is no case where this legitimately has nothing to hold.
       { name: "location", kind: "point", required: true },
 
       { name: "category", kind: "enum", values: CATEGORIES, required: true },
@@ -221,6 +246,7 @@ export const SCHEMA: TableSpec[] = [
   {
     id: TABLES.notes,
     name: "spot notes",
+    // Same arrangement as spots — see above.
     permissions: [],
     rowSecurity: true,
     columns: [
@@ -230,6 +256,10 @@ export const SCHEMA: TableSpec[] = [
       // When the visit happened, which is the part that decides whether
       // the information is still worth anything. Distinct from $createdAt.
       { name: "notedOn", kind: "datetime", required: true },
+      // Storage file ids, JSON-encoded, same arrangement as spots.photos.
+      // A note's photos have no life of their own — they are published
+      // and hidden with it — so they are a field rather than a table.
+      { name: "photos", kind: "string", size: 1000, required: false },
       { name: "hiddenAt", kind: "datetime", required: false },
     ],
     indexes: [
@@ -271,6 +301,42 @@ export const SCHEMA: TableSpec[] = [
   },
 
   {
+    id: TABLES.noteReports,
+    name: "note reports",
+    // Notes get their own table rather than a `noteId` column on
+    // `reports`. Sharing would mean widening that table's unique index
+    // from (spotId, reporterKey) to include the note — and an index whose
+    // columns change is exactly what the provisioner cannot migrate: it
+    // sees the key already exists and moves on, leaving the old
+    // constraint in place with nothing to say so. A second table needs no
+    // migration and no null-comparison semantics to reason about.
+    permissions: [ADMIN_READ],
+    rowSecurity: false,
+    columns: [
+      { name: "noteId", kind: "string", size: 64, required: true },
+      // Denormalised so the moderation screen can group a note's reports
+      // under its spot without reading the note first.
+      { name: "spotId", kind: "string", size: 64, required: true },
+      { name: "reason", kind: "enum", values: REPORT_REASONS, required: true },
+      { name: "detail", kind: "string", size: 500, required: false },
+      // HMAC of the client address, never the address — same weak,
+      // deliberate identity as the spot reports.
+      { name: "reporterKey", kind: "string", size: 64, required: true },
+    ],
+    indexes: [
+      // One report per person per note, enforced here rather than by the
+      // route remembering to check.
+      {
+        key: "one_per_note_reporter",
+        type: "unique",
+        columns: ["noteId", "reporterKey"],
+      },
+      { key: "note_idx", type: "key", columns: ["noteId"] },
+      { key: "spot_idx", type: "key", columns: ["spotId"] },
+    ],
+  },
+
+  {
     id: TABLES.submissionLog,
     name: "submission log",
     permissions: [ADMIN_READ],
@@ -295,6 +361,23 @@ export const SCHEMA: TableSpec[] = [
   },
 
   {
+    id: TABLES.photoLog,
+    name: "photo log",
+    // Its own budget, for the same reason spots and notes have separate
+    // ones: a photo is uploaded before the thing it belongs to exists,
+    // so it cannot be counted against either. It also gives moderation a
+    // record of which stored file arrived from which request key, which
+    // is the only way to find the rest of an abusive upload run.
+    permissions: [ADMIN_READ],
+    rowSecurity: false,
+    columns: [
+      { name: "fileId", kind: "string", size: 64, required: true },
+      { name: "submitterKey", kind: "string", size: 64, required: true },
+    ],
+    indexes: [{ key: "key_idx", type: "key", columns: ["submitterKey"] }],
+  },
+
+  {
     id: TABLES.moderationLog,
     name: "moderation log",
     permissions: [ADMIN_READ],
@@ -310,10 +393,11 @@ export const SCHEMA: TableSpec[] = [
         required: true,
       },
       { name: "reason", kind: "string", size: 500, required: false },
-      // Null for anything not attributable to a person. The auto-hide
-      // path writes one of these, which the Postgres version could not
-      // do — its trigger ran as an anonymous reporter with no way to
-      // reach the audit table.
+      // Both null for anything no person decided — the auto-hide path
+      // writes a log row with neither set, which is what lets the admin
+      // screen tell "hidden by a moderator" from "hidden by the report
+      // threshold". The email is denormalised alongside the id so the
+      // log still reads correctly after an account is deleted.
       { name: "actorId", kind: "string", size: 64, required: false },
       { name: "actorEmail", kind: "string", size: 320, required: false },
     ],

@@ -1,12 +1,11 @@
 /**
  * Assert the security model against a live Appwrite project.
  *
- * This is `supabase/verify.sql`'s replacement, and it carries more weight
- * than that file did. On Postgres the rules were declarative — a policy
- * either existed or it did not, and the catalogue could be read. Here the
- * rules are partly ACLs written at row-creation time, so the only way to
- * know they are right is to look at every row and to try things as a
- * guest.
+ * The rules being checked are partly ACLs written onto each row as it is
+ * created, rather than a policy declared once that the database applies
+ * everywhere. Nothing can be read off a catalogue to confirm them, so
+ * the only way to know they hold is to look at every row and to try
+ * things as an actual guest.
  *
  *   APPWRITE_ENDPOINT=... APPWRITE_PROJECT_ID=... APPWRITE_API_KEY=... \
  *   npm run appwrite:verify
@@ -17,19 +16,31 @@
 
 import {
   Client,
+  ID,
+  Storage,
   TablesDB,
   Teams,
   Query,
   Permission,
   Role,
 } from "node-appwrite";
+import { InputFile } from "node-appwrite/file";
 import {
   ADMIN_READ,
   ADMIN_TEAM_ID,
   DATABASE_ID,
+  PHOTO_BUCKET_ID,
+  PHOTO_EXTENSIONS,
+  PHOTO_MAX_BYTES,
   SCHEMA,
   TABLES,
 } from "@/lib/appwrite/schema";
+
+/** A valid 1x1 JPEG, so the probe upload passes the bucket's own rules. */
+const PROBE_JPEG_B64 =
+  "/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0a" +
+  "HBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/wAALCAABAAEBAREA/8QAFAABAAAAAAAA" +
+  "AAAAAAAAAAAACf/EABQQAQAAAAAAAAAAAAAAAAAAAAD/2gAIAQEAAD8AKp//2Q==";
 
 const endpoint = process.env.APPWRITE_ENDPOINT;
 const projectId =
@@ -49,6 +60,9 @@ const admin = new TablesDB(
   new Client().setEndpoint(endpoint).setProject(projectId).setKey(apiKey),
 );
 const teams = new Teams(
+  new Client().setEndpoint(endpoint).setProject(projectId).setKey(apiKey),
+);
+const storage = new Storage(
   new Client().setEndpoint(endpoint).setProject(projectId).setKey(apiKey),
 );
 
@@ -186,6 +200,28 @@ async function main() {
       wrongRequired.length ? wrongRequired.join(",") : "matches schema",
     );
 
+    // An enum whose element set drifted accepts some values and rejects
+    // the rest, which reads as an intermittent 500 rather than as a
+    // schema problem. `reports.reason` sat wrong for the whole life of
+    // the feature this way: two of five reasons happened to match, so
+    // reporting "worked" often enough that nothing looked broken.
+    const wrongElements = spec.columns
+      .filter((c) => c.kind === "enum")
+      .filter((c) => {
+        const live = byKey.get(c.name) as { elements?: string[] } | undefined;
+        if (!live?.elements) return false;
+        const want = [...(c as { values: readonly string[] }).values]
+          .sort()
+          .join(",");
+        return [...live.elements].sort().join(",") !== want;
+      })
+      .map((c) => c.name);
+    add(
+      `${spec.id} enum values`,
+      "match schema",
+      wrongElements.length ? wrongElements.join(",") : "match schema",
+    );
+
     const { indexes } = await admin.listIndexes({
       databaseId: DATABASE_ID,
       tableId: spec.id,
@@ -249,8 +285,8 @@ async function main() {
     const publiclyReadable = perms.some((p) => p === 'read("any")');
     if (visible !== publiclyReadable) drifted.push(String(row.slug));
 
-    // location is derived from lat/lng. Postgres generated it and
-    // rejected direct writes; here the writer sets both, so check them.
+    // location is derived from lat/lng, but nothing in Appwrite derives
+    // it — the writer sets all three, so confirm they still agree.
     const point = row.location as [number, number] | null | undefined;
     if (point) {
       const [lng, lat] = point;
@@ -452,6 +488,94 @@ async function main() {
     add("admin team exists", "true", "false");
     add("admin team has a member", "true", "unknown");
   }
+
+  // ---------------------------------------------------------- storage --
+  //
+  // The bucket is public-read on purpose: a published photo is public.
+  // What must never be true is public *write* — a bucket anyone can put
+  // files into is a free, anonymous file host attached to this project,
+  // and it would not look any different from the outside until it was
+  // being used as one.
+  try {
+    const bucket = (await storage.getBucket({
+      bucketId: PHOTO_BUCKET_ID,
+    })) as {
+      $permissions?: string[];
+      maximumFileSize?: number;
+      allowedFileExtensions?: string[];
+    };
+    const grants = bucket.$permissions ?? [];
+
+    add("photo bucket exists", "true", "true");
+    add(
+      "photo bucket public read",
+      'read("any")',
+      grants.some((g) => g === 'read("any")') ? 'read("any")' : "missing",
+    );
+
+    const writeGrants = grants.filter((g) =>
+      /^(create|update|delete)\(/.test(g),
+    );
+    add(
+      "photo bucket write grants",
+      "none",
+      writeGrants.length === 0 ? "none" : writeGrants.join(", "),
+    );
+
+    add(
+      "photo bucket size cap",
+      String(PHOTO_MAX_BYTES),
+      String(bucket.maximumFileSize ?? 0),
+    );
+    const extensions = (bucket.allowedFileExtensions ?? []).join(",");
+    add(
+      "photo bucket accepts jpeg only",
+      [...PHOTO_EXTENSIONS].join(","),
+      extensions || "anything",
+    );
+  } catch {
+    add("photo bucket exists", "true", "false");
+  }
+
+  // Configuration is not capability. Everything above reads the bucket,
+  // which needs `buckets.read`; uploading needs `files.write`, which is a
+  // separate scope on the same key. A project can pass every check above
+  // and still refuse every upload — and it did, which is why this now
+  // performs a real write instead of inferring one.
+  let uploadable = "no";
+  try {
+    const probe = (await storage.createFile({
+      bucketId: PHOTO_BUCKET_ID,
+      fileId: ID.unique(),
+      // A 1x1 jpeg: the smallest thing the bucket's own rules accept.
+      file: InputFile.fromBuffer(
+        Buffer.from(PROBE_JPEG_B64, "base64"),
+        "probe.jpg",
+      ),
+      permissions: [Permission.read(Role.any())],
+    })) as { $id: string };
+
+    uploadable = "yes";
+    // Cleaning up also proves `files.write` covers deletion, which the
+    // moderation path needs when a photo is taken down.
+    try {
+      await storage.deleteFile({
+        bucketId: PHOTO_BUCKET_ID,
+        fileId: probe.$id,
+      });
+    } catch {
+      uploadable = "yes (but could not delete)";
+    }
+  } catch (error) {
+    const code = (error as { code?: number }).code ?? 0;
+    const type = (error as { type?: string }).type ?? "";
+    uploadable =
+      code === 401 || code === 403 || /scope|unauthorized/i.test(type)
+        ? "no — key lacks files.write"
+        : `no — ${type || code || "unknown"}`;
+    if (process.env.VERIFY_DEBUG) console.error("[probe]", error);
+  }
+  add("api key can upload a photo", "yes", uploadable);
 
   // ----------------------------------------------------------- report --
   const width = Math.max(...checks.map((c) => c.name.length), 4);

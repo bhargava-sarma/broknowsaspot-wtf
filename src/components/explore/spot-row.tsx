@@ -8,6 +8,7 @@ import {
   CategoryTag,
   DifficultyMeter,
 } from "@/components/ui/spot-tags";
+import { formatDistance } from "@/lib/spots/distance";
 import type { Spot } from "@/lib/types/spot";
 import { cn } from "@/lib/utils/cn";
 
@@ -15,6 +16,8 @@ type SpotRowProps = {
   spot: Spot;
   selected: boolean;
   onSelect: (slug: string) => void;
+  /** How far from the reader, when they have offered a position. */
+  distanceKm?: number | null;
 };
 
 /**
@@ -23,8 +26,18 @@ type SpotRowProps = {
  * The whole row is a button that selects the spot on the map, with a
  * separate explicit link through to the detail page — nesting a link
  * inside a button would be invalid and would make keyboard use ambiguous.
+ *
+ * Selection is marked by an accent rule down the left edge that *grows*
+ * from the centre rather than appearing. Selecting from the map scrolls
+ * the matching row into view, and a mark that animates is findable in
+ * peripheral vision in a way that a mark which simply exists is not.
  */
-export function SpotRow({ spot, selected, onSelect }: SpotRowProps) {
+export function SpotRow({
+  spot,
+  selected,
+  onSelect,
+  distanceKm = null,
+}: SpotRowProps) {
   return (
     <li
       id={`spot-${spot.slug}`}
@@ -52,7 +65,15 @@ export function SpotRow({ spot, selected, onSelect }: SpotRowProps) {
               {spot.name}
             </h3>
             <span className="shrink-0 font-mono text-micro text-faint lowercase tabular-nums">
-              {spot.walkInKm > 0 ? `${spot.walkInKm}km` : "boat"}
+              {distanceKm !== null ? (
+                <>
+                  <span data-distance="" className="text-accent">
+                    {formatDistance(distanceKm)} away
+                  </span>
+                  <span aria-hidden="true"> · </span>
+                </>
+              ) : null}
+              {spot.walkInKm > 0 ? `${spot.walkInKm}km walk` : "boat"}
             </span>
           </div>
 

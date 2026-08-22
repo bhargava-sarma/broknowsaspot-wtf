@@ -35,7 +35,7 @@ export default function Error({
         <button
           type="button"
           onClick={reset}
-          className="tap touch-target mt-10 inline-flex items-center gap-3 border-b border-rule-strong pb-2 font-mono text-tiny tracking-[0.04em] text-ink lowercase"
+          className="press touch-target mt-10 inline-flex items-center gap-3 border-b border-rule-strong pb-2 font-mono text-tiny tracking-[0.04em] text-ink lowercase"
         >
           try again
           <span aria-hidden="true">↻</span>

@@ -1,15 +1,17 @@
 import "server-only";
 
-import { Account, Client, Query, Teams } from "node-appwrite";
+import { Account, Query, Teams } from "node-appwrite";
 import { cookies } from "next/headers";
 
 import { ADMIN_TEAM_ID } from "@/lib/appwrite/schema";
+import {
+  isAppwriteWriteEnabled,
+  keyedClient,
+  sessionClient,
+} from "@/lib/appwrite/server";
 
 /**
- * Admin sessions on Appwrite.
- *
- * The shape is the same as the Supabase version and the reasons are the
- * same, so the differences are what is worth reading.
+ * Admin sessions.
  *
  * Appwrite has no cookie-based SSR helper. A session is created with the
  * API key, which hands back a *secret*; that secret goes in an httpOnly
@@ -18,37 +20,19 @@ import { ADMIN_TEAM_ID } from "@/lib/appwrite/schema";
  * pointer to one, which is why it is httpOnly, sameSite lax and secure
  * outside development.
  *
- * Membership in the `admins` team replaces `public.admins`. Being signed
- * in grants nothing on its own — the same rule as before, and the reason
- * it mattered there was that Supabase accepts public sign-ups by default.
- * Appwrite does too.
+ * Moderation rights are membership in the `admins` team, and being signed
+ * in grants nothing on its own. That distinction is load-bearing rather
+ * than pedantic: Appwrite accepts public sign-ups by default, so "has an
+ * account" and "may moderate" have to be two different questions.
  */
-
-const endpoint = process.env.APPWRITE_ENDPOINT;
-const projectId =
-  process.env.NEXT_PUBLIC_APPWRITE_PROJECT_ID ??
-  process.env.APPWRITE_PROJECT_ID;
-const apiKey = process.env.APPWRITE_API_KEY;
 
 export const SESSION_COOKIE = "bkas_session";
 
-export const isAuthConfigured = Boolean(endpoint && projectId && apiKey);
-
-function keyedClient(): Client | null {
-  if (!endpoint || !projectId || !apiKey) return null;
-  return new Client()
-    .setEndpoint(endpoint)
-    .setProject(projectId)
-    .setKey(apiKey);
-}
-
-function sessionClient(secret: string): Client | null {
-  if (!endpoint || !projectId) return null;
-  return new Client()
-    .setEndpoint(endpoint)
-    .setProject(projectId)
-    .setSession(secret);
-}
+/**
+ * Signing in needs the same three variables every other write needs: the
+ * session is created with the API key, not by the browser.
+ */
+export const isAuthConfigured = isAppwriteWriteEnabled;
 
 export type AdminGate =
   | { state: "unconfigured" }
@@ -116,25 +100,62 @@ export async function readAdminGate(): Promise<AdminGate> {
 }
 
 /** Sign in, returning the session secret to be put in a cookie. */
+export type SignInFailure = "credentials" | "misconfigured";
+
+/**
+ * Sign in, returning the session secret to be put in a cookie.
+ *
+ * Two kinds of failure, and conflating them cost an afternoon. A wrong
+ * password and an API key without `sessions.write` both come back as 401
+ * — this used to answer "that didn't work" to either, so a deployment
+ * that could never accept *any* password looked exactly like a typo.
+ *
+ * They are told apart by Appwrite's error `type`, not its status:
+ *
+ *   user_invalid_credentials  the password is wrong, or nobody has that
+ *                             address. Stays deliberately
+ *                             indistinguishable — separating them turns
+ *                             the form into a way to test whether an
+ *                             address has an account.
+ *
+ *   anything else             our problem, not the visitor's. Logged in
+ *                             full, and the page says so rather than
+ *                             blaming their typing.
+ */
 export async function createSession(
   email: string,
   password: string,
-): Promise<{ ok: true; secret: string } | { ok: false }> {
+): Promise<{ ok: true; secret: string } | { ok: false; why: SignInFailure }> {
   const keyed = keyedClient();
-  if (!keyed) return { ok: false };
+  if (!keyed) return { ok: false, why: "misconfigured" };
 
   try {
     const session = (await new Account(keyed).createEmailPasswordSession({
       email,
       password,
     })) as { secret?: string };
-    if (!session.secret) return { ok: false };
+    if (!session.secret) {
+      console.error("[auth] appwrite returned a session with no secret");
+      return { ok: false, why: "misconfigured" };
+    }
     return { ok: true, secret: session.secret };
-  } catch {
-    // One outcome for every failure mode. Distinguishing "no such user"
-    // from "wrong password" turns the login form into a way to test
-    // whether an address has an account.
-    return { ok: false };
+  } catch (error) {
+    const type = (error as { type?: string }).type ?? "";
+
+    if (type === "user_invalid_credentials") {
+      return { ok: false, why: "credentials" };
+    }
+
+    console.error(
+      "[auth] sign-in could not be attempted — this is a configuration " +
+        "problem, not a bad password.",
+      {
+        type,
+        code: (error as { code?: number }).code,
+        message: (error as { message?: string }).message,
+      },
+    );
+    return { ok: false, why: "misconfigured" };
   }
 }
 
@@ -149,8 +170,5 @@ export async function destroySession(secret: string): Promise<void> {
   }
 }
 
-/** A client acting as the signed-in admin. Reads are governed by row
- *  permissions, so this sees hidden entries and a guest client does not. */
-export function adminSessionClient(secret: string): Client | null {
-  return sessionClient(secret);
-}
+/** A client acting as the signed-in admin. */
+export const adminSessionClient = sessionClient;

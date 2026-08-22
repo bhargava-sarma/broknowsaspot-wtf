@@ -11,15 +11,21 @@ import {
 import { cn } from "@/lib/utils/cn";
 
 /**
- * Reporting a spot.
+ * Reporting something — a spot, or one note on it.
  *
- * Collapsed to a single quiet line by default. Reporting should be findable
- * without being an invitation — a prominent button next to every entry
- * turns into a dare.
+ * Collapsed to a single quiet line by default. Reporting should be
+ * findable without being an invitation: a prominent button next to every
+ * entry turns into a dare.
  *
- * The response never says how many reports a spot has or how close it is to
- * being hidden. That number is a brigading target, so it stays in the
- * database and out of every payload.
+ * The endpoint is a prop rather than built from a slug here, because the
+ * two things reportable on a page answer at different routes and the rest
+ * of this component — the reasons, the silences, the states — is
+ * identical for both. Duplicating it would mean two places to keep the
+ * discretion right.
+ *
+ * The response never says how many reports something has or how close it
+ * is to being hidden. That number is a brigading target, so it stays in
+ * the database and out of every payload.
  */
 
 type State =
@@ -29,7 +35,19 @@ type State =
   | { kind: "done" }
   | { kind: "failed"; message: string };
 
-export function ReportControl({ slug }: { slug: string }) {
+type ReportControlProps = {
+  /** Where the report goes. */
+  endpoint: string;
+  /** The closed-state line. Names what is being reported. */
+  label?: string;
+  className?: string;
+};
+
+export function ReportControl({
+  endpoint,
+  label = "report this entry",
+  className,
+}: ReportControlProps) {
   const [state, setState] = useState<State>({ kind: "closed" });
   const [reason, setReason] = useState<ReportReason | null>(null);
   const [detail, setDetail] = useState("");
@@ -40,7 +58,7 @@ export function ReportControl({ slug }: { slug: string }) {
     setState({ kind: "sending" });
 
     try {
-      const response = await fetch(`/api/spots/${slug}/report`, {
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ reason, detail, turnstileToken: token }),
@@ -76,15 +94,18 @@ export function ReportControl({ slug }: { slug: string }) {
       <button
         type="button"
         onClick={() => setState({ kind: "open" })}
-        className="tap touch-target font-mono text-micro text-faint lowercase"
+        className={cn(
+          "press touch-target font-mono text-micro text-faint lowercase",
+          className,
+        )}
       >
-        report this entry
+        {label}
       </button>
     );
   }
 
   return (
-    <div className="max-w-[46ch]">
+    <div className={cn("max-w-[46ch]", className)}>
       <p className="label">why are you reporting it?</p>
 
       <div
@@ -101,7 +122,7 @@ export function ReportControl({ slug }: { slug: string }) {
               aria-checked={active}
               onClick={() => setReason(value)}
               className={cn(
-                "tap touch-target relative text-left font-mono text-micro lowercase",
+                "press touch-target relative text-left font-mono text-micro lowercase",
                 active ? "text-ink" : "text-faint",
               )}
             >
@@ -144,14 +165,14 @@ export function ReportControl({ slug }: { slug: string }) {
           type="button"
           onClick={submit}
           disabled={!reason || state.kind === "sending"}
-          className="tap touch-target border-b border-accent pb-1 font-mono text-micro text-accent lowercase disabled:opacity-40"
+          className="press touch-target border-b border-accent pb-1 font-mono text-micro text-accent lowercase disabled:opacity-40"
         >
           {state.kind === "sending" ? "sending…" : "send report"}
         </button>
         <button
           type="button"
           onClick={() => setState({ kind: "closed" })}
-          className="tap touch-target font-mono text-micro text-faint lowercase"
+          className="press touch-target font-mono text-micro text-faint lowercase"
         >
           cancel
         </button>

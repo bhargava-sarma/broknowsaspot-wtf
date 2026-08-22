@@ -42,7 +42,7 @@ export function SiteFooter() {
           <p className="label">status</p>
           <ul className="mt-3 space-y-1.5 font-mono text-micro text-muted lowercase">
             <li>v0.1</li>
-            <li>postgres · postgis</li>
+            <li>next · appwrite</li>
             <li>
               <span className="text-accent">●</span> open to submissions
             </li>
@@ -50,8 +50,13 @@ export function SiteFooter() {
         </div>
       </div>
 
-      {/* Spacer so the fixed mobile bar never covers the last line. */}
-      <div aria-hidden="true" className="h-[var(--bar-h)] sm:hidden" />
+      {/* Spacer so the floating mobile bar never covers the last line.
+          It clears the bar itself plus the gap it floats in; the safe-area
+          inset is already applied to <body>. */}
+      <div
+        aria-hidden="true"
+        className="h-[calc(var(--bar-h)+1.2rem)] sm:hidden"
+      />
     </footer>
   );
 }

@@ -3,8 +3,10 @@ import type { Spot } from "@/lib/types/spot";
 /**
  * Seed index.
  *
- * Stands in for the database until Supabase/Postgres lands. Coordinates are
- * real so the map reads as a real map; the write-ups are illustrative.
+ * This is the payload `npm run appwrite:seed` writes, and nothing else
+ * reads it: the site itself serves whatever is in the database, including
+ * an empty database. Coordinates are real so the map reads as a real map;
+ * the write-ups are illustrative.
  *
  * `photos[].src` is null throughout — no real photography exists yet, so
  * the gallery renders generated plates. The field is plumbed through so
@@ -482,11 +484,3 @@ export const SPOTS: Spot[] = [
     addedAt: "2026-03-25",
   },
 ];
-
-export function getSpot(slug: string): Spot | undefined {
-  return SPOTS.find((spot) => spot.slug === slug);
-}
-
-export function allSlugs(): string[] {
-  return SPOTS.map((spot) => spot.slug);
-}

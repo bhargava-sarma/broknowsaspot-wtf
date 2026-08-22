@@ -2,7 +2,7 @@ import "server-only";
 
 import { ID, Query } from "node-appwrite";
 
-import { spotPermissions } from "@/lib/appwrite/permissions";
+import { notePermissions, spotPermissions } from "@/lib/appwrite/permissions";
 import { DATABASE_ID, REPORT_THRESHOLD, TABLES } from "@/lib/appwrite/schema";
 import { adminTables } from "@/lib/appwrite/server";
 import { toSlug } from "@/lib/spots/slug";
@@ -12,8 +12,8 @@ import type { SpotDraft } from "@/lib/types/spot";
  * Every write the public can cause.
  *
  * All of it runs on the API key, because no row grants create, update or
- * delete to anyone — a browser cannot write to this database at all. That
- * is the same arrangement the service-role key had on Supabase, and it is
+ * delete to anyone — a browser cannot write to this database at all.
+ * Every write therefore has to come through a route handler, which is
  * what keeps Turnstile, the rate limiter and the validator on the only
  * path in.
  */
@@ -27,12 +27,12 @@ function conflict(error: unknown): boolean {
 /**
  * A slug nobody else holds.
  *
- * Postgres did this in `unique_slug()`, where the uniqueness check and
- * the insert were one statement and could not race. Appwrite has no
- * stored procedures, so the equivalent is to *let the insert fail*: the
- * unique index on `slug` is the arbiter, and a 409 means someone took it
- * between our check and our write. Querying first and trusting the answer
- * would be the racy version of this, not the safe one.
+ * The approach is to *let the insert fail*: the unique index on `slug` is
+ * the arbiter, and a 409 means someone took the name between our check
+ * and our write. Querying first for a free slug and then trusting the
+ * answer is the racy version of this, not the safe one — there is no way
+ * to hold the gap open, so the only reliable check is the one the
+ * database performs as part of the write itself.
  */
 async function insertWithUniqueSlug(
   base: string,
@@ -65,6 +65,7 @@ async function insertWithUniqueSlug(
 export async function createSpot(
   draft: SpotDraft,
   submitterKey: string,
+  photos: { src: string; alt: string }[] = [],
 ): Promise<Result<{ slug: string }>> {
   const tables = adminTables();
   if (!tables) return { ok: false, reason: "no database connection" };
@@ -78,8 +79,8 @@ export async function createSpot(
       country: draft.country,
       lat: draft.lat,
       lng: draft.lng,
-      // [longitude, latitude] — the order PostGIS used and the reverse of
-      // how people say it. Backwards puts the spot in the wrong
+      // [longitude, latitude] — Appwrite's order, and the reverse of how
+      // people say it. Swapped, this puts the spot in the wrong
       // hemisphere and nothing complains.
       location: [draft.lng, draft.lat],
       category: draft.category,
@@ -90,7 +91,7 @@ export async function createSpot(
       watchOut: draft.watchOut,
       bestWindow: "",
       walkInKm: 0,
-      photos: "[]",
+      photos: JSON.stringify(photos),
       reportCount: 0,
     }),
     // Live on arrival: submissions publish immediately, per the product
@@ -137,6 +138,7 @@ export async function createNote(
   slug: string,
   note: { author: string; body: string; notedOn: string },
   submitterKey: string,
+  photoIds: string[] = [],
 ): Promise<Result<{ id: string; author: string; body: string; date: string }>> {
   const tables = adminTables();
   if (!tables) return { ok: false, reason: "no database connection" };
@@ -156,9 +158,10 @@ export async function createNote(
       author: note.author,
       body: note.body,
       notedOn: new Date(`${note.notedOn}T12:00:00Z`).toISOString(),
+      photos: JSON.stringify(photoIds),
     },
     // The parent is visible — checked above — so the note is too.
-    permissions: spotPermissions(true),
+    permissions: notePermissions(true, true),
   });
   const row = created as { $id: string };
 
@@ -184,12 +187,12 @@ export async function createNote(
  * Record a report and hide the spot if enough distinct people have now
  * reported it.
  *
- * This was a Postgres trigger, which had a property this cannot have: it
- * fired no matter how the row arrived, so the threshold could not be
- * bypassed by writing to the table another way. Here the logic lives in
- * the one route that can write reports at all — every other path is
- * refused by Appwrite — so the trust boundary is the API key rather than
- * the table. Same boundary the rest of the write path already has.
+ * The threshold is enforced in application code, not by the database, so
+ * it holds only because there is exactly one way to write a report: this
+ * module, on the API key, reached through one route handler. Every other
+ * path is refused by Appwrite outright. Worth stating plainly because a
+ * database-side trigger would have been stronger — it would fire however
+ * the row arrived — and this does not have that property.
  *
  * The count-then-hide is not atomic with the insert, and deliberately so:
  * a read cannot be staged into a transaction. Two simultaneous tenth
@@ -281,9 +284,14 @@ async function hideSpotRow(spotId: string, reporters: number): Promise<void> {
 
   try {
     const hidden = spotPermissions(false);
-    const operations: object[] = [
-      {
-        action: "update",
+    // Staged with `updateRow` / `createRow` carrying the transaction id
+    // rather than with `createOperations`. The latter has no permissions
+    // field — its operations are typed as a bare `object[]`, so the ones
+    // written here were accepted by TypeScript and refused by Appwrite,
+    // which meant the report threshold could not actually take anything
+    // down. See the note on runTransaction in moderate.ts.
+    await Promise.all([
+      tables.updateRow({
         databaseId: DATABASE_ID,
         tableId: TABLES.spots,
         rowId: spotId,
@@ -293,16 +301,18 @@ async function hideSpotRow(spotId: string, reporters: number): Promise<void> {
           reportCount: reporters,
         },
         permissions: hidden,
-      },
-      ...(noteRows as Array<{ $id: string }>).map((note) => ({
-        action: "update",
-        databaseId: DATABASE_ID,
-        tableId: TABLES.notes,
-        rowId: note.$id,
-        permissions: hidden,
-      })),
-      {
-        action: "create",
+        transactionId: transaction.$id,
+      }),
+      ...(noteRows as Array<{ $id: string }>).map((note) =>
+        tables.updateRow({
+          databaseId: DATABASE_ID,
+          tableId: TABLES.notes,
+          rowId: note.$id,
+          permissions: hidden,
+          transactionId: transaction.$id,
+        }),
+      ),
+      tables.createRow({
         databaseId: DATABASE_ID,
         tableId: TABLES.moderationLog,
         rowId: ID.unique(),
@@ -310,20 +320,15 @@ async function hideSpotRow(spotId: string, reporters: number): Promise<void> {
           spotId,
           action: "hide",
           reason: `auto-hidden at ${reporters} reports`,
-          // No actor: nobody decided this. Postgres could not write this
-          // row at all — its trigger ran as an anonymous reporter with no
-          // way to reach the audit table — so the automatic hides were
-          // invisible in the log. They are not any more.
+          // No actor, because no person decided this. The admin screen
+          // reads the absence and says so, rather than attributing an
+          // automatic hide to whoever happens to be looking.
           actorId: null,
           actorEmail: null,
         },
-      },
-    ];
-
-    await tables.createOperations({
-      transactionId: transaction.$id,
-      operations,
-    });
+        transactionId: transaction.$id,
+      }),
+    ]);
     await tables.updateTransaction({
       transactionId: transaction.$id,
       commit: true,
@@ -336,9 +341,118 @@ async function hideSpotRow(spotId: string, reporters: number): Promise<void> {
   }
 }
 
+/**
+ * Record a report against a note, and hide the note if enough distinct
+ * people have now reported it.
+ *
+ * Mirrors `reportSpot`, including answering a duplicate as success: the
+ * outcome the reporter wanted is already true, and "you already reported
+ * this" would confirm that their pseudonymous key is stable, which is an
+ * invitation to probe it.
+ *
+ * A note carries no denormalised count the way a spot does, because
+ * nothing sorts by it — the moderation screen reads the reports
+ * themselves. So the threshold is counted at report time and nowhere
+ * else.
+ */
+export async function reportNote(
+  noteId: string,
+  reason: string,
+  detail: string | null,
+  reporterKey: string,
+): Promise<Result<{ hidden: boolean }>> {
+  const tables = adminTables();
+  if (!tables) return { ok: false, reason: "no database connection" };
+
+  let note: { $id: string; spotId: string; hiddenAt?: string | null };
+  try {
+    // Cast through unknown: getRow is generic over the row shape and
+    // its default carries only the $-prefixed system fields.
+    note = (await tables.getRow({
+      databaseId: DATABASE_ID,
+      tableId: TABLES.notes,
+      rowId: noteId,
+    })) as unknown as typeof note;
+  } catch {
+    return { ok: false, reason: "no such note" };
+  }
+
+  try {
+    await tables.createRow({
+      databaseId: DATABASE_ID,
+      tableId: TABLES.noteReports,
+      rowId: ID.unique(),
+      data: {
+        noteId: note.$id,
+        spotId: String(note.spotId),
+        reason,
+        detail: detail || null,
+        reporterKey,
+      },
+    });
+  } catch (error) {
+    if (!conflict(error)) throw error;
+    return { ok: true, value: { hidden: Boolean(note.hiddenAt) } };
+  }
+
+  const { total } = await tables.listRows({
+    databaseId: DATABASE_ID,
+    tableId: TABLES.noteReports,
+    queries: [Query.equal("noteId", note.$id), Query.limit(1)],
+  });
+  const reporters = total ?? 0;
+
+  if (reporters < REPORT_THRESHOLD || note.hiddenAt) {
+    return { ok: true, value: { hidden: Boolean(note.hiddenAt) } };
+  }
+
+  // The parent's visibility is the ceiling either way, so hiding a note
+  // only ever tightens: notePermissions(false, _) is the same set
+  // whatever the spot's state.
+  await tables.updateRow({
+    databaseId: DATABASE_ID,
+    tableId: TABLES.notes,
+    rowId: note.$id,
+    data: { hiddenAt: new Date().toISOString() },
+    permissions: notePermissions(false, false),
+  });
+
+  await tables.createRow({
+    databaseId: DATABASE_ID,
+    tableId: TABLES.moderationLog,
+    rowId: ID.unique(),
+    data: {
+      spotId: String(note.spotId),
+      noteId: note.$id,
+      action: "hide",
+      reason: `auto-hidden at ${reporters} reports`,
+      // Nobody decided this; the admin screen reads the absence.
+      actorId: null,
+      actorEmail: null,
+    },
+  });
+
+  return { ok: true, value: { hidden: true } };
+}
+
 /** Rows written by one key inside a window — the rate limiter's counter. */
+/** Records an uploaded file against the key that sent it. */
+export async function logPhoto(
+  fileId: string,
+  submitterKey: string,
+): Promise<void> {
+  const tables = adminTables();
+  if (!tables) return;
+  await tables.createRow({
+    databaseId: DATABASE_ID,
+    tableId: TABLES.photoLog,
+    rowId: ID.unique(),
+    data: { fileId, submitterKey },
+  });
+}
+
 export async function countRecentWrites(
-  table: "submission_log" | "note_log",
+  table: "submission_log" | "note_log" | "photo_log",
   submitterKey: string,
   windowMinutes: number,
 ): Promise<number | null> {

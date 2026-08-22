@@ -5,8 +5,8 @@ import { useActionState, useState } from "react";
 import { IDLE } from "@/lib/admin/action-state";
 import { moderateAction } from "@/lib/admin/actions";
 import type { QueueEntry } from "@/lib/admin/queue";
-import { REPORT_REASON_LABELS } from "@/lib/spots/reports";
-import { formatDate, formatTimestamp } from "@/lib/utils/date";
+import { ReportBreakdown } from "@/components/admin/report-breakdown";
+import { formatDate } from "@/lib/utils/date";
 import { cn } from "@/lib/utils/cn";
 
 /**
@@ -91,25 +91,7 @@ export function ModerationRow({ entry }: { entry: QueueEntry }) {
             {entry.reportCount}
           </p>
 
-          {reported ? (
-            <>
-              <ul className="mt-3 space-y-1">
-                {entry.reasons.map((code) => (
-                  <li
-                    key={code}
-                    className="max-w-[34ch] text-small leading-snug text-muted"
-                  >
-                    {REPORT_REASON_LABELS[code] ?? code}
-                  </li>
-                ))}
-              </ul>
-              {entry.lastReportAt ? (
-                <p className="mt-3 font-mono text-micro text-faint lowercase">
-                  last {formatTimestamp(entry.lastReportAt)}
-                </p>
-              ) : null}
-            </>
-          ) : null}
+          {reported ? <ReportBreakdown reports={entry.reports} /> : null}
         </div>
 
         {/* -------------------------------------------------- verbs */}
@@ -140,7 +122,7 @@ export function ModerationRow({ entry }: { entry: QueueEntry }) {
                   value={verb}
                   disabled={pending}
                   className={cn(
-                    "tap touch-target border-b pb-1 font-mono text-tiny tracking-[0.04em] lowercase disabled:opacity-50",
+                    "press touch-target border-b pb-1 font-mono text-tiny tracking-[0.04em] lowercase disabled:opacity-50",
                     verb === "restore"
                       ? "border-rule-strong text-ink"
                       : "border-accent text-accent",
