@@ -195,7 +195,10 @@ export function SubmitForm() {
             it down again.
           </p>
           <div className="mt-10 flex flex-wrap gap-x-4 gap-y-4">
-            <Link href={status.url} className="btn-pill bg-accent text-accent-ink">
+            <Link
+              href={status.url}
+              className="btn-pill bg-accent text-accent-ink"
+            >
               see the entry →
             </Link>
             <button
@@ -205,7 +208,10 @@ export function SubmitForm() {
             >
               add another →
             </button>
-            <Link href="/explore" className="btn-pill bg-paper-raised text-ink border border-rule">
+            <Link
+              href="/explore"
+              className="btn-pill border border-rule bg-paper-raised text-ink"
+            >
               back to the map →
             </Link>
           </div>

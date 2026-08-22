@@ -171,4 +171,3 @@ export function ExploreView({ spots }: { spots: Spot[] }) {
     </>
   );
 }
-

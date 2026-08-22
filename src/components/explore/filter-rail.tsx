@@ -55,7 +55,7 @@ function FilterToggle({ label, active, onClick }: ToggleProps) {
         "tap touch-target relative rounded-full px-3 py-1 font-mono text-micro whitespace-nowrap lowercase transition-colors",
         active
           ? "bg-accent text-accent-ink"
-          : "text-faint hover:text-ink hover:bg-paper-raised",
+          : "text-faint hover:bg-paper-raised hover:text-ink",
       )}
     >
       {label}

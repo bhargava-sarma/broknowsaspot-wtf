@@ -33,11 +33,7 @@ export function ActionLink({
   return (
     <Link
       href={href}
-      className={cn(
-        "btn-pill touch-target",
-        toneClass,
-        className,
-      )}
+      className={cn("btn-pill touch-target", toneClass, className)}
     >
       <span>{children}</span>
       <span

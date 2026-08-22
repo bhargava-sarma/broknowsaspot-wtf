@@ -76,7 +76,10 @@ const UNAVAILABLE = [
   { label: "gift shops", value: "0" },
 ];
 
-const READOUT_ICONS = {
+const READOUT_ICONS: Record<
+  string,
+  { Icon: typeof MapPin; iconBg: string; iconColor: string }
+> = {
   "spots logged": {
     Icon: MapPin,
     iconBg: "bg-rose-100",
@@ -126,7 +129,7 @@ export default async function HomePage() {
               </Reveal>
 
               <Reveal index={1}>
-                <h1 className="mt-[clamp(1.5rem,1rem+2vw,3rem)] text-mega font-bold lowercase leading-[0.88] tracking-[-0.045em]">
+                <h1 className="mt-[clamp(1.5rem,1rem+2vw,3rem)] text-mega leading-[0.88] font-bold tracking-[-0.045em] lowercase">
                   bro knows
                   <br />a spot
                 </h1>
@@ -178,7 +181,7 @@ export default async function HomePage() {
                     ) : null}
                   </div>
                   <div>
-                    <p className="font-display text-h3 font-bold leading-none text-ink tabular-nums">
+                    <p className="font-display text-h3 leading-none font-bold text-ink tabular-nums">
                       {item.value}
                     </p>
                     <p className="label mt-1">{item.label}</p>

@@ -126,7 +126,7 @@ export default async function SpotPage({
                   />
                 </div>
                 <div>
-                  <p className="font-display text-h3 font-bold leading-none text-ink tabular-nums">
+                  <p className="font-display text-h3 leading-none font-bold text-ink tabular-nums">
                     {item.value}
                   </p>
                   <p className="label mt-1">{item.label}</p>

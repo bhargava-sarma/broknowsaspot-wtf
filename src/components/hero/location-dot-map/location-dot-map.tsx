@@ -20,10 +20,7 @@ export function LocationDotMap({ className }: { className?: string }) {
       className={cn("relative h-full w-full", className)}
       aria-label="A stylized dot-map visualization of an urban road network."
     >
-      <DotMapCanvas
-        dots={CITY_DOTS}
-        reducedMotion={reducedMotion}
-      />
+      <DotMapCanvas dots={CITY_DOTS} reducedMotion={reducedMotion} />
     </figure>
   );
 }

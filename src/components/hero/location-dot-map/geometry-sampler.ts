@@ -19,19 +19,26 @@ const WEIGHT: Record<MapFeatureKind, number> = {
   railway: 0.52,
   waterway: 0.45,
   park: 0.28,
-  building: 0.20,
+  building: 0.2,
 };
 
 /** Dot-spacing in normalized 0-1 coordinates per feature type. */
 function dotSpacing(kind: MapFeatureKind): number {
   switch (kind) {
-    case "major-road": return MAP_CONFIG.majorRoadSpacing;
-    case "minor-road": return MAP_CONFIG.minorRoadSpacing;
-    case "railway":    return MAP_CONFIG.railwaySpacing;
-    case "waterway":   return MAP_CONFIG.waterwaySpacing;
-    case "building":   return MAP_CONFIG.buildingSpacing;
-    case "park":       return MAP_CONFIG.parkSpacing;
-    default:           return MAP_CONFIG.minorRoadSpacing;
+    case "major-road":
+      return MAP_CONFIG.majorRoadSpacing;
+    case "minor-road":
+      return MAP_CONFIG.minorRoadSpacing;
+    case "railway":
+      return MAP_CONFIG.railwaySpacing;
+    case "waterway":
+      return MAP_CONFIG.waterwaySpacing;
+    case "building":
+      return MAP_CONFIG.buildingSpacing;
+    case "park":
+      return MAP_CONFIG.parkSpacing;
+    default:
+      return MAP_CONFIG.minorRoadSpacing;
   }
 }
 
@@ -42,8 +49,8 @@ function dotSpacing(kind: MapFeatureKind): number {
 function tierBudget(importance: number): number {
   if (importance >= 0.9) return 2200; // major roads
   if (importance >= 0.6) return 1400; // minor roads, railways
-  if (importance >= 0.4) return 800;  // waterways
-  return 500;                          // buildings, parks
+  if (importance >= 0.4) return 800; // waterways
+  return 500; // buildings, parks
 }
 
 /**
@@ -65,7 +72,7 @@ function project(
   const mercY = (deg: number) =>
     Math.log(Math.tan(Math.PI / 4 + (deg * toRad) / 2));
   const centerMY = mercY(center.latitude);
-  const northMY  = mercY(center.latitude + latDelta);
+  const northMY = mercY(center.latitude + latDelta);
   const halfSpan = northMY - centerMY;
 
   return {
@@ -133,7 +140,10 @@ export function sampleGeometry(
     }
 
     // ── sparse interior fill for closed polygons ───────────────────────────
-    if (feature.closed && (feature.kind === "building" || feature.kind === "park")) {
+    if (
+      feature.closed &&
+      (feature.kind === "building" || feature.kind === "park")
+    ) {
       const xs = projected.map((p) => p.x);
       const ys = projected.map((p) => p.y);
       const x0 = Math.max(-0.05, Math.min(...xs));

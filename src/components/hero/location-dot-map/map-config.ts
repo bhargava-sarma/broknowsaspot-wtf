@@ -21,11 +21,11 @@ export const MAP_CONFIG = {
   waterwaySpacing: 0.013,
 
   // Dot appearance
-  minRadius: 1.2,   // px — always clearly visible
-  maxRadius: 2.4,   // px — major roads near centre
+  minRadius: 1.2, // px — always clearly visible
+  maxRadius: 2.4, // px — major roads near centre
 
   // Radial falloff — be generous so dots reach canvas edges
-  edgeFadeStart: 0.30,
+  edgeFadeStart: 0.3,
   edgeFadeEnd: 0.75,
 
   // Animation
@@ -33,8 +33,8 @@ export const MAP_CONFIG = {
 
   // Centre marker
   centerDotRadius: 7,
-  centerGlowFraction: 0.20,   // fraction of min(w, h)
-  centerGlowAlpha: 0.20,
+  centerGlowFraction: 0.2, // fraction of min(w, h)
+  centerGlowAlpha: 0.2,
 } as const;
 
 export const OVERPASS_ENDPOINT =

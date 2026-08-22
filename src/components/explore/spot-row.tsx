@@ -41,10 +41,7 @@ export function SpotRow({
   return (
     <li
       id={`spot-${spot.slug}`}
-      className={cn(
-        "relative",
-        selected && "bg-paper-raised",
-      )}
+      className={cn("relative", selected && "bg-paper-raised")}
     >
       {selected ? (
         <span
@@ -95,7 +92,7 @@ export function SpotRow({
         <div className="mt-4">
           <Link
             href={`/spot/${spot.slug}`}
-            className="btn-pill bg-paper-raised text-ink border border-rule inline-flex items-center gap-2"
+            className="btn-pill inline-flex items-center gap-2 border border-rule bg-paper-raised text-ink"
           >
             open entry
             <ArrowRight size={14} aria-hidden="true" />
@@ -105,4 +102,3 @@ export function SpotRow({
     </li>
   );
 }
-
