@@ -41,6 +41,7 @@ export const TABLES = {
   submissionLog: "submission_log",
   noteLog: "note_log",
   noteReports: "note_reports",
+  ratings: "ratings",
   photoLog: "photo_log",
   moderationLog: "moderation_log",
 } as const;
@@ -184,8 +185,13 @@ export const SCHEMA: TableSpec[] = [
     columns: [
       { name: "slug", kind: "string", size: 120, required: true },
       { name: "name", kind: "string", size: 80, required: true },
-      { name: "region", kind: "string", size: 60, required: true },
-      { name: "country", kind: "string", size: 60, required: true },
+      // Optional, and kept only for rows that predate the submission
+      // form dropping them: the pin says where a place is, and it says
+      // it better than a free-text country ever did. Loosening a column
+      // is safe to migrate; tightening one is not, so this can never be
+      // put back without a data pass first.
+      { name: "region", kind: "string", size: 60, required: false },
+      { name: "country", kind: "string", size: 60, required: false },
 
       // lat/lng stay the source of truth and mirror the TypeScript Spot
       // type exactly, so nothing converts on the way out.
@@ -229,6 +235,20 @@ export const SCHEMA: TableSpec[] = [
       // of truth — the verifier checks it against the real count.
       { name: "reportCount", kind: "integer", required: false, min: 0, def: 0 },
 
+      // The ball meter, denormalised the same way and for the same
+      // reason: every card, row and feed post shows a score, and reading
+      // the ratings table per spot would be one query per card. The
+      // rating route writes both of these in the same transaction as the
+      // rating row, and the verifier checks them against the real rows.
+      { name: "ratingSum", kind: "integer", required: false, min: 0, def: 0 },
+      {
+        name: "ratingCount",
+        kind: "integer",
+        required: false,
+        min: 0,
+        def: 0,
+      },
+
       { name: "hiddenAt", kind: "datetime", required: false },
       { name: "hiddenReason", kind: "string", size: 300, required: false },
       { name: "removedAt", kind: "datetime", required: false },
@@ -240,6 +260,36 @@ export const SCHEMA: TableSpec[] = [
       { key: "difficulty_idx", type: "key", columns: ["difficulty"] },
       { key: "access_idx", type: "key", columns: ["access"] },
       { key: "hidden_idx", type: "key", columns: ["hiddenAt"] },
+    ],
+  },
+
+  {
+    id: TABLES.ratings,
+    name: "ball ratings",
+    // Never public. A rating is anonymous in the aggregate and the
+    // aggregate is all anyone needs; the rows carry a rater key, and a
+    // rater key that can be read back is a way to ask "did this person
+    // rate that". Not even moderators get this one — nothing on the
+    // admin screen needs an individual score.
+    permissions: [],
+    rowSecurity: false,
+    columns: [
+      { name: "spotId", kind: "string", size: 64, required: true },
+      { name: "score", kind: "integer", required: true, min: 0, max: 10 },
+      // HMAC of the client address, never the address — same weak,
+      // deliberate identity as reporterKey. See lib/security/request-key.
+      { name: "raterKey", kind: "string", size: 64, required: true },
+    ],
+    indexes: [
+      // One rating per person per spot, enforced by the database rather
+      // than by the route remembering to check. Rating again updates the
+      // existing row instead of stacking a second vote.
+      {
+        key: "one_per_rater",
+        type: "unique",
+        columns: ["spotId", "raterKey"],
+      },
+      { key: "spot_idx", type: "key", columns: ["spotId"] },
     ],
   },
 

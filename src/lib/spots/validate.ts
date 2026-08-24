@@ -12,8 +12,6 @@ export type ValidationResult =
 
 export const LIMITS = {
   name: { min: 3, max: 80 },
-  region: { min: 2, max: 60 },
-  country: { min: 2, max: 60 },
   summary: { min: 10, max: 140 },
   description: { min: 40, max: 4000 },
   watchOut: { min: 10, max: 500 },
@@ -49,20 +47,12 @@ export function validateDraft(input: unknown): ValidationResult {
   const raw = input as Record<string, unknown>;
 
   const name = text(raw.name);
-  const region = text(raw.region);
-  const country = text(raw.country);
   const summary = text(raw.summary);
   const description = text(raw.description);
   const watchOut = text(raw.watchOut);
 
   const nameError = checkLength(name, LIMITS.name, "name");
   if (nameError) errors.name = nameError;
-
-  const regionError = checkLength(region, LIMITS.region, "region");
-  if (regionError) errors.region = regionError;
-
-  const countryError = checkLength(country, LIMITS.country, "country");
-  if (countryError) errors.country = countryError;
 
   const summaryError = checkLength(summary, LIMITS.summary, "summary");
   if (summaryError) errors.summary = summaryError;
@@ -103,8 +93,6 @@ export function validateDraft(input: unknown): ValidationResult {
     ok: true,
     draft: {
       name,
-      region,
-      country,
       lat,
       lng,
       summary,

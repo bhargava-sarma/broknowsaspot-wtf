@@ -18,8 +18,8 @@ export type QueueState = moderate.QueueState;
 export type QueueEntry = {
   slug: string;
   name: string;
-  region: string;
-  country: string;
+  region?: string;
+  country?: string;
   state: QueueState;
   addedAt: string;
   hiddenReason: string | null;
@@ -87,8 +87,8 @@ export function readQueue(secret?: string): Promise<Result<QueueEntry>> {
     return entries.map((entry) => ({
       slug: entry.slug,
       name: entry.name,
-      region: entry.region,
-      country: entry.country,
+      ...(entry.region ? { region: String(entry.region) } : {}),
+      ...(entry.country ? { country: String(entry.country) } : {}),
       state: entry.state,
       addedAt: entry.addedAt,
       hiddenReason: entry.hiddenReason,

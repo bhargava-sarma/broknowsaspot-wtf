@@ -31,8 +31,6 @@ const LocationPicker = dynamic(
 
 type FormState = {
   name: string;
-  region: string;
-  country: string;
   summary: string;
   description: string;
   watchOut: string;
@@ -45,8 +43,6 @@ type FormState = {
 
 const EMPTY: FormState = {
   name: "",
-  region: "",
-  country: "",
   summary: "",
   description: "",
   watchOut: "",
@@ -255,7 +251,7 @@ export function SubmitForm() {
           {/* ------------------------------------------------ what it is */}
           <section className={PANEL}>
             <h2 className={PANEL_TITLE}>What is it</h2>
-            <div className="mt-6 grid gap-[clamp(1.25rem,1rem+1vw,1.75rem)] sm:grid-cols-2">
+            <div className="mt-6 grid gap-[clamp(1.25rem,1rem+1vw,1.75rem)]">
               <TextField
                 label="Name"
                 value={form.name}
@@ -263,22 +259,6 @@ export function SubmitForm() {
                 error={errors.name}
                 placeholder="What people call it"
                 maxLength={80}
-                className="sm:col-span-2"
-              />
-              <TextField
-                label="Region"
-                value={form.region}
-                onChange={(v) => set("region", v)}
-                error={errors.region}
-                placeholder="County, state, province"
-                maxLength={60}
-              />
-              <TextField
-                label="Country"
-                value={form.country}
-                onChange={(v) => set("country", v)}
-                error={errors.country}
-                maxLength={60}
               />
               <TextField
                 label="Summary"
@@ -287,7 +267,6 @@ export function SubmitForm() {
                 error={errors.summary}
                 hint="One line. What makes it worth the detour."
                 maxLength={140}
-                className="sm:col-span-2"
               />
             </div>
           </section>

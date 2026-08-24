@@ -1,6 +1,6 @@
 import "server-only";
 
-import { ID, Query } from "node-appwrite";
+import { ID, Query, type Models } from "node-appwrite";
 
 import { notePermissions, spotPermissions } from "@/lib/appwrite/permissions";
 import { DATABASE_ID, REPORT_THRESHOLD, TABLES } from "@/lib/appwrite/schema";
@@ -75,8 +75,6 @@ export async function createSpot(
     (slug) => ({
       slug,
       name: draft.name,
-      region: draft.region,
-      country: draft.country,
       lat: draft.lat,
       lng: draft.lng,
       // [longitude, latitude] — Appwrite's order, and the reverse of how
@@ -470,4 +468,139 @@ export async function countRecentWrites(
     ],
   });
   return total ?? 0;
+}
+
+/**
+ * Record a ball rating, or change one already given.
+ *
+ * The interesting part is that there are two facts to keep in step: the
+ * rating row (which enforces one vote per person) and the `ratingSum` /
+ * `ratingCount` pair denormalised onto the spot (which every card reads).
+ * They are written in one transaction, so a run that recorded the vote
+ * and not the total — or moved the total twice — rolls back instead.
+ *
+ * Re-rating adjusts the sum by the delta rather than adding again, which
+ * is why the previous score has to be read first. Reading and writing are
+ * not atomic against a second request from the same key, but the unique
+ * index means those requests are the same person racing themselves, and
+ * the worst outcome is their own two clicks landing in either order.
+ *
+ * Returns the spot's new aggregate so the caller can render it without a
+ * second round trip.
+ */
+export async function rateSpot(
+  slug: string,
+  score: number,
+  raterKey: string,
+): Promise<Result<{ sum: number; count: number }>> {
+  const tables = adminTables();
+  if (!tables) return { ok: false, reason: "no database connection" };
+
+  const { rows } = await tables.listRows({
+    databaseId: DATABASE_ID,
+    tableId: TABLES.spots,
+    queries: [Query.equal("slug", slug), Query.limit(1)],
+  });
+  const spot = rows[0] as
+    | {
+        $id: string;
+        ratingSum?: number | null;
+        ratingCount?: number | null;
+        removedAt?: string | null;
+      }
+    | undefined;
+  if (!spot) return { ok: false, reason: "no such spot" };
+
+  // A removed entry is not up for scoring. Hidden ones still are: hidden
+  // is a moderation state that can be undone, and losing the ratings
+  // gathered meanwhile would punish the spot for having been reported.
+  if (spot.removedAt) return { ok: false, reason: "no such spot" };
+
+  const existing = await tables.listRows({
+    databaseId: DATABASE_ID,
+    tableId: TABLES.ratings,
+    queries: [
+      Query.equal("spotId", spot.$id),
+      Query.equal("raterKey", raterKey),
+      Query.limit(1),
+    ],
+  });
+  const prior = existing.rows[0] as { $id: string; score: number } | undefined;
+
+  const sum = Number(spot.ratingSum ?? 0);
+  const count = Number(spot.ratingCount ?? 0);
+
+  const nextSum = prior ? sum - Number(prior.score) + score : sum + score;
+  const nextCount = prior ? count : count + 1;
+
+  const committed = await runRatingTransaction(tables, (transactionId) => [
+    prior
+      ? tables.updateRow<Models.DefaultRow>({
+          databaseId: DATABASE_ID,
+          tableId: TABLES.ratings,
+          rowId: prior.$id,
+          data: { score },
+          transactionId,
+        })
+      : tables.createRow<Models.DefaultRow>({
+          databaseId: DATABASE_ID,
+          tableId: TABLES.ratings,
+          rowId: ID.unique(),
+          data: { spotId: spot.$id, score, raterKey },
+          transactionId,
+        }),
+    tables.updateRow<Models.DefaultRow>({
+      databaseId: DATABASE_ID,
+      tableId: TABLES.spots,
+      rowId: spot.$id,
+      // Only the two aggregate columns. Passing the whole row here would
+      // let a rating quietly rewrite a moderator's hiddenAt.
+      data: { ratingSum: nextSum, ratingCount: nextCount },
+      transactionId,
+    }),
+  ]);
+
+  if (!committed.ok) {
+    // The unique index fired between the read and the write: the same
+    // person rated twice at once. Their vote is recorded either way, so
+    // this is success from where they are standing.
+    if (committed.raced) {
+      return { ok: true, value: { sum, count } };
+    }
+    return { ok: false, reason: committed.reason };
+  }
+
+  return { ok: true, value: { sum: nextSum, count: nextCount } };
+}
+
+/**
+ * The two-write transaction above, with rollback.
+ *
+ * A local copy rather than the one in moderate.ts: that module is
+ * server-only admin code reached through a session, this one runs on the
+ * API key from a public route, and importing across that line would drag
+ * the moderation surface into the request path for a rating.
+ */
+async function runRatingTransaction(
+  tables: NonNullable<ReturnType<typeof adminTables>>,
+  stage: (transactionId: string) => Promise<unknown>[],
+): Promise<{ ok: true } | { ok: false; reason: string; raced: boolean }> {
+  const transaction = (await tables.createTransaction({})) as { $id: string };
+  try {
+    await Promise.all(stage(transaction.$id));
+    await tables.updateTransaction({
+      transactionId: transaction.$id,
+      commit: true,
+    });
+    return { ok: true };
+  } catch (error) {
+    await tables
+      .updateTransaction({ transactionId: transaction.$id, rollback: true })
+      .catch(() => {});
+    return {
+      ok: false,
+      reason: error instanceof Error ? error.message : "transaction failed",
+      raced: conflict(error),
+    };
+  }
 }

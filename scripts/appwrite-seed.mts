@@ -50,8 +50,8 @@ type SeedNote = { author: string; date: string; body: string };
 type SeedSpot = {
   slug: string;
   name: string;
-  region: string;
-  country: string;
+  region?: string;
+  country?: string;
   lat: number;
   lng: number;
   category: string;
@@ -61,6 +61,8 @@ type SeedSpot = {
   description: string;
   watchOut: string;
   bestWindow: string;
+  ratingSum?: number;
+  ratingCount?: number;
   walkInKm: number;
   photos: unknown[];
   notes: SeedNote[];
@@ -84,8 +86,8 @@ async function main() {
     const data = {
       slug: spot.slug,
       name: spot.name,
-      region: spot.region,
-      country: spot.country,
+      region: spot.region ?? null,
+      country: spot.country ?? null,
       lat: spot.lat,
       lng: spot.lng,
       // Appwrite points are [longitude, latitude], the reverse of how
@@ -103,6 +105,8 @@ async function main() {
       walkInKm: spot.walkInKm ?? 0,
       photos: JSON.stringify(spot.photos ?? []),
       reportCount: 0,
+      ratingSum: spot.ratingSum ?? 0,
+      ratingCount: spot.ratingCount ?? 0,
     };
 
     let spotId: string;

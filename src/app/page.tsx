@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { Reveal, RevealGroup } from "@/components/motion/reveal";
+import { BallScore } from "@/components/ball/ball-meter";
 import { SpotPlate } from "@/components/spot/spot-plate";
 import { ActionLink } from "@/components/ui/action-link";
 import { ArrowRight, ButtonLink } from "@/components/ui/button";
@@ -11,7 +12,8 @@ import {
 } from "@/components/ui/spot-tags";
 import { Ticker } from "@/components/ui/ticker";
 import { listSpots } from "@/lib/data/spots-repo";
-import type { Spot } from "@/lib/types/spot";
+import { ballRating } from "@/lib/spots/ball";
+import { placeLine, type Spot } from "@/lib/types/spot";
 
 const MANIFESTO = [
   {
@@ -44,7 +46,14 @@ const MANIFESTO = [
  * that is true by construction.
  */
 function readout(spots: Spot[]) {
-  const countries = new Set(spots.map((spot) => spot.country)).size;
+  const rated = spots
+    .map((spot) => ballRating(spot.ratingSum, spot.ratingCount))
+    .filter((rating): rating is NonNullable<typeof rating> => rating !== null);
+  const meanBall =
+    rated.length === 0
+      ? null
+      : rated.reduce((total, rating) => total + rating.average, 0) /
+        rated.length;
 
   const walks = spots
     .map((spot) => spot.walkInKm)
@@ -64,7 +73,12 @@ function readout(spots: Spot[]) {
 
   return [
     { label: "Spots logged", value: String(spots.length) },
-    { label: "Countries", value: String(countries) },
+    {
+      label: "Mean ball",
+      // An em dash rather than 0, which would read as "everything here is
+      // rubbish" instead of "nobody has scored anything yet".
+      value: meanBall === null ? "—" : meanBall.toFixed(1),
+    },
     {
       label: "Median walk-in",
       // An em dash rather than "0km", which would read as a measurement
@@ -77,7 +91,7 @@ function readout(spots: Spot[]) {
 
 const UNAVAILABLE = [
   { label: "Spots logged", value: "—" },
-  { label: "Countries", value: "—" },
+  { label: "Mean ball", value: "—" },
   { label: "Median walk-in", value: "—" },
   { label: "Gift shops", value: "0" },
 ];
@@ -190,13 +204,21 @@ export default async function HomePage() {
                     </h2>
                     <CategoryTag value={featured.category} />
                   </div>
-                  <p className="mt-1.5 text-small text-faint">
-                    {featured.region}, {featured.country}
-                  </p>
+                  {placeLine(featured) ? (
+                    <p className="mt-1.5 text-small text-faint">
+                      {placeLine(featured)}
+                    </p>
+                  ) : null}
                   <p className="mt-4 text-small text-muted">
                     {featured.summary}
                   </p>
                   <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-2">
+                    <BallScore
+                      rating={ballRating(
+                        featured.ratingSum,
+                        featured.ratingCount,
+                      )}
+                    />
                     <DifficultyMeter value={featured.difficulty} />
                     <AccessTag value={featured.access} />
                   </div>
@@ -302,13 +324,18 @@ export default async function HomePage() {
                         {spot.name}
                       </Link>
                     </h3>
-                    <p className="mt-1.5 text-small text-faint">
-                      {spot.region}, {spot.country}
-                    </p>
+                    {placeLine(spot) ? (
+                      <p className="mt-1.5 text-small text-faint">
+                        {placeLine(spot)}
+                      </p>
+                    ) : null}
                     <p className="mt-3.5 text-small text-muted">
                       {spot.summary}
                     </p>
-                    <div className="mt-5">
+                    <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2">
+                      <BallScore
+                        rating={ballRating(spot.ratingSum, spot.ratingCount)}
+                      />
                       <DifficultyMeter value={spot.difficulty} />
                     </div>
                   </div>

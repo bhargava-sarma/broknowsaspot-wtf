@@ -128,6 +128,7 @@ submit and mobile screens plus the material sheet.
 | route                      | what it is                                                    |
 | -------------------------- | ------------------------------------------------------------- |
 | `/`                        | hero, glass readout, manifesto, recently logged                |
+| `/feed`                    | the social feed — posts are spots, comments are field notes    |
 | `/explore`                 | Leaflet map + faceted filters over the index                  |
 | `/spot/[slug]`             | detail: plates, write-up, access notes, dated community notes |
 | `/submit`                  | submission form with a map picker                             |
@@ -135,17 +136,63 @@ submit and mobile screens plus the material sheet.
 | `/admin/login`             | admin sign-in. no sign-up link, deliberately                  |
 | `/api/spots`               | `GET` the index · `POST` a submission                         |
 | `/api/spots/[slug]/notes`  | `POST` a community note                                       |
+| `/api/spots/[slug]/rate`   | `POST` a ball-meter score, 0–10                               |
 | `/api/spots/[slug]/report` | `POST` a report                                               |
 
 Spot pages prerender from `generateStaticParams` and revalidate every five
 minutes, so an added spot appears without a redeploy. `dynamicParams` is on,
 so a slug created after the last build renders on demand instead of 404ing.
 
+## the ball meter
+
+Every spot carries a score out of ten. Zero is *bro needs to touch grass*;
+ten is *bro knows ball*. The ladder in between lives in
+`src/lib/spots/ball.ts` and is the only place the copy is written.
+
+It is deliberately **not** difficulty. Difficulty says what getting there
+costs you; the ball meter says whether it was worth it. A brutal walk-in to
+a mediocre viewpoint is `serious` and a 3.
+
+It is also deliberately not a report. A low score sorts an entry down and
+hides nothing, which is why the rating response *does* return the running
+total where the report response refuses to: there is no threshold to
+brigade toward, and the number is already on every card.
+
+| property | how |
+| --- | --- |
+| one score per person per spot | a unique index on `(spotId, raterKey)` — not a check this route remembers to make |
+| re-rating replaces | the delta is applied to the sum; the count does not move |
+| the two facts stay in step | the rating row and the spot's `ratingSum`/`ratingCount` are written in one transaction |
+| a racing double-click | the index rejects the second write and the route answers success — their vote is recorded either way |
+| no rate-limit budget | the index already caps one key at one row per spot, so the volume is bounded by the size of the index |
+
+`raterKey` is an HMAC of the client address, never the address — the same
+weak, deliberate identity as `reporterKey`. Shared behind NAT, rotated with
+a VPN, and enough to raise the cost of stuffing a score rather than to make
+it impossible.
+
+## the feed
+
+`/feed` is the index as a link aggregator: posts are logged spots and
+comments are the field notes already attached to them. The shape is
+borrowed because the content already has it — somebody posts a place, and
+people who went add what they found.
+
+What is not borrowed is the vote arrows. The ball meter is the score, and
+"was this worth the trip" is a more useful axis here than agreement is.
+
+Sorting (newest, top rated, most discussed) happens in the browser. The
+whole index is already in the payload, so a round trip to reorder rows the
+page is holding would be a round trip for nothing.
+
 ## data
 
-Appwrite Cloud, using the TablesDB API. Six tables: `spots` and `notes` are
-publicly readable per row; `reports`, `submission_log`, `note_log` and
-`moderation_log` are readable only by the `admins` team.
+Appwrite Cloud, using the TablesDB API. `spots` and `notes` are publicly
+readable per row; `reports`, `submission_log`, `note_log` and
+`moderation_log` are readable only by the `admins` team; and `ratings` is
+readable by nobody at all — the aggregate on the spot is the whole public
+surface, and a rater key that can be read back is a way to ask "did this
+person rate that".
 
 [`src/lib/appwrite/schema.ts`](src/lib/appwrite/schema.ts) is the only
 description of that database that exists — Appwrite offers nothing to dump a

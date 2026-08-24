@@ -67,8 +67,8 @@ function toSpot(row: SpotRow, notes: CommunityNote[]): Spot {
   return {
     slug: row.slug,
     name: String(row.name),
-    region: String(row.region),
-    country: String(row.country),
+    ...(row.region ? { region: String(row.region) } : {}),
+    ...(row.country ? { country: String(row.country) } : {}),
     lat: Number(row.lat),
     lng: Number(row.lng),
     category: row.category as Spot["category"],
@@ -82,6 +82,8 @@ function toSpot(row: SpotRow, notes: CommunityNote[]): Spot {
     photos,
     notes,
     addedAt: row.$createdAt.slice(0, 10),
+    ratingSum: Number(row.ratingSum ?? 0),
+    ratingCount: Number(row.ratingCount ?? 0),
   };
 }
 
