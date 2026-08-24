@@ -8,7 +8,9 @@ import {
   DifficultyMeter,
 } from "@/components/ui/spot-tags";
 import { formatDistance } from "@/lib/spots/distance";
-import type { Spot } from "@/lib/types/spot";
+import { BallScore } from "@/components/ball/ball-meter";
+import { ballRating } from "@/lib/spots/ball";
+import { placeLine, type Spot } from "@/lib/types/spot";
 import { cn } from "@/lib/utils/cn";
 
 type SpotRowProps = {
@@ -38,6 +40,8 @@ export function SpotRow({
   onSelect,
   distanceKm = null,
 }: SpotRowProps) {
+  const place = placeLine(spot);
+
   return (
     <li
       id={`spot-${spot.slug}`}
@@ -76,15 +80,14 @@ export function SpotRow({
             </span>
           </div>
 
-          <p className="mt-1 text-tiny text-faint">
-            {spot.region}, {spot.country}
-          </p>
+          {place ? <p className="mt-1 text-tiny text-faint">{place}</p> : null}
 
           <p className="mt-3 max-w-[52ch] text-small text-muted">
             {spot.summary}
           </p>
 
           <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+            <BallScore rating={ballRating(spot.ratingSum, spot.ratingCount)} />
             <CategoryTag value={spot.category} />
             <DifficultyMeter value={spot.difficulty} />
             <AccessTag value={spot.access} />

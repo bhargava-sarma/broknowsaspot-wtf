@@ -53,6 +53,8 @@ export const SPOTS: Spot[] = [
       },
     ],
     addedAt: "2026-03-11",
+    ratingSum: 87,
+    ratingCount: 10,
   },
   {
     slug: "paronella-park-overflow",
@@ -87,6 +89,8 @@ export const SPOTS: Spot[] = [
       },
     ],
     addedAt: "2026-02-27",
+    ratingSum: 41,
+    ratingCount: 7,
   },
   {
     slug: "kolmanskop-drift",
@@ -119,6 +123,8 @@ export const SPOTS: Spot[] = [
       },
     ],
     addedAt: "2026-01-09",
+    ratingSum: 62,
+    ratingCount: 8,
   },
   {
     slug: "vikos-balcony",
@@ -159,6 +165,8 @@ export const SPOTS: Spot[] = [
       },
     ],
     addedAt: "2026-02-02",
+    ratingSum: 39,
+    ratingCount: 6,
   },
   {
     slug: "williamson-tunnels-lower",
@@ -193,6 +201,8 @@ export const SPOTS: Spot[] = [
       },
     ],
     addedAt: "2026-01-22",
+    ratingSum: 26,
+    ratingCount: 6,
   },
   {
     slug: "salto-ventoso-back",
@@ -225,6 +235,8 @@ export const SPOTS: Spot[] = [
       },
     ],
     addedAt: "2026-03-30",
+    ratingSum: 28,
+    ratingCount: 5,
   },
   {
     slug: "hafnarfjall-spur",
@@ -256,6 +268,8 @@ export const SPOTS: Spot[] = [
       },
     ],
     addedAt: "2026-04-15",
+    ratingSum: 31,
+    ratingCount: 4,
   },
   {
     slug: "canfranc-platform",
@@ -291,6 +305,8 @@ export const SPOTS: Spot[] = [
       },
     ],
     addedAt: "2026-02-14",
+    ratingSum: 44,
+    ratingCount: 6,
   },
   {
     slug: "hamilton-pool-upstream",
@@ -325,6 +341,8 @@ export const SPOTS: Spot[] = [
       },
     ],
     addedAt: "2026-03-19",
+    ratingSum: 9,
+    ratingCount: 4,
   },
   {
     slug: "gunkanjima-shadow",
@@ -356,6 +374,8 @@ export const SPOTS: Spot[] = [
       },
     ],
     addedAt: "2026-01-30",
+    ratingSum: 17,
+    ratingCount: 5,
   },
   {
     slug: "beelitz-stairwell",
@@ -387,6 +407,8 @@ export const SPOTS: Spot[] = [
       },
     ],
     addedAt: "2026-02-20",
+    ratingSum: 47,
+    ratingCount: 6,
   },
   {
     slug: "quilotoa-far-rim",
@@ -419,6 +441,8 @@ export const SPOTS: Spot[] = [
       },
     ],
     addedAt: "2026-04-06",
+    ratingSum: 68,
+    ratingCount: 7,
   },
   {
     slug: "maunsell-approach",
@@ -450,6 +474,8 @@ export const SPOTS: Spot[] = [
       },
     ],
     addedAt: "2026-05-01",
+    ratingSum: 5,
+    ratingCount: 3,
   },
   {
     slug: "wieliczka-lower-chamber",
@@ -482,5 +508,7 @@ export const SPOTS: Spot[] = [
       },
     ],
     addedAt: "2026-03-25",
+    ratingSum: 61,
+    ratingCount: 7,
   },
 ];

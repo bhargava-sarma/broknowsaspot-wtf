@@ -185,7 +185,14 @@
 
   /* -- layout ------------------------------------------------------ */
   --gutter: clamp(1rem, 0.62rem + 1.6vw, 2rem);
-  --shell-max: 90rem;
+
+  /* 85% of the viewport once that is wider than the old 90rem ceiling —
+     i.e. above ~1694px. `max()` rather than a media query because the two
+     behaviours are the same rule: below the crossover the 90rem cap never
+     binds (the shell is already 100% minus gutters), so phones and
+     laptops are untouched and only wide monitors stop leaving a corridor
+     down each side. */
+  --shell-max: max(90rem, 85vw);
   --bar-h: 3.5rem; /* header + mobile bar height, shared */
 
   /* -- radius ------------------------------------------------------ *

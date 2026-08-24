@@ -255,7 +255,7 @@ export default function SpotMap({
           eventHandlers={{ click: () => onSelect(spot.slug) }}
           // Leaflet exposes markers to assistive tech as buttons; give them
           // a name so the map isn't a wall of unlabelled controls.
-          alt={`${spot.name}, ${spot.region}`}
+          alt={spot.name}
           keyboard
         />
       ))}

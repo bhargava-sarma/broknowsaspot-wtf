@@ -39,7 +39,7 @@ export function MobileBar() {
       className="fixed inset-x-0 bottom-0 z-50 px-3 pb-[calc(env(safe-area-inset-bottom)+0.6rem)] sm:hidden"
     >
       <div className="glass-3 mx-auto max-w-md rounded-[var(--radius-lg)] p-2">
-        <ul className="relative grid grid-cols-3 gap-1">
+        <ul className="relative grid grid-cols-4 gap-1">
           {NAV_ITEMS.map((item) => {
             const active = isActivePath(pathname, item.href);
             return (
@@ -48,7 +48,7 @@ export function MobileBar() {
                   href={item.href}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "press-pane relative flex flex-col items-center justify-center gap-1.5 rounded-[var(--radius-md)] py-2.5",
+                    "press-pane relative flex flex-col items-center justify-center gap-1.5 rounded-[var(--radius-md)] px-1 py-2.5",
                     active ? "text-paper" : "text-muted",
                   )}
                 >
@@ -79,7 +79,7 @@ export function MobileBar() {
                   </svg>
                   <span
                     className={cn(
-                      "relative text-[0.6875rem] tracking-[0.01em]",
+                      "relative text-[0.625rem] tracking-[0.01em]",
                       active ? "font-semibold" : "font-medium",
                     )}
                   >

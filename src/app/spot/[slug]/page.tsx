@@ -12,10 +12,17 @@ import {
   CategoryTag,
   DifficultyMeter,
 } from "@/components/ui/spot-tags";
+import { BallRate } from "@/components/ball/ball-rate";
 import { getSpotBySlug, listSpotSlugs } from "@/lib/data/spots-repo";
+import { ballRating } from "@/lib/spots/ball";
 import { SITE_TITLE } from "@/lib/site";
 import { formatDate } from "@/lib/utils/date";
-import { ACCESS_NOTES, DIFFICULTIES } from "@/lib/types/spot";
+import {
+  ACCESS_NOTES,
+  CATEGORY_LABELS,
+  DIFFICULTIES,
+  placeLine,
+} from "@/lib/types/spot";
 
 type Params = { slug: string };
 
@@ -59,6 +66,7 @@ export default async function SpotPage({
   const spot = await getSpotBySlug(slug);
   if (!spot) notFound();
 
+  const place = placeLine(spot);
   const lead = spot.photos[0];
   const rest = spot.photos.slice(1);
 
@@ -92,7 +100,7 @@ export default async function SpotPage({
                 aria-hidden="true"
                 className="breathe block size-[7px] rounded-full bg-accent shadow-[0_0_14px_var(--color-accent)]"
               />
-              {spot.region}, {spot.country}
+              {place ?? CATEGORY_LABELS[spot.category]}
             </p>
             <h1 className="mt-5 text-h1 text-ink">{spot.name}</h1>
             <p className="mt-6 max-w-[44ch] text-lead font-light text-muted">
@@ -239,35 +247,43 @@ export default async function SpotPage({
           </dl>
         </div>
 
-        {/* The facts card. */}
-        <aside className="glass rounded-[var(--radius-xl)] p-6 lg:sticky lg:top-[calc(var(--bar-h)+1.5rem)]">
-          <p className="eyebrow">What it costs you</p>
+        {/* The rail: the ball meter first, because it is the thing
+            people came to compare, then the costs. */}
+        <aside className="grid gap-4 lg:sticky lg:top-[calc(var(--bar-h)+1.5rem)]">
+          <BallRate
+            slug={spot.slug}
+            rating={ballRating(spot.ratingSum, spot.ratingCount)}
+          />
 
-          <div className="mt-5">
-            <div className="flex items-baseline justify-between">
-              <span className="text-small text-muted">Difficulty</span>
-              <span className="text-small font-semibold text-ink">
-                {spot.difficulty.charAt(0).toUpperCase() +
-                  spot.difficulty.slice(1)}
-              </span>
-            </div>
-            <div className="mt-2.5 h-[5px] overflow-hidden rounded-full bg-ink/10">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-accent/70 to-accent"
-                style={{ width: `${difficultyPct}%` }}
-              />
-            </div>
-          </div>
+          <div className="glass rounded-[var(--radius-xl)] p-6">
+            <p className="eyebrow">What it costs you</p>
 
-          <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-5 border-t border-[var(--glass-rim)] pt-6">
-            {facts.map((fact) => (
-              <div key={fact.label}>
-                <p className="eyebrow">{fact.label}</p>
-                <p className="mt-2 text-small font-medium text-ink tabular-nums">
-                  {fact.value}
-                </p>
+            <div className="mt-5">
+              <div className="flex items-baseline justify-between">
+                <span className="text-small text-muted">Difficulty</span>
+                <span className="text-small font-semibold text-ink">
+                  {spot.difficulty.charAt(0).toUpperCase() +
+                    spot.difficulty.slice(1)}
+                </span>
               </div>
-            ))}
+              <div className="mt-2.5 h-[5px] overflow-hidden rounded-full bg-ink/10">
+                <div
+                  className="h-full rounded-full bg-gradient-to-r from-accent/70 to-accent"
+                  style={{ width: `${difficultyPct}%` }}
+                />
+              </div>
+            </div>
+
+            <div className="mt-6 grid grid-cols-2 gap-x-4 gap-y-5 border-t border-[var(--glass-rim)] pt-6">
+              {facts.map((fact) => (
+                <div key={fact.label}>
+                  <p className="eyebrow">{fact.label}</p>
+                  <p className="mt-2 text-small font-medium text-ink tabular-nums">
+                    {fact.value}
+                  </p>
+                </div>
+              ))}
+            </div>
           </div>
         </aside>
       </div>

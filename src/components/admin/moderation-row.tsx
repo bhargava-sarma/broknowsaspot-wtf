@@ -9,6 +9,7 @@ import { ReportBreakdown } from "@/components/admin/report-breakdown";
 import { formatDate } from "@/lib/utils/date";
 import { cn } from "@/lib/utils/cn";
 import { Button } from "@/components/ui/button";
+import { placeLine } from "@/lib/types/spot";
 
 /**
  * One entry in the queue, with its controls attached.
@@ -72,7 +73,9 @@ export function ModerationRow({ entry }: { entry: QueueEntry }) {
           </h3>
 
           <p className="mt-1.5 text-tiny text-faint">
-            {entry.region}, {entry.country} · logged {formatDate(entry.addedAt)}
+            {[placeLine(entry), `logged ${formatDate(entry.addedAt)}`]
+              .filter(Boolean)
+              .join(" · ")}
           </p>
 
           {entry.hiddenReason ? (

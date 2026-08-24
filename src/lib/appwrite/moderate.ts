@@ -29,7 +29,7 @@ export type QueueEntry = {
   id: string;
   slug: string;
   name: string;
-  region: string;
+  region?: string;
   country: string;
   state: QueueState;
   addedAt: string;

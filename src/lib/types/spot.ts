@@ -81,8 +81,17 @@ export type SpotPhoto = {
 export type Spot = {
   slug: string;
   name: string;
-  region: string;
-  country: string;
+  /**
+   * Where it is, in words.
+   *
+   * Optional because the submission form no longer asks: you drop a pin,
+   * and the pin already says where the place is far more precisely than
+   * "Vlorë, Albania" does. Entries logged before that change keep theirs,
+   * so anything rendering these has to handle their absence — use
+   * `placeLine()` rather than interpolating the pair by hand.
+   */
+  region?: string;
+  country?: string;
   lat: number;
   lng: number;
   category: Category;
@@ -100,13 +109,20 @@ export type Spot = {
   photos: SpotPhoto[];
   notes: CommunityNote[];
   addedAt: string;
+  /**
+   * The ball meter, denormalised onto the spot.
+   *
+   * Sum and count rather than an average so a new rating is one add
+   * instead of a re-read of every rating on the row. `ballRating()` in
+   * lib/spots/ball.ts folds them; nothing should divide these by hand.
+   */
+  ratingSum: number;
+  ratingCount: number;
 };
 
 /** Shape accepted by POST /api/spots. */
 export type SpotDraft = {
   name: string;
-  region: string;
-  country: string;
   lat: number;
   lng: number;
   category: Category;
@@ -116,6 +132,22 @@ export type SpotDraft = {
   description: string;
   watchOut: string;
 };
+
+/**
+ * "Vlorë, Albania", "Albania", or null when neither was recorded.
+ *
+ * One function so every surface renders the pair the same way, including
+ * the half-filled cases that older rows can carry.
+ */
+export function placeLine(spot: {
+  region?: string;
+  country?: string;
+}): string | null {
+  const parts = [spot.region, spot.country]
+    .map((part) => part?.trim())
+    .filter((part): part is string => Boolean(part));
+  return parts.length > 0 ? parts.join(", ") : null;
+}
 
 export function isCategory(value: unknown): value is Category {
   return CATEGORIES.includes(value as Category);
