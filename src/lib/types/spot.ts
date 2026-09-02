@@ -123,6 +123,8 @@ export type Spot = {
 /** Shape accepted by POST /api/spots. */
 export type SpotDraft = {
   name: string;
+  /** Optional: plenty of places are worth going year round. */
+  bestWindow: string;
   lat: number;
   lng: number;
   category: Category;

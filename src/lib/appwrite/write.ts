@@ -87,7 +87,7 @@ export async function createSpot(
       summary: draft.summary,
       description: draft.description,
       watchOut: draft.watchOut,
-      bestWindow: "",
+      bestWindow: draft.bestWindow,
       walkInKm: 0,
       photos: JSON.stringify(photos),
       reportCount: 0,

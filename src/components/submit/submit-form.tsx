@@ -34,6 +34,7 @@ type FormState = {
   summary: string;
   description: string;
   watchOut: string;
+  bestWindow: string;
   category: Category | null;
   difficulty: Difficulty | null;
   access: Access | null;
@@ -46,6 +47,7 @@ const EMPTY: FormState = {
   summary: "",
   description: "",
   watchOut: "",
+  bestWindow: "",
   category: null,
   difficulty: null,
   access: null,
@@ -417,6 +419,15 @@ export function SubmitForm() {
                 error={errors.watchOut}
                 hint="The thing that will catch someone out. Tides, loose rock, dogs."
                 maxLength={500}
+              />
+              <TextField
+                label="Best window (optional)"
+                value={form.bestWindow}
+                onChange={(v) => set("bestWindow", v)}
+                error={errors.bestWindow}
+                placeholder="May–June, or late September"
+                hint="When it is actually worth going — season, tide, light. Leave it empty if any time will do."
+                maxLength={120}
               />
             </div>
           </section>

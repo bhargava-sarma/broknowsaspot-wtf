@@ -275,7 +275,7 @@ export const SCHEMA: TableSpec[] = [
     rowSecurity: false,
     columns: [
       { name: "spotId", kind: "string", size: 64, required: true },
-      { name: "score", kind: "integer", required: true, min: 0, max: 10 },
+      { name: "score", kind: "integer", required: true, min: 1, max: 10 },
       // HMAC of the client address, never the address — same weak,
       // deliberate identity as reporterKey. See lib/security/request-key.
       { name: "raterKey", kind: "string", size: 64, required: true },

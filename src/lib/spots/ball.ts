@@ -1,7 +1,9 @@
 /**
  * The ball meter — how much a spot is worth knowing about, 0 to 10.
  *
- * Distinct from `difficulty`, which says what getting there costs you.
+ * Scored 1 to 10 — there is no zero, because a place someone bothered to
+ * log is at minimum worth a one. Distinct from `difficulty`, which says
+ * what getting there costs you.
  * This says whether it was worth it. A brutal walk-in to a mediocre
  * viewpoint is `serious` and a 3; a layby you can park at with a view
  * that ruins other views is `easy` and a 9.
@@ -10,7 +12,7 @@
  * nothing. Reports take entries down; ratings only sort them.
  */
 
-export const BALL_MIN = 0;
+export const BALL_MIN = 1;
 export const BALL_MAX = 10;
 
 export function isBallScore(value: unknown): value is number {
@@ -25,16 +27,16 @@ export function isBallScore(value: unknown): value is number {
 /**
  * The ladder, in the site's voice.
  *
- * Ranges are inclusive and cover 0–10 with no gaps; `ballBand` falls back
+ * Ranges are inclusive and cover 1–10 with no gaps; `ballBand` falls back
  * to the first band rather than returning undefined, so a score that
  * somehow lands outside the scale still renders.
  */
 export const BALL_BANDS = [
-  { upTo: 0, label: "Bro needs to touch grass" },
-  { upTo: 2, label: "Bro read about it online" },
-  { upTo: 4, label: "Bro drove past once" },
-  { upTo: 6, label: "Bro knows a spot" },
-  { upTo: 8, label: "Bro knows the spot" },
+  { upTo: 1, label: "Bro needs to touch grass" },
+  { upTo: 3, label: "Bro read about it online" },
+  { upTo: 5, label: "Bro drove past once" },
+  { upTo: 7, label: "Bro knows a spot" },
+  { upTo: 9, label: "Bro knows the spot" },
   { upTo: 10, label: "Bro knows ball" },
 ] as const;
 
@@ -71,7 +73,21 @@ export function ballRating(
   return { average, count: total, label: ballBand(average) };
 }
 
-/** Sort key: unrated spots sort below rated ones rather than as zeroes. */
+/** Sort key: unrated spots sort below rated ones rather than as ones. */
 export function ballSortKey(rating: BallRating | null): number {
-  return rating ? rating.average : -1;
+  return rating ? rating.average : 0;
+}
+
+/**
+ * How full the meter's ring should be, 0 to 1.
+ *
+ * Not `average / BALL_MAX`: with a floor of 1 that would draw a tenth of
+ * a ring for the lowest possible score, which reads as "barely rated"
+ * rather than as "rated, and badly". The scale is mapped across the whole
+ * arc so a 1 is empty and a 10 is full.
+ */
+export function ballFraction(average: number): number {
+  const span = BALL_MAX - BALL_MIN;
+  const clamped = Math.min(BALL_MAX, Math.max(BALL_MIN, average));
+  return span === 0 ? 1 : (clamped - BALL_MIN) / span;
 }

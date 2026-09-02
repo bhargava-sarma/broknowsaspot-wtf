@@ -119,17 +119,7 @@ export default async function HomePage() {
         <div className="grid items-center gap-[clamp(2.5rem,1.6rem+4vw,4rem)] lg:grid-cols-[1fr_minmax(0,26rem)]">
           <RevealGroup>
             <Reveal index={0}>
-              <p className="eyebrow flex items-center gap-3">
-                <span
-                  aria-hidden="true"
-                  className="breathe block size-[7px] rounded-full bg-accent shadow-[0_0_14px_var(--color-accent)]"
-                />
-                Index of the unlisted
-              </p>
-            </Reveal>
-
-            <Reveal index={1}>
-              <h1 className="mt-[clamp(1.25rem,0.9rem+1.6vw,2rem)] text-mega text-ink">
+              <h1 className="text-mega text-ink">
                 Bro knows
                 <br />
                 {/* The one gradient in the app, and the reason the display
@@ -141,7 +131,7 @@ export default async function HomePage() {
               </h1>
             </Reveal>
 
-            <Reveal index={2}>
+            <Reveal index={1}>
               <p className="mt-[clamp(1.5rem,1rem+1.4vw,2.25rem)] max-w-[44ch] text-lead font-light text-muted">
                 A crowdsourced guide to the places that never made the
                 guidebook. Abandoned rail cuttings, unmarked springs, ridge
@@ -149,7 +139,7 @@ export default async function HomePage() {
               </p>
             </Reveal>
 
-            <Reveal index={3}>
+            <Reveal index={2}>
               <div className="mt-[clamp(2rem,1.4rem+2vw,3rem)] flex flex-wrap items-center gap-3">
                 <ButtonLink href="/explore" tone="ember" size="lg">
                   Open the map
@@ -178,7 +168,7 @@ export default async function HomePage() {
               put in it — a placeholder here would be exactly the invented
               content the readout above refuses to print. */}
           {featured ? (
-            <Reveal index={4} className="hidden lg:block">
+            <Reveal index={3} className="hidden lg:block">
               <article className="glass floaty relative rounded-[var(--radius-2xl)] p-4">
                 <SpotPlate
                   photo={

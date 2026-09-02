@@ -1,4 +1,4 @@
-import { BALL_MAX, type BallRating } from "@/lib/spots/ball";
+import { BALL_MAX, ballFraction, type BallRating } from "@/lib/spots/ball";
 import { cn } from "@/lib/utils/cn";
 
 /**
@@ -53,7 +53,7 @@ export function BallMeter({
   const { box, stroke } = GEOMETRY[size];
   const radius = (box - stroke) / 2;
   const { circumference, filled } = arc(
-    rating ? rating.average / BALL_MAX : 0,
+    rating ? ballFraction(rating.average) : 0,
     radius,
   );
 
@@ -150,7 +150,7 @@ export function BallScore({
   const { box, stroke } = GEOMETRY[size];
   const radius = (box - stroke) / 2;
   const { circumference, filled } = arc(
-    rating ? rating.average / BALL_MAX : 0,
+    rating ? ballFraction(rating.average) : 0,
     radius,
   );
 

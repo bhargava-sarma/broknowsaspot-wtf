@@ -109,7 +109,7 @@ export function FeedView({ spots }: { spots: Spot[] }) {
         <div className="glass rounded-[var(--radius-xl)] p-6">
           <p className="eyebrow">Does bro know ball?</p>
           <p className="mt-3.5 text-small text-muted">
-            Every spot carries a score out of ten. Zero is bro needs to touch
+            Every spot carries a score out of ten. One is bro needs to touch
             grass. Ten is bro knows ball. Open an entry to add yours.
           </p>
           <div className="mt-6">
