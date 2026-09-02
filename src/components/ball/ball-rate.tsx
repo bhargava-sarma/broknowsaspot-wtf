@@ -104,8 +104,8 @@ export function BallRate({
 
         <div
           role="radiogroup"
-          aria-label="Ball meter score, 0 to 10"
-          className="well mt-3 grid grid-cols-6 gap-1 rounded-[var(--radius-md)] p-1.5"
+          aria-label="Ball meter score, 1 to 10"
+          className="well mt-3 grid grid-cols-5 gap-1 rounded-[var(--radius-md)] p-1.5"
           onMouseLeave={() => setHovered(null)}
         >
           {scores.map((score) => {
@@ -147,7 +147,7 @@ export function BallRate({
           )}
         >
           {previewing === null
-            ? "0 is bro needs to touch grass. 10 is bro knows ball."
+            ? "1 is bro needs to touch grass. 10 is bro knows ball."
             : ballBand(previewing)}
         </p>
 

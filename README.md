@@ -136,7 +136,7 @@ submit and mobile screens plus the material sheet.
 | `/admin/login`             | admin sign-in. no sign-up link, deliberately                  |
 | `/api/spots`               | `GET` the index · `POST` a submission                         |
 | `/api/spots/[slug]/notes`  | `POST` a community note                                       |
-| `/api/spots/[slug]/rate`   | `POST` a ball-meter score, 0–10                               |
+| `/api/spots/[slug]/rate`   | `POST` a ball-meter score, 1–10                               |
 | `/api/spots/[slug]/report` | `POST` a report                                               |
 
 Spot pages prerender from `generateStaticParams` and revalidate every five
@@ -145,8 +145,9 @@ so a slug created after the last build renders on demand instead of 404ing.
 
 ## the ball meter
 
-Every spot carries a score out of ten. Zero is *bro needs to touch grass*;
-ten is *bro knows ball*. The ladder in between lives in
+Every spot carries a score out of ten. One is *bro needs to touch grass*;
+ten is *bro knows ball*. There is no zero — a place somebody bothered to
+log is at minimum worth a one. The ladder in between lives in
 `src/lib/spots/ball.ts` and is the only place the copy is written.
 
 It is deliberately **not** difficulty. Difficulty says what getting there

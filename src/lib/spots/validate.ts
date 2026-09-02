@@ -15,6 +15,12 @@ export const LIMITS = {
   summary: { min: 10, max: 140 },
   description: { min: 40, max: 4000 },
   watchOut: { min: 10, max: 500 },
+  /**
+   * The one optional field, so it carries a max and no min: plenty of
+   * places are worth going year round, and forcing a sentence there
+   * produces "anytime" fourteen times rather than information.
+   */
+  bestWindow: { max: 120 },
 } as const;
 
 function text(value: unknown): string {
@@ -50,6 +56,7 @@ export function validateDraft(input: unknown): ValidationResult {
   const summary = text(raw.summary);
   const description = text(raw.description);
   const watchOut = text(raw.watchOut);
+  const bestWindow = text(raw.bestWindow);
 
   const nameError = checkLength(name, LIMITS.name, "name");
   if (nameError) errors.name = nameError;
@@ -83,6 +90,10 @@ export function validateDraft(input: unknown): ValidationResult {
     errors.lat = "pick a location on the map";
   }
 
+  if (bestWindow.length > LIMITS.bestWindow.max) {
+    errors.bestWindow = `best window must be under ${LIMITS.bestWindow.max} characters`;
+  }
+
   if (!isCategory(raw.category)) errors.category = "pick a category";
   if (!isDifficulty(raw.difficulty)) errors.difficulty = "pick a difficulty";
   if (!isAccess(raw.access)) errors.access = "pick an access type";
@@ -98,6 +109,7 @@ export function validateDraft(input: unknown): ValidationResult {
       summary,
       description,
       watchOut,
+      bestWindow,
       // Narrowed by the isX guards above.
       category: raw.category as SpotDraft["category"],
       difficulty: raw.difficulty as SpotDraft["difficulty"],

@@ -26,36 +26,20 @@ export function SiteFooter() {
           </p>
         </div>
 
-        <div className="flex gap-[clamp(2rem,1.4rem+3vw,4rem)]">
-          <div>
-            <p className="eyebrow">Pages</p>
-            <ul className="mt-4 space-y-2.5">
-              {NAV_ITEMS.map((item) => (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    className="press text-small text-muted hover:text-ink"
-                  >
-                    {item.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <p className="eyebrow">Status</p>
-            <ul className="mt-4 space-y-2.5 text-small text-muted">
-              <li>Next · Appwrite</li>
-              <li className="flex items-center gap-2">
-                <span
-                  aria-hidden="true"
-                  className="breathe block size-1.5 rounded-full bg-accent shadow-[0_0_10px_var(--color-accent)]"
-                />
-                Open to submissions
+        <div>
+          <p className="eyebrow">Pages</p>
+          <ul className="mt-4 space-y-2.5">
+            {NAV_ITEMS.map((item) => (
+              <li key={item.href}>
+                <Link
+                  href={item.href}
+                  className="press text-small text-muted hover:text-ink"
+                >
+                  {item.label}
+                </Link>
               </li>
-            </ul>
-          </div>
+            ))}
+          </ul>
         </div>
       </div>
 

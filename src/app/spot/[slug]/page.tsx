@@ -207,12 +207,14 @@ export default async function SpotPage({
           </p>
 
           <dl className="mt-10 grid gap-3">
-            <div className="glass rounded-[var(--radius-lg)] p-5">
-              <dt className="eyebrow">Best window</dt>
-              <dd className="mt-2.5 max-w-[56ch] text-small text-ink">
-                {spot.bestWindow}
-              </dd>
-            </div>
+            {spot.bestWindow ? (
+              <div className="glass rounded-[var(--radius-lg)] p-5">
+                <dt className="eyebrow">Best window</dt>
+                <dd className="mt-2.5 max-w-[56ch] text-small text-ink">
+                  {spot.bestWindow}
+                </dd>
+              </div>
+            ) : null}
             {/* The one place the accent marks prose: this is the field
                 that stops someone getting hurt. */}
             <div className="glass rounded-[var(--radius-lg)] p-5">

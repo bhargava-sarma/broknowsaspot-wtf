@@ -8,7 +8,7 @@ import { requestKey } from "@/lib/security/request-key";
 import { ballRating, isBallScore } from "@/lib/spots/ball";
 
 /**
- * Rate a spot on the ball meter, 0–10.
+ * Rate a spot on the ball meter, 1–10.
  *
  * Unlike a report, this is not moderation and nothing is hidden by it:
  * a low score sorts an entry down and says nothing else. So the response
@@ -53,7 +53,7 @@ export async function POST(
 
   if (!isBallScore(body.score)) {
     return NextResponse.json(
-      { ok: false, message: "pick a score from 0 to 10." },
+      { ok: false, message: "pick a score from 1 to 10." },
       { status: 422 },
     );
   }
