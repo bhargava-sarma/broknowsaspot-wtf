@@ -50,7 +50,7 @@ export async function generateMetadata({
     title: spot.name,
     description: spot.summary,
     openGraph: {
-      title: `${spot.name} — ${SITE_TITLE}`,
+      title: `${spot.name} · ${SITE_TITLE}`,
       description: spot.summary,
       type: "article",
     },
@@ -67,7 +67,9 @@ export default async function SpotPage({
   if (!spot) notFound();
 
   const place = placeLine(spot);
-  const lead = spot.photos[0];
+  // The plate art is a stand-in, so it is drawn whether or not a photo
+  // exists; `rest` is the real gallery and stays empty until one does.
+  const lead = spot.photos[0] ?? { src: null, alt: spot.name };
   const rest = spot.photos.slice(1);
 
   const facts = [
@@ -115,17 +117,15 @@ export default async function SpotPage({
           </div>
 
           {/* The lead plate, floating. */}
-          {lead ? (
-            <div className="glass floaty rounded-[var(--radius-2xl)] p-3.5">
-              <SpotPlate
-                photo={lead}
-                index={0}
-                sizes="(min-width: 1024px) 32rem, 100vw"
-                priority
-                className="[&>figcaption]:hidden"
-              />
-            </div>
-          ) : null}
+          <div className="glass floaty rounded-[var(--radius-2xl)] p-3.5">
+            <SpotPlate
+              photo={lead}
+              index={0}
+              sizes="(min-width: 1024px) 32rem, 100vw"
+              priority
+              className="[&>figcaption]:hidden"
+            />
+          </div>
         </div>
       </header>
 

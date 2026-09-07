@@ -270,8 +270,8 @@ export default async function AdminPage() {
           </ul>
         ) : (
           <p className="glass max-w-[46rem] rounded-[var(--radius-lg)] p-6 text-body text-muted">
-            Nothing yet. Automatic hides don&rsquo;t appear here — this is a
-            record of decisions people made.
+            Nothing yet. Automatic hides do not appear here. This is a record of
+            decisions people made.
           </p>
         )}
       </section>

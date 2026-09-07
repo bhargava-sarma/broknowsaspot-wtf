@@ -68,7 +68,7 @@ export type PrepareFailure =
 export const PREPARE_MESSAGES: Record<PrepareFailure, string> = {
   "not-an-image": "That isn't an image file.",
   "too-large": "That image is over 12 MB. Try a smaller one.",
-  unreadable: "Couldn't read that image — it may be damaged.",
+  unreadable: "Couldn't read that image. It may be damaged.",
   "encode-failed": "Couldn't process that image on this device.",
 };
 

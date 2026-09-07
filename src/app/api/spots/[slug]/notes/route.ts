@@ -80,7 +80,7 @@ export async function POST(
     return NextResponse.json(
       {
         ok: false,
-        message: `that's a lot of notes — try again in about ${rate.retryAfterMinutes} minutes.`,
+        message: `that's a lot of notes. try again in about ${rate.retryAfterMinutes} minutes.`,
       },
       {
         status: 429,

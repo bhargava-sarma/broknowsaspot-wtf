@@ -102,7 +102,7 @@ export function TextField({
     >
       <div
         className={cn(
-          "well mt-2.5 rounded-[var(--radius-md)] px-4 py-3",
+          "well mt-2.5 rounded-[var(--radius-control-md)] px-4 py-3",
           error && "border-accent",
         )}
       >
@@ -175,7 +175,7 @@ export function ChoiceField<T extends string>({
         aria-invalid={Boolean(error)}
         aria-describedby={error ? `${id}-error` : undefined}
         className={cn(
-          "well mt-2.5 flex flex-wrap gap-1 rounded-[var(--radius-md)] p-1.5",
+          "well mt-2.5 flex flex-wrap gap-1 rounded-[var(--radius-control-md)] p-1.5",
           error && "border-accent",
         )}
       >
@@ -189,7 +189,7 @@ export function ChoiceField<T extends string>({
               aria-checked={active}
               onClick={() => onChange(option)}
               className={cn(
-                "press touch-target flex-1 rounded-[var(--radius-xs)] px-3 py-2 text-tiny whitespace-nowrap",
+                "press touch-target flex-1 rounded-[var(--radius-control-sm)] px-3 py-2 text-tiny whitespace-nowrap",
                 active
                   ? "bg-ink font-semibold text-paper shadow-[inset_0_1px_0_var(--glass-specular)]"
                   : "font-medium text-muted hover:text-ink",

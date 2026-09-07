@@ -85,7 +85,7 @@ export function ReportControl({
   if (state.kind === "done") {
     return (
       <p className="text-tiny text-muted">
-        Report logged. Thanks — someone will look at it.
+        Report logged. Thanks. Someone will look at it.
       </p>
     );
   }

@@ -51,7 +51,7 @@ export function LocateButton({
           disabled={busy}
           aria-busy={busy}
           className={cn(
-            "press-pane glass-1 touch-target inline-flex items-center gap-2.5 rounded-[var(--radius-sm)] px-4 py-2.5 text-small font-medium disabled:opacity-60",
+            "press-pane glass-1 touch-target inline-flex items-center gap-2.5 rounded-[var(--radius-control-sm)] px-4 py-2.5 text-small font-medium disabled:opacity-60",
             found ? "text-accent" : "text-ink",
           )}
         >

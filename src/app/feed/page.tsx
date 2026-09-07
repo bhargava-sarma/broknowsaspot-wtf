@@ -30,7 +30,7 @@ export default async function FeedPage() {
       <section className="shell pb-[clamp(2rem,1.4rem+3vw,4rem)]">
         {spots === null ? (
           <p className="glass mx-auto max-w-[52rem] rounded-[var(--radius-lg)] p-6 text-body text-muted">
-            The index could not be reached just now. Nothing has been lost — try
+            The index could not be reached just now. Nothing has been lost. Try
             again in a moment.
           </p>
         ) : spots.length === 0 ? (

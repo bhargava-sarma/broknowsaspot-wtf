@@ -92,12 +92,12 @@ export function PhotoField({
       setNotice(null);
       const room = max - latest.current.length;
       if (room <= 0) {
-        setNotice(`That's the limit — ${max} photos.`);
+        setNotice(`That's the limit. ${max} photos.`);
         return;
       }
       const chosen = Array.from(files).slice(0, room);
       if (files.length > room) {
-        setNotice(`Only the first ${room} were added — ${max} is the limit.`);
+        setNotice(`Only the first ${room} were added. ${max} is the limit.`);
       }
 
       for (const file of chosen) {

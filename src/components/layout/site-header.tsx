@@ -53,7 +53,7 @@ export function SiteHeader() {
                       href={item.href}
                       aria-current={active ? "page" : undefined}
                       className={cn(
-                        "press relative block rounded-[var(--radius-sm)] px-4 py-2 text-small font-medium",
+                        "press relative block rounded-[var(--radius-control-sm)] px-4 py-2 text-small font-medium",
                         active ? "text-ink" : "text-muted",
                       )}
                     >
@@ -65,7 +65,7 @@ export function SiteHeader() {
                           aria-hidden="true"
                           layoutId={reduce ? undefined : "nav-marker"}
                           transition={springUI}
-                          className="absolute inset-0 block rounded-[var(--radius-sm)] bg-ink/[0.07]"
+                          className="absolute inset-0 block rounded-[var(--radius-control-sm)] bg-ink/[0.07]"
                         />
                       ) : null}
                       <span className="relative">{item.label}</span>

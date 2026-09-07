@@ -22,9 +22,9 @@ export type ButtonTone = "ember" | "glass" | "quiet";
 export type ButtonSize = "sm" | "md" | "lg";
 
 const SIZES: Record<ButtonSize, string> = {
-  sm: "gap-2 rounded-[var(--radius-sm)] px-4 py-2.5 text-small",
-  md: "gap-2.5 rounded-[var(--radius-md)] px-5 py-3 text-small",
-  lg: "gap-3 rounded-[var(--radius-lg)] px-7 py-4 text-body",
+  sm: "gap-2 rounded-[var(--radius-control-sm)] px-4 py-2.5 text-small",
+  md: "gap-2.5 rounded-[var(--radius-control-md)] px-5 py-3 text-small",
+  lg: "gap-3 rounded-[var(--radius-control-lg)] px-7 py-4 text-body",
 };
 
 const TONES: Record<ButtonTone, string> = {

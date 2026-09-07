@@ -45,7 +45,7 @@ export async function signInAction(
       message:
         session.why === "credentials"
           ? "that didn't work."
-          : "sign-in isn't working right now — this is a problem with the site, not your password. the details are in the server logs.",
+          : "sign-in isn't working right now. this is a problem with the site, not your password. the details are in the server logs.",
     };
   }
 
@@ -129,7 +129,7 @@ export async function moderateAction(
   revalidatePath(`/spot/${slug}`);
   revalidatePath("/admin");
 
-  return { status: "ok", message: `${slug} — ${PAST_TENSE[action]}.` };
+  return { status: "ok", message: `${slug}: ${PAST_TENSE[action]}.` };
 }
 
 // ------------------------------------------------------- moderate note --

@@ -26,14 +26,14 @@
 :root {
   color-scheme: light;
 
-  --tone-paper: #f6f4fb; /* page ground — cool near-white            */
-  --tone-paper-raised: #eceaf6; /* recessed wells: inputs, map chrome */
-  --tone-ink: #171326; /* primary text            16.63:1            */
-  --tone-muted: #4b4462; /* secondary text           8.36:1            */
-  --tone-faint: #645b7d; /* meta + labels            5.77:1            */
-  --tone-rule: #cac3e0; /* hairline                 1.55:1            */
-  --tone-rule-strong: #171326; /* emphatic hairline                  */
-  --tone-accent: #b53d13; /* ember, dropped for a light ground  5.29:1 */
+  --tone-paper: #f5f5f7; /* page ground — cool near-white           */
+  --tone-paper-raised: #ebebef; /* recessed wells: inputs, map chrome */
+  --tone-ink: #16161a; /* primary text            16.57:1            */
+  --tone-muted: #47474f; /* secondary text           8.45:1            */
+  --tone-faint: #61616b; /* meta + labels            5.62:1            */
+  --tone-rule: #c8c8d0; /* hairline                 1.53:1            */
+  --tone-rule-strong: #16161a; /* emphatic hairline                  */
+  --tone-accent: #b53d13; /* ember, dropped for a light ground  5.30:1 */
   --tone-accent-ink: #fff7f2; /* text on accent fill      5.45:1     */
 
   /* -- the aurora ---------------------------------------------------- *
@@ -41,11 +41,15 @@
    * the contrast guard has nothing to say about them — anything a word
    * sits on still resolves to a --tone-* value.
    *
+   * Two colours of light and no third: a cold one and the ember. The
+   * field that used to sit between them was violet, which is the single
+   * most generic gradient on the web and is off the table here.
+   *
    * At dawn they are a wash rather than a glow: --aurora-strength is
    * what keeps a pale ground from turning into a smeared pastel.
    * ------------------------------------------------------------------ */
   --aurora-ice: 96 170 255;
-  --aurora-violet: 168 110 255;
+  --aurora-deep: 70 100 190;
   --aurora-ember: 255 122 69;
   --aurora-strength: 0.2;
   --aurora-blur: 90px;
@@ -81,18 +85,18 @@
 [data-theme="dark"] {
   color-scheme: dark;
 
-  --tone-paper: #0a0912;
-  --tone-paper-raised: #151327;
-  --tone-ink: #f2eff5; /*                         17.39:1            */
-  --tone-muted: #b6aecb; /*                          9.34:1            */
-  --tone-faint: #8b83a6; /*                          5.56:1            */
-  --tone-rule: #363059; /*                          1.63:1            */
-  --tone-rule-strong: #f2eff5;
+  --tone-paper: #0a0a0f;
+  --tone-paper-raised: #14141c;
+  --tone-ink: #f2f2f4; /*                         17.67:1            */
+  --tone-muted: #b2b2be; /*                          9.41:1            */
+  --tone-faint: #87879a; /*                          5.61:1            */
+  --tone-rule: #33334a; /*                          1.61:1            */
+  --tone-rule-strong: #f2f2f4;
   --tone-accent: #ff7a45; /*                          7.66:1            */
   --tone-accent-ink: #1a0d06; /*                          7.36:1        */
 
   --aurora-ice: 96 214 255;
-  --aurora-violet: 168 110 255;
+  --aurora-deep: 84 124 220;
   --aurora-ember: 255 122 69;
   --aurora-strength: 0.55;
   --aurora-blur: 90px;
@@ -196,9 +200,10 @@
   --bar-h: 3.5rem; /* header + mobile bar height, shared */
 
   /* -- radius ------------------------------------------------------ *
-   * Continuous and generous, scaled to the surface so the curvature
-   * reads the same on a chip as on a sheet. Nothing in the app is
-   * square any more.
+   * Two scales, because one does not stretch across both jobs.
+   *
+   * Surfaces are generous: a sheet, a card and a glass panel carry
+   * enough curvature to read as soft-edged slabs.
    * ---------------------------------------------------------------- */
   --radius-xs: 10px;
   --radius-sm: 13px;
@@ -206,6 +211,16 @@
   --radius-lg: 24px;
   --radius-xl: 30px;
   --radius-2xl: 38px;
+
+  /* Controls are tighter, and deliberately so. Curvature is relative to
+   * the thing it rounds: --radius-lg on a 61px-tall button is 79% of a
+   * full round, which stops reading as a rounded rectangle and starts
+   * reading as a capsule. These sit near 45%, which is unmistakably a
+   * button. Panels keep the scale above; anything you press or type
+   * into uses this one. */
+  --radius-control-sm: 10px;
+  --radius-control-md: 12px;
+  --radius-control-lg: 14px;
 
   /* -- easing ------------------------------------------------------ *
    * One curve for anything that responds to you: nearly all of the
@@ -800,21 +815,21 @@
    * transition runs on the compositor and nothing touches the main
    * thread again.
    * ---------------------------------------------------------------- */
+  /* A rise and a fade, and nothing else. The blur that used to ride
+     along with this was the showiest thing on the page for the least
+     information; a reveal should say "this arrived", not perform. */
   .js [data-reveal] {
     opacity: 0;
     transform: translate3d(0, 26px, 0);
-    filter: blur(8px);
     transition:
       opacity var(--dur-enter) var(--ease-glass),
-      transform var(--dur-enter) var(--ease-glass),
-      filter var(--dur-enter) var(--ease-glass);
+      transform var(--dur-enter) var(--ease-glass);
     transition-delay: calc(var(--reveal-i, 0) * 80ms);
   }
 
   .js [data-reveal][data-shown] {
     opacity: 1;
     transform: translate3d(0, 0, 0);
-    filter: blur(0);
   }
 
   /* A group arms its own children: they wait for the group to enter,
@@ -822,7 +837,6 @@
   .js [data-reveal-group]:not([data-shown]) [data-reveal] {
     opacity: 0;
     transform: translate3d(0, 26px, 0);
-    filter: blur(8px);
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -830,7 +844,6 @@
     .js [data-reveal-group]:not([data-shown]) [data-reveal] {
       opacity: 1;
       transform: none;
-      filter: none;
       transition: none;
     }
   }

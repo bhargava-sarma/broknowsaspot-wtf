@@ -42,7 +42,7 @@ export function AuroraGround() {
           right: "-18vw",
           top: "-12vh",
           background:
-            "radial-gradient(circle, rgb(var(--aurora-violet) / 0.52), transparent 68%)",
+            "radial-gradient(circle, rgb(var(--aurora-deep) / 0.52), transparent 68%)",
         }}
       />
       <div

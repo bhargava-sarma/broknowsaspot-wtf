@@ -19,7 +19,7 @@ const MANIFESTO = [
   {
     n: "01",
     title: "The guidebook is a filter",
-    body: "Everything that makes it into one is there because it scales — parking, opening hours, a gift shop. The places worth the detour fail every one of those tests.",
+    body: "Everything that makes it into one is there because it scales: parking, opening hours, a gift shop. The places worth the detour fail every one of those tests.",
   },
   {
     n: "02",
@@ -124,8 +124,10 @@ export default async function HomePage() {
                 <br />
                 {/* The one gradient in the app, and the reason the display
                     face carries an italic: it is the half of the line that
-                    catches the light. */}
-                <span className="bg-gradient-to-r from-[#c96a2e] via-accent to-[#7a4bd0] bg-clip-text text-transparent italic dark:from-[#ffd9c2] dark:via-accent dark:to-[#c9a2ff]">
+                    catches the light. It stays inside the ember range —
+                    a warm-to-cool ramp here would land on the purple every
+                    other site is already using. */}
+                <span className="bg-gradient-to-r from-[#8a3a10] via-accent to-[#c1741f] bg-clip-text text-transparent italic dark:from-[#ffd9c2] dark:via-accent dark:to-[#ffc46b]">
                   a spot
                 </span>
               </h1>
@@ -347,7 +349,7 @@ export default async function HomePage() {
             </h2>
             <p className="mx-auto mt-6 max-w-[52ch] text-body text-muted">
               The index is only as good as what people are willing to give up.
-              No account needed — just coordinates, an honest difficulty rating,
+              No account needed. Just coordinates, an honest difficulty rating,
               and what to watch out for.
             </p>
             <div className="mt-9 flex justify-center">
