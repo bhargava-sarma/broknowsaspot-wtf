@@ -81,7 +81,7 @@ export function NoteForm({
         setState({
           kind: "failed",
           message:
-            payload?.message ?? "The server rejected that — check the fields.",
+            payload?.message ?? "The server rejected that. Check the fields.",
         });
         return;
       }
@@ -135,7 +135,7 @@ export function NoteForm({
             }}
             aria-invalid={Boolean(errors.body)}
             aria-describedby={errors.body ? "note-body-error" : undefined}
-            placeholder="The lower gate was chained in March — the fence line still works"
+            placeholder="The lower gate was chained in March, but the fence line still works"
             className={cn(control, "resize-y leading-relaxed")}
           />
         </div>

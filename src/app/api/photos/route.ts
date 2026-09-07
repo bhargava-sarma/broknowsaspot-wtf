@@ -85,7 +85,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         ok: false,
-        message: `that's enough for now — try again in about ${limit.retryInMinutes} minutes.`,
+        message: `that's enough for now. try again in about ${limit.retryInMinutes} minutes.`,
       },
       { status: 429 },
     );

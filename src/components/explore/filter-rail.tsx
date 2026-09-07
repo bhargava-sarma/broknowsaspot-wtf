@@ -165,7 +165,7 @@ export function FilterRail({
       onRequest={geo.request}
       onClear={geo.clear}
       label="Sort by what's near me"
-      caption="Ranks the list by distance from you. Worked out in your browser — your position is never sent to this site or anywhere else."
+      caption="Ranks the list by distance from you. Worked out in your browser, so your position is never sent to this site or anywhere else."
     />
   );
 
@@ -185,7 +185,7 @@ export function FilterRail({
           onClick={() => setSheetOpen(true)}
           aria-haspopup="dialog"
           aria-expanded={sheetOpen}
-          className="press-pane touch-target inline-flex items-center gap-2 rounded-[var(--radius-sm)] bg-ink/[0.06] px-3.5 py-2 text-tiny font-medium text-ink"
+          className="press-pane touch-target inline-flex items-center gap-2 rounded-[var(--radius-control-sm)] bg-ink/[0.06] px-3.5 py-2 text-tiny font-medium text-ink"
         >
           <svg
             width="14"

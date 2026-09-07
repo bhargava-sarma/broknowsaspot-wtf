@@ -35,6 +35,15 @@ export const NAV_ITEMS: NavItem[] = [
   },
 ];
 
+/**
+ * Footer-only. Kept out of NAV_ITEMS because those drive the header and
+ * the four-column mobile bar, and neither has room for two more.
+ */
+export const LEGAL_ITEMS: { href: string; label: string }[] = [
+  { href: "/privacy", label: "Privacy" },
+  { href: "/terms", label: "Terms" },
+];
+
 /** `/` matches only itself; everything else matches its subtree. */
 export function isActivePath(pathname: string, href: string): boolean {
   if (href === "/") return pathname === "/";

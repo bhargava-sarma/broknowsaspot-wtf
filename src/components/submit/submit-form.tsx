@@ -69,7 +69,7 @@ type Status =
  */
 const PRIVACY = [
   "No account, no email, no name.",
-  "Your IP address is never stored — only a salted hash, used for rate limiting.",
+  "Your IP address is never stored. Only a salted hash, used for rate limiting.",
   "Photo GPS, timestamps and camera data are removed in your browser.",
   "Your location is read only when you press the button, and never saved.",
 ];
@@ -173,7 +173,7 @@ export function SubmitForm() {
             kind: "failed",
             message:
               payload?.message ??
-              "the server rejected that — see the fields above.",
+              "the server rejected that. Check the fields above.",
           });
           return;
         }
@@ -217,9 +217,9 @@ export function SubmitForm() {
           </span>
           <h2 className="mt-7 text-h2 text-ink">{status.name} is on the map</h2>
           <p className="mx-auto mt-5 max-w-[48ch] text-body text-muted">
-            It&rsquo;s live now — no queue, no moderation wait. If it turns out
-            to be wrong or unsafe, anyone can report it and enough reports take
-            it down again.
+            It&rsquo;s live now, with no queue and no moderation wait. If it
+            turns out to be wrong or unsafe, anyone can report it and enough
+            reports take it down again.
           </p>
           <div className="mt-9 flex flex-wrap justify-center gap-3">
             <ButtonLink href={status.url} tone="ember">
@@ -332,7 +332,7 @@ export function SubmitForm() {
                 onRequest={geo.request}
                 onClear={geo.clear}
                 label="Use my location"
-                caption="Moves the pin to where you are. Nothing is sent until you submit — and the pin is published, so drop it on the spot rather than on your doorstep."
+                caption="Moves the pin to where you are. Nothing is sent until you submit, and the pin is published, so drop it on the spot rather than on your doorstep."
               />
             </div>
             <div className="mt-6">
@@ -426,7 +426,7 @@ export function SubmitForm() {
                 onChange={(v) => set("bestWindow", v)}
                 error={errors.bestWindow}
                 placeholder="May–June, or late September"
-                hint="When it is actually worth going — season, tide, light. Leave it empty if any time will do."
+                hint="When it is actually worth going: season, tide, light. Leave it empty if any time will do."
                 maxLength={120}
               />
             </div>
@@ -459,7 +459,7 @@ export function SubmitForm() {
             </Button>
 
             <p className="mt-5 max-w-[56ch] text-tiny text-faint">
-              No account, no email. It goes live immediately — and anyone can
+              No account, no email. It goes live immediately, and anyone can
               report it, so please be accurate about access and difficulty.
             </p>
           </section>

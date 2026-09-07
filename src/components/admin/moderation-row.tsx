@@ -116,7 +116,7 @@ export function ModerationRow({ entry }: { entry: QueueEntry }) {
                 maxLength={500}
                 value={reason}
                 onChange={(event) => setReason(event.target.value)}
-                placeholder="Why — goes in the record"
+                placeholder="Why. Goes in the record"
                 className="block h-6 w-full bg-transparent text-small text-ink outline-none placeholder:text-faint"
               />
             </div>

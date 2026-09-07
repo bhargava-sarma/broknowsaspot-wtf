@@ -62,7 +62,7 @@ export function BallMeter({
       className={cn("inline-flex shrink-0 items-center gap-3", className)}
       title={
         rating
-          ? `${rating.average} / ${BALL_MAX} — ${rating.label} (${rating.count} ${rating.count === 1 ? "rating" : "ratings"})`
+          ? `${rating.average} of ${BALL_MAX}. ${rating.label}. ${rating.count} ${rating.count === 1 ? "rating" : "ratings"}.`
           : "Not rated yet"
       }
     >
@@ -163,7 +163,7 @@ export function BallScore({
       style={{ width: box, height: box }}
       title={
         rating
-          ? `${rating.average} / ${BALL_MAX} — ${rating.label}`
+          ? `${rating.average} of ${BALL_MAX}. ${rating.label}`
           : "Not rated yet"
       }
     >

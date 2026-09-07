@@ -14,7 +14,7 @@ export default function AdminLoginPage() {
       <PageHeader
         eyebrow="Restricted"
         title="Moderation"
-        lede={`Moderation for ${SITE_TITLE}. Accounts are issued by hand — there is no sign-up.`}
+        lede={`Moderation for ${SITE_TITLE}. Accounts are issued by hand, and there is no sign-up.`}
       />
 
       <section className="shell py-[clamp(2.5rem,1.8rem+4vw,5rem)]">

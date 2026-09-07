@@ -7,7 +7,7 @@ import { listSpots } from "@/lib/data/spots-repo";
 export const metadata: Metadata = {
   title: "Explore",
   description:
-    "A filterable map of every logged spot — by category, difficulty and access type.",
+    "A filterable map of every logged spot, by category, difficulty and access type.",
 };
 
 /** Rebuild at most every 5 minutes, so an approved spot appears without a

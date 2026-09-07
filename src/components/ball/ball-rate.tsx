@@ -105,7 +105,7 @@ export function BallRate({
         <div
           role="radiogroup"
           aria-label="Ball meter score, 1 to 10"
-          className="well mt-3 grid grid-cols-5 gap-1 rounded-[var(--radius-md)] p-1.5"
+          className="well mt-3 grid grid-cols-5 gap-1 rounded-[var(--radius-control-md)] p-1.5"
           onMouseLeave={() => setHovered(null)}
         >
           {scores.map((score) => {
@@ -116,7 +116,7 @@ export function BallRate({
                 type="button"
                 role="radio"
                 aria-checked={active}
-                aria-label={`${score} — ${ballBand(score)}`}
+                aria-label={`${score}. ${ballBand(score)}`}
                 disabled={state.kind === "sending"}
                 onMouseEnter={() => setHovered(score)}
                 onFocus={() => setHovered(score)}
@@ -128,7 +128,7 @@ export function BallRate({
                   if (state.kind !== "idle") setState({ kind: "idle" });
                 }}
                 className={cn(
-                  "press touch-target rounded-[var(--radius-xs)] py-2 text-small tabular-nums",
+                  "press touch-target rounded-[var(--radius-control-sm)] py-2 text-small tabular-nums",
                   active
                     ? "bg-ink font-semibold text-paper shadow-[inset_0_1px_0_var(--glass-specular)]"
                     : "font-medium text-muted hover:bg-ink/[0.07] hover:text-ink",

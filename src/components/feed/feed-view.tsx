@@ -86,7 +86,7 @@ export function FeedView({ spots }: { spots: Spot[] }) {
                 aria-pressed={active}
                 onClick={() => setSort(option.id)}
                 className={cn(
-                  "press touch-target flex-1 rounded-[var(--radius-sm)] px-3 py-2 text-tiny whitespace-nowrap transition-colors duration-[var(--dur-ui)]",
+                  "press touch-target flex-1 rounded-[var(--radius-control-sm)] px-3 py-2 text-tiny whitespace-nowrap transition-colors duration-[var(--dur-ui)]",
                   active
                     ? "bg-ink font-semibold text-paper shadow-[inset_0_1px_0_var(--glass-specular)]"
                     : "font-medium text-muted hover:bg-ink/[0.06] hover:text-ink",

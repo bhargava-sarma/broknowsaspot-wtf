@@ -48,7 +48,7 @@ export function MobileBar() {
                   href={item.href}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "press-pane relative flex flex-col items-center justify-center gap-1.5 rounded-[var(--radius-md)] px-1 py-2.5",
+                    "press-pane relative flex flex-col items-center justify-center gap-1.5 rounded-[var(--radius-control-md)] px-1 py-2.5",
                     active ? "text-paper" : "text-muted",
                   )}
                 >
@@ -59,7 +59,7 @@ export function MobileBar() {
                       aria-hidden="true"
                       layoutId={reduce ? undefined : "mobile-nav-key"}
                       transition={springUI}
-                      className="absolute inset-0 block rounded-[var(--radius-md)] bg-ink shadow-[inset_0_1px_0_var(--glass-specular)]"
+                      className="absolute inset-0 block rounded-[var(--radius-control-md)] bg-ink shadow-[inset_0_1px_0_var(--glass-specular)]"
                     />
                   ) : null}
 

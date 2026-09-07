@@ -32,7 +32,7 @@ export function ThemeToggle({ className }: { className?: string }) {
       aria-label="Switch between light and dark"
       title="Switch between light and dark"
       className={cn(
-        "touch-target relative inline-flex items-center overflow-hidden rounded-[var(--radius-sm)] border border-[var(--glass-rim)] bg-ink/[0.05] p-1 select-none",
+        "touch-target relative inline-flex items-center overflow-hidden rounded-[var(--radius-control-sm)] border border-[var(--glass-rim)] bg-ink/[0.05] p-1 select-none",
         className,
       )}
     >
@@ -40,7 +40,7 @@ export function ThemeToggle({ className }: { className?: string }) {
           dark — the accent rule of the old switch, given mass. */}
       <span
         aria-hidden="true"
-        className="absolute inset-y-1 left-1 block w-[calc(50%-0.25rem)] rounded-[var(--radius-xs)] bg-paper shadow-[inset_0_1px_0_var(--glass-specular),0_4px_10px_-4px_rgba(0,0,0,0.5)] transition-transform duration-300 ease-[var(--ease-spring)] motion-reduce:transition-none dark:translate-x-full"
+        className="absolute inset-y-1 left-1 block w-[calc(50%-0.25rem)] rounded-[var(--radius-control-sm)] bg-paper shadow-[inset_0_1px_0_var(--glass-specular),0_4px_10px_-4px_rgba(0,0,0,0.5)] transition-transform duration-300 ease-[var(--ease-spring)] motion-reduce:transition-none dark:translate-x-full"
       />
 
       <span className="relative z-1 flex h-7 w-8 items-center justify-center text-ink transition-colors duration-200 dark:text-faint">

@@ -63,8 +63,11 @@ was removed rather than blended.
 
 Both themes are authored independently; dark is not an inverted light
 theme. Dark is midnight with the aurora at full strength. Light is the
-same idea at dawn: a cool, faintly violet white with the light turned down
-to a wash, because a pale ground turns into smeared pastel otherwise.
+same idea at dawn: a cool, neutral white with the light turned down to a
+wash, because a pale ground turns into smeared pastel otherwise.
+
+Every hue in both palettes sits in the blue-to-ember arc. Nothing is
+violet, deliberately: see **house rules** below.
 
 The glass flips direction with the theme. Light glass is frosted white
 lifted **off** the ground — a pane that matches the page exactly reads as
@@ -122,6 +125,32 @@ Three rules hold it together:
 The design canvas the implementation was built from is in
 [`.design/`](.design/) — six artboards covering the home, explore, spot,
 submit and mobile screens plus the material sheet.
+
+### house rules
+
+Standing constraints on what this site is allowed to look like and claim.
+They exist because each one is a tell that a site was assembled rather
+than designed, and most of them are checked rather than remembered.
+
+| rule | how it is held |
+| --- | --- |
+| No purple. Every hue lives in the blue-to-ember arc | `npm run check:house-rules` reads every colour literal in `src/` and fails on a hue between 260° and 330° at real saturation |
+| No em dashes in copy people read | the same check strips comments and console calls, then fails on a dash between two words. A lone `—` is the no-data glyph and is allowed |
+| No emoji icons | the same check; every icon is a hand-written single-path SVG, and the favicon is [`src/app/icon.svg`](src/app/icon.svg) |
+| No fake reviews, ratings or photos | the same check reads [the seed](src/lib/data/spots.ts) and fails on a note, a photo or a non-zero rating, so a fresh install opens with "Not rated yet", no comments and no gallery |
+| No pill-shaped buttons | controls carry `--radius-control-*` (10/12/14px), kept separate from the surface radii so a 61px button cannot inherit a 24px corner and read as a capsule |
+| No cursor effects, no fake counters, no "made with AI" badge | nothing in the app tracks the pointer or invents a number |
+| A privacy policy and terms, before launch | [`/privacy`](src/app/privacy/page.tsx) and [`/terms`](src/app/terms/page.tsx), written from the code and linked in the footer |
+
+The first four are decidable from the source and run in `npm run check`.
+The rest are geometric or rendered — what a gradient actually paints, what
+a radius looks like at a given height — and were verified against a
+production build in a browser rather than in CI. That gap is deliberate
+and stated rather than papered over with a check that only looks like one.
+
+The homepage readout is the shape of this: it prints spot count, mean ball
+and median walk-in from whatever is actually in the database, and prints
+`—` rather than a number when there is nothing to average.
 
 ## routes
 
@@ -203,7 +232,7 @@ file and cannot disagree about what the schema is supposed to be.
 | script                       | does                                     |
 | ---------------------------- | ---------------------------------------- |
 | `npm run appwrite:provision` | database, tables, columns, indexes, team |
-| `npm run appwrite:seed`      | the 14 seed spots and their notes        |
+| `npm run appwrite:seed`      | the 14 seed spots, with no notes or ratings |
 | `npm run appwrite:verify`    | assert the security model against it     |
 | `npm run appwrite:setup`     | provision, seed and verify in order      |
 | `npm run appwrite:admin`     | create the first moderator               |
@@ -298,9 +327,14 @@ validators are the only thing enforcing them.
 
 ### photography
 
-`photos[].src` is `null` throughout and the gallery renders a deterministic
-terrain plate per caption. Populating the field with real URLs is a data
-change — `SpotPlate` already renders `next/image` when a `src` is present.
+The seed carries no photos at all. `SpotPlate` draws a deterministic
+terrain plate labelled with the spot's own name wherever an image is
+missing, and renders `next/image` as soon as a `src` is present, so a
+real upload replaces the stand-in with no component change.
+
+The "from people who went" gallery on a detail page only appears once a
+spot has more than one real photo. It used to render seeded plates under
+captions describing photographs nobody had taken.
 
 ## location and photos, and what stays on your device
 
@@ -609,12 +643,10 @@ result.
 - There is no end-to-end check that the map actually paints. The vector
   regression would have been caught by asserting a tile grid exists in
   the DOM; nothing in CI does that today.
-- No photo uploads; `photos[].src` is still `null` everywhere.
 - Proximity search is unbuilt, though the schema is ready for it: `location`
   is a `Point` with a spatial index, so `Query.distanceLessThan` is a query
   away.
 - Filters are component state, not URL state — no shareable filtered views.
-- Notes can be moderated but not reported; only spots have a report path.
 - No email flows. An admin who forgets their password needs a reset from the
   Appwrite console.
 

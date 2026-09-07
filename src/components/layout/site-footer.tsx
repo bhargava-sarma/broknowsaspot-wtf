@@ -1,7 +1,7 @@
 import Link from "next/link";
 
 import { PinMark } from "@/components/layout/brand-mark";
-import { NAV_ITEMS } from "@/lib/nav";
+import { LEGAL_ITEMS, NAV_ITEMS } from "@/lib/nav";
 import { SITE_NAME, SITE_TLD } from "@/lib/site";
 
 /**
@@ -26,20 +26,39 @@ export function SiteFooter() {
           </p>
         </div>
 
-        <div>
-          <p className="eyebrow">Pages</p>
-          <ul className="mt-4 space-y-2.5">
-            {NAV_ITEMS.map((item) => (
-              <li key={item.href}>
-                <Link
-                  href={item.href}
-                  className="press text-small text-muted hover:text-ink"
-                >
-                  {item.label}
-                </Link>
-              </li>
-            ))}
-          </ul>
+        <div className="flex gap-[clamp(2rem,1.4rem+3vw,4rem)]">
+          <div>
+            <p className="eyebrow">Pages</p>
+            <ul className="mt-4 space-y-2.5">
+              {NAV_ITEMS.map((item) => (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    className="press text-small text-muted hover:text-ink"
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* A policy nobody can reach is not a policy. */}
+          <div>
+            <p className="eyebrow">Legal</p>
+            <ul className="mt-4 space-y-2.5">
+              {LEGAL_ITEMS.map((item) => (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    className="press text-small text-muted hover:text-ink"
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </div>
 

@@ -58,13 +58,16 @@ function ridge(next: () => number, baseline: number, amp: number): string {
   return points.join(" ");
 }
 
-/** Sky pairs, picked by seed. Warm, cold, and violet nights. */
+/**
+ * Sky pairs, picked by seed. Cold nights and warm ones, no violet: a
+ * purple night sky is the single most generic gradient on the web.
+ */
 const SKIES: [string, string][] = [
-  ["#3a2a5e", "#120f22"],
-  ["#1e2748", "#0d1122"],
-  ["#3a2140", "#150e1e"],
-  ["#233054", "#0e1424"],
-  ["#42284c", "#170f24"],
+  ["#1e2b4d", "#0d1120"],
+  ["#243044", "#0f141d"],
+  ["#3a2a1e", "#170f0c"],
+  ["#1a3040", "#0c1620"],
+  ["#33261a", "#150f0b"],
 ];
 
 type SpotPlateProps = {
@@ -140,7 +143,7 @@ export function SpotPlate({
 
           <g
             fill="none"
-            stroke="#8e7fd0"
+            stroke="#7f97c8"
             strokeWidth="0.4"
             opacity="0.32"
             vectorEffect="non-scaling-stroke"

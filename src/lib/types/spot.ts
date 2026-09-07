@@ -50,7 +50,7 @@ export const ACCESS_NOTES: Record<Access, string> = {
   open: "Public land or a right of way. Nothing to negotiate.",
   permit: "Someone owns it and will say yes if you ask. Ask.",
   grey: "Unposted, unenforced, and not technically yours. Your call.",
-  private: "Posted private. Listed for the record — we don't recommend it.",
+  private: "Posted private. Listed for the record. We don't recommend it.",
 };
 
 export type CommunityNote = {

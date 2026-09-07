@@ -474,6 +474,6 @@ async function runTransaction(
       (error as { message?: string }).message ||
       "unknown";
     console.error("[moderate] transaction failed", error);
-    return { ok: false, reason: `could not apply that — ${detail}` };
+    return { ok: false, reason: `could not apply that: ${detail}` };
   }
 }

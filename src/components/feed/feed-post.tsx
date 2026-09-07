@@ -31,7 +31,7 @@ export function FeedPost({ spot, index }: { spot: Spot; index: number }) {
   const ordered = [...notes].sort((a, b) => b.date.localeCompare(a.date));
   const place = placeLine(spot);
   const rating = ballRating(spot.ratingSum, spot.ratingCount);
-  const lead = spot.photos[0];
+  const lead = spot.photos[0] ?? { src: null, alt: spot.name };
 
   return (
     <article className="glass rounded-[var(--radius-xl)] p-[clamp(1rem,0.85rem+0.8vw,1.5rem)]">
@@ -67,19 +67,17 @@ export function FeedPost({ spot, index }: { spot: Spot; index: number }) {
               </p>
             </div>
 
-            {lead ? (
-              <Link
-                href={`/spot/${spot.slug}`}
-                className="press block w-full shrink-0 sm:w-[15rem] lg:w-[17rem]"
-              >
-                <SpotPlate
-                  photo={lead}
-                  index={index}
-                  sizes="(min-width: 640px) 17rem, 100vw"
-                  className="[&>figcaption]:hidden"
-                />
-              </Link>
-            ) : null}
+            <Link
+              href={`/spot/${spot.slug}`}
+              className="press block w-full shrink-0 sm:w-[15rem] lg:w-[17rem]"
+            >
+              <SpotPlate
+                photo={lead}
+                index={index}
+                sizes="(min-width: 640px) 17rem, 100vw"
+                className="[&>figcaption]:hidden"
+              />
+            </Link>
           </div>
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -87,7 +85,7 @@ export function FeedPost({ spot, index }: { spot: Spot; index: number }) {
               type="button"
               onClick={() => setOpen((current) => !current)}
               aria-expanded={open}
-              className="press touch-target inline-flex items-center gap-2 rounded-[var(--radius-sm)] bg-ink/[0.06] px-3.5 py-2 text-tiny font-medium text-ink"
+              className="press touch-target inline-flex items-center gap-2 rounded-[var(--radius-control-sm)] bg-ink/[0.06] px-3.5 py-2 text-tiny font-medium text-ink"
             >
               <svg
                 width="14"

@@ -81,7 +81,7 @@ export function validateNote(input: unknown): NoteValidationResult {
         const floor = new Date(now);
         floor.setUTCFullYear(floor.getUTCFullYear() - NOTE_MAX_AGE_YEARS);
         if (when < floor) {
-          errors.notedOn = `older than ${NOTE_MAX_AGE_YEARS} years — probably a typo`;
+          errors.notedOn = `older than ${NOTE_MAX_AGE_YEARS} years, probably a typo`;
         }
       }
     }
